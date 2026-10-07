@@ -1,4 +1,6 @@
 import CountingMatroid.Analysis.OutputSupport
+import CountingMatroid.Analysis.BoundedRunResourceEnvelope
+import CountingMatroid.Analysis.ScheduleResourceEnvelope
 
 set_option autoImplicit false
 
@@ -503,6 +505,22 @@ theorem acceptance_oracleCalls_zero {n : ℕ} (tape : ℕ → Bool)
       split_ifs <;> simp
   · simp [oracleCalls]
 
+/-- INTERNAL: The schedule envelope supplies the sign condition required by
+the capped-run envelope. This is the nonnegative bounded-run output that the
+estimator's median step will consume.
+TEXLINE: main.tex:1350-1440 -/
+theorem scheduled_boundedRun_nonneg (n r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (p : InputParams)
+    (tape : ℕ → Bool) :
+    0 ≤ (CountingMatroid.Program.boundedRun r o₁ o₂ tape
+      (CountingMatroid.Program.schedule n p).val 0).val.1 := by
+  obtain ⟨_, _, hschedule⟩ :=
+    ScheduleResourceEnvelope.schedule_resource_envelope
+  obtain ⟨_, _, hrun⟩ :=
+    BoundedRunResourceEnvelope.boundedRun_resource_envelope
+  exact (hrun n r o₁ o₂ tape (CountingMatroid.Program.schedule n p).val
+    (hschedule n r p).1).1
+
 /-- PAPER: main.tex:1333-1440, 1455-1469
 Every branch of the charged estimator, including abort branches, has a
 nonnegative answer and polynomial charged costs. -/
@@ -518,15 +536,16 @@ theorem estimate_run_bound (contract : FeasibilityContract) :
       0 ≤ run.val ∧
       oracleCalls run ≤ C * (size + 1) ^ degree ∧
       otherSteps run ≤ C * (size + 1) ^ degree := by
-  -- BLOCKER: `otherSteps` charges rational instructions by the squared bit
-  -- length of their operands. A uniform `boundedRun` phase-body bound needs
-  -- all of the following through the nested phase, restart, and observation
-  -- loops: each learned multiplier has bit length bounded by its number of
-  -- updates times the count length; each observation accumulator has bit
-  -- length bounded by its observation count times the `rho`-power length;
-  -- and `product` has bit length bounded by the sum of completed ratio lengths.
-  -- The loop cost lemmas only compose a bound once these invariants hold.
-  -- Schedule, uniform-draw, and median bit costs remain to compose.
+  have hrunNonneg := scheduled_boundedRun_nonneg
+  obtain ⟨_, _, hschedule⟩ :=
+    ScheduleResourceEnvelope.schedule_resource_envelope
+  obtain ⟨_, _, hrun⟩ :=
+    BoundedRunResourceEnvelope.boundedRun_resource_envelope
+  -- The envelopes separate schedule arithmetic from the phase-state
+  -- invariant. The remaining composition needs a charged median bound for
+  -- lists of nonnegative outputs with polynomial rational encoding length,
+  -- then combines schedule, repetitions, pretest, and run charges.
+  -- `hrunNonneg`, `hschedule`, and `hrun` are the three inputs to that step.
   sorry
 
 /-- INTERNAL: A pointwise charged-run bound transfers to every supported
@@ -560,6 +579,7 @@ end CountingMatroid.Analysis.ResourceBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r6 · open · split schedule arithmetic and capped-run rational invariants into independently elaborated resource envelopes; the estimator still needs median and charge composition.
 * r5 · open · proved charged rational-power value and nonnegativity, and zero oracle calls for rational acceptance; the full polynomial bound still needs rational-size invariants.
 * r4 · open · proved zero oracle cost for classification, bounded uniform draws, and paired selection, plus a `2*n` oracle cap for observation recording; rational-size invariants still block the full run bound.
 * r3 · open · proved greedy and paired rank oracle caps and zero oracle cost of rational powers; the annealing phase still needs rational-size invariants.
