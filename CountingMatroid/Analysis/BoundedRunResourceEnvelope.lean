@@ -362,8 +362,11 @@ theorem boundedRun_resource_envelope :
     · exact (boundedRun_zero_phases_otherSteps n r o₁ o₂ tape s hL).trans hquad
   · -- BLOCKER: The three remaining quantitative bounds require one phase invariant
     -- for every current/stored multiplier, the observation numeratorSum, and the
-    -- running product. Their lengths determine the rational-operation charges
-    -- and the widths of the capped uniform draws inside nested phase loops.
+    -- running product, plus bounds on the costs of restartPhase, observePhase,
+    -- and finishPhase under that invariant. The generic Charged fold cost bound
+    -- requires a uniform step price; rational-operation prices here depend on
+    -- those accumulator values. The widths of capped uniform draws also depend
+    -- on rational acceptance denominators reached during a phase.
     refine ⟨boundedRun_value_nonneg n r o₁ o₂ tape s hρ, ?_⟩
     sorry
 
@@ -372,6 +375,7 @@ end CountingMatroid.Analysis.BoundedRunResourceEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r10 · open · audited arbitrary schedule fields and expanded the positive-phase goal; Arlib's fold cost bound needs a state-length invariant for the stored multiplier tables and phase accumulators, which is still absent.
 * r9 · partial recovery · proved nonnegativity of every successful observation accumulator, completed phase ratio, and bounded-run output; the three positive-phase quantitative bounds still need a joint phase-state invariant.
 * r8 · partial recovery · proved the zero-phase oracle and quadratic work bounds and integrated the entire zero-phase case into the envelope; the positive-phase joint invariant remains open.
 * r7 · partial recovery · proved the charged natural-power value and isolated the zero-phase output; the positive-phase state-and-cost invariant remains open.
