@@ -81,6 +81,12 @@ theorem abort_tape_mass_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
     -- other failures, while `boundedRun` further collapses every `none` to zero.
     -- There is no theorem bounding the resulting status events or relating the
     -- uncapped law in main.tex:1202-1280 to this finite-tape execution.
+    -- `FiniteTapeProductAccuracy.finite_tape_product_accuracy` cannot supply
+    -- this estimate: its event explicitly requires the output to be nonzero.
+    -- The missing same-paper obligation is a probability law for the three
+    -- abort statuses, transferred to length-`blockLength` tapes; in particular
+    -- it needs a proved bound on the run's bit cursor to avoid the default
+    -- `false` reads beyond a block.
     sorry
 
 end CountingMatroid.Analysis.AbortTapeBound
@@ -88,6 +94,7 @@ end CountingMatroid.Analysis.AbortTapeBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r11 · blocked · checked the only nearby finite-tape error bound; it excludes zero outputs, while the needed abort-status law, bit-cursor coverage, and uncapped-to-capped coupling are absent.
 * r10 · blocked · checked the positive-ground branch against `Program.boundedRun`, `traceReturn`, `observePhase`, and the project analysis: no finite-tape abort-event law or uncapped-to-capped coupling is available; the paper's Markov and MSE bounds have no Lean counterparts here.
 * r9 · blocked · `aesop` and `simp_all` leave the exact positive-ground abort-tape mass inequality; source search found no uncapped phase-failure law, abort-status cover, or finite-tape coupling for `boundedRun`.
 * r8 · partial · proved the empty-ground case using the schedule's zero phase count and `boundedRun_zero_phases_value`; the positive-ground tape mass remains open.
