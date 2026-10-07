@@ -1,6 +1,14 @@
 import CountingMatroid.Model.Program
 import Mathlib.Data.List.Sort
 
+/-!
+# Value of the charged rational insertion scan
+
+On a sorted list, the charged scan inserts a rational at the same position as
+`List.orderedInsert`. The proof first identifies the scan with strict insertion,
+then uses sortedness to handle repeated values.
+-/
+
 set_option autoImplicit false
 
 namespace CountingMatroid.Analysis
@@ -118,3 +126,9 @@ theorem sortedInsert_value_eq (value : ℚ) (sorted : List ℚ)
   simpa [result, hstrict sorted hsorted] using hresult
 
 end CountingMatroid.Analysis
+
+/-! ### Run record
+Newest first. History, not instruction — what this file claims is above.
+
+* r1 · repaired · restricted the insertion equality to sorted lists; an arbitrary unsorted input need not agree with ordered insertion at repeated values.
+-/

@@ -21,7 +21,8 @@ It is a ladder. Each theorem below is proved from the ones above it, and
 `outputLaw_answer_eq` is the top: it is the one lemma the analysis rewrites
 through, and the only one anything outside this file should need.
 
-Every rung is `sorry` until it is climbed.
+The bridge is closed by a charged insertion lemma and the resulting median,
+estimator, and PMF law equalities.
 -/
 
 set_option autoImplicit false
@@ -117,3 +118,9 @@ theorem outputLaw_answer_eq (solver : CountingMatroid.Model.Subroutines.Feasibil
   simpa only [Function.comp_def] using algorithmLaw_answer_eq solver n r o₁ o₂ p
 
 end CountingMatroid
+
+/-! ### Run record
+Newest first. History, not instruction — what this file claims is above.
+
+* r1 · proved · closed the answer-law bridge and its six preceding and following correspondences.
+-/
