@@ -52,10 +52,13 @@ theorem inaccurate_nonzero_tape_mass_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin
     CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
       (fun i => (bits[i]?).getD false) s
   have hz : 0 ≤ z := by simp [z]
-  -- The witness is the paper's final transversal partition sum c₀(q_L).
-  -- It has not yet been defined on the analysis side. The remaining
-  -- obligation is the conditional phase estimate and finite-bit coupling
-  -- for the narrower product interval around this fixed sum.
+  -- BLOCKER: The witness is the paper's final transversal partition sum c₀(q_L),
+  -- but no analysis-side partition sum or stationary law has been defined.
+  -- To prove its tape-mass bound, one must formalize the conditional restart
+  -- and observable estimates of main.tex:1210-1287, the weight/product induction
+  -- of main.tex:1289-1323, and the uncapped-to-capped finite-bit coupling of
+  -- main.tex:1392-1421. Program.boundedRun exposes only answer and bit cursor,
+  -- so these event bounds require an execution-level correspondence first.
   have hphase : ∃ c : ℚ,
       z ≤ c ∧ c ≤ (1 + p.ε / 10) * z ∧
       (Set.ncard {bits : List Bool | bits.length = m ∧
@@ -105,6 +108,7 @@ end CountingMatroid.Analysis.InaccurateNonzeroTapeBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r7 · blocked · exact? and aesop leave the partition-sum/product-error witness; project search found no analytic partition sum, conditional phase law, or capped-draw coupling.
 * r6 · decomposed · proved the deterministic product/contamination comparison and reduced the tape bound to a partition-sum witness with a narrower product-error event; its conditional phase estimate and finite-bit coupling remain open.
 * r5 · open · direct simplification reduces the claim to a nonzero bad-tape count bound; phase estimates and product induction for `Program.boundedRun` are missing.
 -/
