@@ -36,7 +36,11 @@ theorem abort_tape_mass_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
   -- zero-type statuses using the paper's conditional phase estimates, and
   -- draw status using the trial-cap coupling. Only then apply a finite-tape
   -- union bound. Merely changing the event to `singleRun = 0` under another
-  -- name does not reduce the present obligation.
+  -- name does not reduce the present obligation. In the current source,
+  -- `traceReturn` and `observePhase` use `Option` for both draw exhaustion and
+  -- other failures, while `boundedRun` further collapses every `none` to zero.
+  -- There is no theorem bounding the resulting status events or relating the
+  -- uncapped law in main.tex:1202-1280 to this finite-tape execution.
   sorry
 
 end CountingMatroid.Analysis.AbortTapeBound
@@ -44,6 +48,7 @@ end CountingMatroid.Analysis.AbortTapeBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r7 · blocked · source audit found no abort-status cover, uncapped restart law, or finite-tape coupling; direct `rfl` and targeted schedule simplification did not yield even the empty-ground subcase.
 * r6 · blocked · `boundedRun` erases abort causes and no uncapped experiment or coupling is formalized; the exact event cover and conditional bounds are specified above.
 * r5 · open · direct simplification reduces the claim to an abort-tape count bound; restart and capped-draw estimates for `Program.boundedRun` are missing.
 -/
