@@ -1,4 +1,5 @@
 import CountingMatroid.Model.Run
+import CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
 
 set_option autoImplicit false
 set_option maxHeartbeats 1000000
@@ -121,6 +122,17 @@ theorem leastDrawTrials_oracleCalls_zero (M : ℕ) :
   simpa [oracleCalls, binaryLoopBound, natMul,
     Arlib.Computation.CostVec.one] using hfold
 
+/-- INTERNAL: Constructing the schedule makes no independence-oracle calls. -/
+theorem schedule_oracleCalls_zero (n : ℕ) (p : InputParams) :
+    oracleCalls (CountingMatroid.Program.schedule n p) = 0 := by
+  unfold CountingMatroid.Program.schedule
+  simp only [oracleCalls_bind,
+    natPower_oracleCalls_zero, leastHalvings_oracleCalls_zero,
+    leastDrawTrials_oracleCalls_zero]
+  simp [oracleCalls, ratDiv, ratSub, ratMul, ratOfNat, natMul,
+    natAdd, successor, rationalCeil, Arlib.Computation.CostVec.one,
+    Arlib.Computation.CostVec.many]
+
 /-- INTERNAL: The charged construction of the schedule has polynomial cost
 in the encoded input size. This is the cost part of the schedule resource envelope.
 TEXLINE: main.tex:1348-1358 -/
@@ -131,16 +143,17 @@ theorem schedule_cost_envelope :
       let schedule := CountingMatroid.Program.schedule n p
       oracleCalls schedule ≤ C * inputSize ^ degree ∧
       otherSteps schedule ≤ C * inputSize ^ degree := by
-  -- BLOCKER: The bounded-search and natural-power oracle charges are zero by
-  -- the lemmas above. A straight-line schedule decomposition and polynomial
-  -- encodings of eta and the observation quotient are still needed to sum
-  -- the quadratic rational charges.
-  sorry
+  obtain ⟨C, degree, hother⟩ :=
+    ScheduleOtherStepsEnvelope.schedule_otherSteps_envelope
+  refine ⟨C, degree, ?_⟩
+  intro n r p
+  exact ⟨by simp [schedule_oracleCalls_zero], hother n r p⟩
 
 end CountingMatroid.Analysis.ScheduleCostEnvelope
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r10 · partial · proved zero oracle cost and reduced the target to the separate nonoracle schedule charge bound; scheduler handoff request was refused by the shell policy.
 * r9 · open · zero oracle charges proved for bounded searches and natural powers; the full charged bound needs rational encoding estimates.
 -/
