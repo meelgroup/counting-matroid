@@ -88,6 +88,7 @@ end CountingMatroid.Analysis.FiniteTapeProductAccuracy
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r10 · blocked · `exact?` cannot close the positive-ground event bound; source search found no finite-chain trace/MSE analysis, good-multiplier invariant, or uncapped-to-`boundedRun` coupling. The paper proves these steps at main.tex:1207-1315, so this is a same-paper dependency, not a Prior proposal.
 * r9 · partial · proved the empty-ground event is empty; positive-ground `aesop` leaves the event-mass inequality, with conditional phase bounds and capped finite-tape coupling absent.
 * r8 · open · `aesop` leaves the finite-tape product-event bound; no conditional phase law or uncapped-to-capped coupling is formalized.
 -/
