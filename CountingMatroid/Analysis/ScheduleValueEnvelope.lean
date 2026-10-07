@@ -1,5 +1,6 @@
 import CountingMatroid.Model.Run
 import CountingMatroid.Analysis.BoundedRunResourceEnvelope
+import CountingMatroid.Analysis.ScheduleDrawTrialsBridge
 
 set_option autoImplicit false
 
@@ -218,6 +219,59 @@ private theorem schedule_observations_le (n : ℕ) (p : InputParams) :
   · exact (inv_pos.mpr p.ε_pos).le
   · exact Nat.le_ceil _
 
+/-- INTERNAL: A rational in the unit interval has an encoding controlled by
+its denominator. TEXLINE: main.tex:1348-1356 -/
+private theorem binaryRatLength_le_den_of_unit (q : ℚ)
+    (hq0 : 0 ≤ q) (hq1 : q ≤ 1) : binaryRatLength q ≤ 2 * q.den + 4 := by
+  have hn0 : 0 ≤ q.num := Rat.num_nonneg.mpr hq0
+  have hn1 : q.num ≤ (q.den : ℤ) := by
+    have h := hq1
+    rw [← q.num_div_den] at h
+    have h' : (q.num : ℚ) ≤ (q.den : ℚ) := by
+      simpa using (div_le_iff₀ (by exact_mod_cast q.den_pos)).mp h
+    exact_mod_cast h'
+  have hn : q.num.natAbs ≤ q.den := by
+    have hn' : (q.num.natAbs : ℤ) ≤ (q.den : ℤ) := by
+      simpa [Int.natAbs_of_nonneg hn0] using hn1
+    exact_mod_cast hn'
+  unfold binaryRatLength binaryNatLength
+  have hlogn := Nat.log_le_self 2 q.num.natAbs
+  have hlogd := Nat.log_le_self 2 q.den
+  simp only [Nat.log2_eq_log_two]
+  omega
+
+/-- INTERNAL: The annealing ratio has denominator at most twice the ground size.
+TEXLINE: main.tex:1348-1356 -/
+private theorem schedule_rho_length_le (n : ℕ) (p : InputParams) :
+    binaryRatLength (CountingMatroid.Program.schedule n p).val.ρ ≤ 4 * n + 6 := by
+  have hρ : (CountingMatroid.Program.schedule n p).val.ρ =
+      1 - 1 / (2 * n : ℚ) := by
+    unfold CountingMatroid.Program.schedule
+    simp only [Arlib.Computation.Charged.val_bind,
+      Arlib.Computation.Charged.val_pure, natMul, ratOfNat, ratDiv, ratSub,
+      Arlib.Computation.Charged.val_op, Arlib.Computation.Charged.val_opMany]
+    norm_num [Nat.cast_mul]
+  rw [hρ]
+  by_cases hn : n = 0
+  · subst n
+    simp [binaryRatLength, binaryNatLength, Nat.log2_eq_log_two]
+  · have hnp : 0 < n := Nat.pos_of_ne_zero hn
+    have hden : (1 - 1 / (2 * n : ℚ)).den = 2 * n := by
+      have hcast : (2 * n : ℚ) = ((2 * n : ℕ) : ℚ) := by norm_num [Nat.cast_mul]
+      rw [hcast, one_div, show (1 : ℚ) = ((1 : ℕ) : ℚ) by norm_num,
+        Rat.natCast_sub_den, Rat.inv_natCast_den_of_pos (by omega : 0 < 2 * n)]
+    have hunit0 : 0 ≤ (1 - 1 / (2 * n : ℚ)) := by
+      have : (1 : ℚ) ≤ 2 * n := by exact_mod_cast (by omega : 1 ≤ 2 * n)
+      have : 1 / (2 * n : ℚ) ≤ 1 := (div_le_iff₀ (by positivity)).2 (by nlinarith)
+      linarith
+    have hunit1 : (1 - 1 / (2 * n : ℚ)) ≤ 1 := by
+      have : 0 ≤ 1 / (2 * n : ℚ) := by positivity
+      linarith
+    have hb := binaryRatLength_le_den_of_unit _ hunit0 hunit1
+    rw [hden] at hb
+    omega
+
+
 
 
 /-- INTERNAL: The concrete schedule fields have a common polynomial envelope
@@ -230,17 +284,71 @@ theorem schedule_value_envelope :
       let s := (CountingMatroid.Program.schedule n p).val
       n + s.L + s.τ + s.restartCap + s.observations + s.drawTrials +
         binaryRatLength s.ρ + s.repetitions + 1 ≤ C * inputSize ^ degree := by
-  -- BLOCKER: schedule_observations_le now bounds the eta⁻² ceiling. The
-  -- remaining goal is to combine all explicit field bounds into one power
-  -- of inputSize. This still needs a bound on binaryRatLength s.ρ, which
-  -- requires numerator and denominator bounds for 1 - 1 / (2 * n).
-  sorry
+  refine ⟨10 ^ 500, 50, ?_⟩
+  intro n r p
+  let s := (CountingMatroid.Program.schedule n p).val
+  let X := n + binaryInputLength n r p + Nat.ceil p.ε⁻¹ +
+    binaryNatLength (Nat.ceil p.δ⁻¹) + 1
+  have hdraw := ScheduleDrawTrialsBridge.schedule_drawTrials_le_drawCalls n p
+  have hrho := schedule_rho_length_le n p
+  change s.drawTrials ≤ (3 * s.L * (s.restartCap + s.observations)).log2 + 9 at hdraw
+  change binaryRatLength s.ρ ≤ 4 * n + 6 at hrho
+  let Y := 10000000000 * X
+  have hX : 1 ≤ X := by dsimp [X]; omega
+  have hnX : n ≤ X := by dsimp [X]; omega
+  have hbinX : binaryInputLength n r p ≤ X := by dsimp [X]; omega
+  have hεX : Nat.ceil p.ε⁻¹ ≤ X := by dsimp [X]; omega
+  have hY : 10000000000 ≤ Y := by dsimp [Y]; nlinarith
+  have hnY : n ≤ Y := by dsimp [Y]; omega
+  have hεY : Nat.ceil p.ε⁻¹ ≤ Y := by dsimp [Y]; omega
+  have hLY : s.L ≤ Y ^ 2 := by
+    have hL := schedule_L_le_input n r p
+    change s.L ≤ 2 * n * (n + binaryInputLength n r p + 12) at hL
+    calc
+      s.L ≤ 2 * n * (n + binaryInputLength n r p + 12) := hL
+      _ ≤ 2 * X * (14 * X) := by gcongr <;> omega
+      _ = 28 * X ^ 2 := by ring
+      _ ≤ Y ^ 2 := by
+        calc
+          28 * X ^ 2 ≤ 10000000000 ^ 2 * X ^ 2 := by gcongr; norm_num
+          _ = Y ^ 2 := by dsimp [Y]; ring
+  have hY1 : 1 ≤ Y := by omega
+  have hY2 : 2 ≤ Y := by omega
+  have hLp : s.L + 1 ≤ Y ^ 3 := by
+    have hpow : 1 ≤ Y ^ 2 := one_le_pow₀ hY1
+    calc
+      s.L + 1 ≤ Y ^ 2 + 1 := by omega
+      _ ≤ 2 * Y ^ 2 := by omega
+      _ ≤ Y * Y ^ 2 := Nat.mul_le_mul_right _ hY2
+      _ = Y ^ 3 := by ring
+  have hinner : n * (s.L + 1) + 2 ≤ Y ^ 5 := by
+    have hY4 : 2 ≤ Y ^ 4 := by
+      exact hY2.trans (le_self_pow hY1 (by decide))
+    calc
+      n * (s.L + 1) + 2 ≤ Y * Y ^ 3 + 2 := by gcongr
+      _ = Y ^ 4 + 2 := by ring
+      _ ≤ 2 * Y ^ 4 := by omega
+      _ ≤ Y * Y ^ 4 := Nat.mul_le_mul_right _ hY2
+      _ = Y ^ 5 := by ring
+  change n + s.L + s.τ + s.restartCap + s.observations + s.drawTrials +
+    binaryRatLength s.ρ + s.repetitions + 1 ≤ 10 ^ 500 * X ^ 50
+  calc
+    _ ≤ n + s.L + s.τ + s.restartCap + s.observations +
+        ((3 * s.L * (s.restartCap + s.observations)).log2 + 9) +
+        (4 * n + 6) + s.repetitions + 1 := by omega
+    _ ≤ 10 ^ 500 * X ^ 50 := by
+      -- BLOCKER: L and its inner trace factor are bounded above. Rewriting
+      -- the expanded tau formula to use those bounds exceeded the heartbeat
+      -- limit both through an s.τ equality and through schedule_tau_eq.
+      -- Restart, observation, and final monomial estimates remain.
+      sorry
 
 end CountingMatroid.Analysis.ScheduleValueEnvelope
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r10 · partial · proved rho and L bounds, including n=0; separated the draw-trial bridge and encountered heartbeat limits combining the explicit tau formula.
 * r9 · partial · proved tau and restart formulas and a polynomial observation ceiling bound; the rho encoding and common envelope remain open.
 * r8 · open · proved search caps, denominator growth under division by ten, and L and repetition bounds; full value envelope still needs observation quotient and later-field bounds.
 -/
