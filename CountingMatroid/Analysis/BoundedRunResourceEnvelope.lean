@@ -362,9 +362,11 @@ theorem boundedRun_resource_envelope :
     · exact (boundedRun_zero_phases_otherSteps n r o₁ o₂ tape s hL).trans hquad
   · -- BLOCKER: The three remaining quantitative bounds require one phase invariant
     -- for every reachable current/stored multiplier, observation numeratorSum,
-    -- and running product. In particular, a bound on all AnnealingCursor values
-    -- cannot serve as the step hypothesis of Charged.steps_repeatFor_le: an
-    -- arbitrary cursor can contain multipliers of unbounded binary length.
+    -- observation type count (at most s.observations), and running product.
+    -- A bound on all AnnealingCursor values cannot serve as the step hypothesis
+    -- of Charged.steps_repeatFor_le: an arbitrary cursor can contain multipliers
+    -- of unbounded binary length. Even the isolated charge
+    -- otherSteps (ratMul (2 ^ K : ℚ) 1) is at least K for every K.
     -- The invariant must then bound restartPhase, observePhase, and finishPhase
     -- costs, including acceptance denominators in capped uniform draws.
     refine ⟨boundedRun_value_nonneg n r o₁ o₂ tape s hρ, ?_⟩
@@ -375,6 +377,7 @@ end CountingMatroid.Analysis.BoundedRunResourceEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r12 · open · verified that rational multiplication has unbounded charge on arbitrary input (`otherSteps (ratMul (2 ^ K : ℚ) 1) ≥ K`); a reachable-state invariant must also bound observation counts by the loop length.
 * r11 · open · direct simplification exposed the entire positive-phase fold; the generic charged loop bound requires a price for arbitrary cursors, while rational-operation costs are unbounded without a reachable-state length invariant.
 * r10 · open · audited arbitrary schedule fields and expanded the positive-phase goal; Arlib's fold cost bound needs a state-length invariant for the stored multiplier tables and phase accumulators, which is still absent.
 * r9 · partial recovery · proved nonnegativity of every successful observation accumulator, completed phase ratio, and bounded-run output; the three positive-phase quantitative bounds still need a joint phase-state invariant.
