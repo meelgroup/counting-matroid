@@ -1,4 +1,5 @@
 import CountingMatroid.Model.Run
+import CountingMatroid.Analysis.ScheduleValueEnvelope
 
 set_option autoImplicit false
 
@@ -56,11 +57,40 @@ theorem schedule_resource_envelope :
           binaryRatLength s.ρ + s.repetitions + 1 ≤ C * inputSize ^ degree ∧
         oracleCalls schedule ≤ C * inputSize ^ degree ∧
         otherSteps schedule ≤ C * inputSize ^ degree := by
-    -- BLOCKER: prove binary-length bounds for intermediate rational values
-    -- (especially ε / (32(L+1)) and the observation quotient), then sum the
-    -- charged primitive costs through the two bounded folds. The generic
-    -- `steps_repeatWhile_le` controls total iterations but not operand sizes.
-    sorry
+    obtain ⟨Cv, dv, hv⟩ := ScheduleValueEnvelope.schedule_value_envelope
+    have hcost :
+        ∃ (C degree : ℕ), ∀ (n r : ℕ) (p : InputParams),
+          let inputSize := n + binaryInputLength n r p + Nat.ceil p.ε⁻¹ +
+            binaryNatLength (Nat.ceil p.δ⁻¹) + 1
+          let schedule := CountingMatroid.Program.schedule n p
+          oracleCalls schedule ≤ C * inputSize ^ degree ∧
+          otherSteps schedule ≤ C * inputSize ^ degree := by
+      -- BLOCKER: The rational primitives charge quadratic binary lengths.
+      -- Bound the intermediate eta and observation quotient encodings, then
+      -- sum the two bounded search costs and the straight-line schedule.
+      sorry
+    obtain ⟨Cc, dc, hc⟩ := hcost
+    refine ⟨Cv + Cc, max dv dc, ?_⟩
+    intro n r p
+    let N := n + binaryInputLength n r p + Nat.ceil p.ε⁻¹ +
+      binaryNatLength (Nat.ceil p.δ⁻¹) + 1
+    have hN : 0 < N := by dsimp [N]; omega
+    have hpowV : N ^ dv ≤ N ^ max dv dc :=
+      Nat.pow_le_pow_right hN (le_max_left _ _)
+    have hpowC : N ^ dc ≤ N ^ max dv dc :=
+      Nat.pow_le_pow_right hN (le_max_right _ _)
+    have hCv : Cv ≤ Cv + Cc := by omega
+    have hCc : Cc ≤ Cv + Cc := by omega
+    have hV : Cv * N ^ dv ≤ (Cv + Cc) * N ^ max dv dc :=
+      le_trans (Nat.mul_le_mul_left Cv hpowV)
+        (Nat.mul_le_mul_right _ hCv)
+    have hC : Cc * N ^ dc ≤ (Cv + Cc) * N ^ max dv dc :=
+      le_trans (Nat.mul_le_mul_left Cc hpowC)
+        (Nat.mul_le_mul_right _ hCc)
+    have hv' := hv n r p
+    have hc' := hc n r p
+    dsimp at hv' hc' ⊢
+    exact ⟨le_trans hv' hV, le_trans hc'.1 hC, le_trans hc'.2 hC⟩
   obtain ⟨C, degree, hpoly⟩ := hpoly
   refine ⟨C, degree, ?_⟩
   intro n r p
@@ -71,6 +101,7 @@ end CountingMatroid.Analysis.ScheduleResourceEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r8 · partial · proved generic search counter caps and a linear bound for schedule repetitions; polynomial rational-size and charge bounds remain open.
 * r7 · repaired · isolated the nonnegative schedule base; the remaining envelope requires intermediate rational encoding bounds.
 * r6 · open · isolated schedule arithmetic from the capped-run state invariant.
 -/
