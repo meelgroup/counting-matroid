@@ -41,6 +41,26 @@ theorem fairTape_support_iff_length (m : ℕ) (bits : List Bool) :
             · simpa using hlen
             · exact (PMF.mem_support_pure_iff _ _).mpr rfl
 
+/-- INTERNAL: The finite fair-bit source assigns the same mass to each block
+of the requested length and zero mass to every other list.
+TEXLINE: main.tex:1392-1421 -/
+theorem fairTape_apply (m : ℕ) (bits : List Bool) :
+    CountingMatroid.Model.Run.fairTape m bits =
+      if bits.length = m then (1 / 2 : ENNReal) ^ m else 0 := by
+  induction m generalizing bits with
+  | zero =>
+      change (PMF.pure ([] : List Bool)) bits = _
+      cases bits <;> simp
+  | succ m ih =>
+      change (PMF.bind CountingMatroid.Model.Run.fairBitLaw
+        (fun b => PMF.bind (CountingMatroid.Model.Run.fairTape m)
+          (fun rest => PMF.pure (b :: rest)))) bits = _
+      cases bits with
+      | nil => simp [PMF.bind_apply, PMF.pure_apply]
+      | cons b rest =>
+          cases b <;> simp [PMF.bind_apply, PMF.pure_apply, ih,
+            CountingMatroid.Model.Run.fairBitLaw, pow_succ] <;> simp [mul_comm]
+
 /-- PAPER: main.tex:1253-1421
 The capped annealing run, fed one fresh finite fair-bit block, misses the
 relative-error interval with probability at most one quarter. -/
@@ -77,6 +97,10 @@ theorem single_run_accuracy_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       {bits : List Bool |
         bits.length = CountingMatroid.Model.Run.blockLength n r p} from
     Set.ext (fun bits => hlength bits)]
+  rw [PMF.toOuterMeasure_apply]
+  simp only [Set.indicator, fairTape_apply]
+  -- The summand is now the explicit fair-tape mass of each bad block. Its
+  -- total requires the uncapped phase analysis and a finite-bit coupling.
   sorry
 
 end CountingMatroid.Analysis.SingleRunAccuracy
@@ -84,6 +108,7 @@ end CountingMatroid.Analysis.SingleRunAccuracy
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r3 · open · proved exact fair-tape point masses; the finite bad-block count still needs conditional phase estimates and capped-draw coupling.
 * r2 · open · proved the fair-tape support/length characterization; the conditional phase estimates and capped-draw coupling are still absent.
 * r1 · open · reduced the theorem to the fair-tape error event; `simp_all` and `aesop` leave the same probability bound, and the paper's phase estimates and finite-bit coupling are not formalized.
 -/
