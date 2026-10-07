@@ -1,4 +1,5 @@
 import CountingMatroid.Model.Run
+import CountingMatroid.Analysis.BoundedRunResourceEnvelope
 
 set_option autoImplicit false
 
@@ -144,6 +145,47 @@ private theorem schedule_L_le_input (n r : ℕ) (p : InputParams) :
     unfold binaryInputLength binaryRatLength binaryNatLength
     omega
   exact Nat.mul_le_mul_left _ (Nat.add_le_add_left hbound n)
+
+/-- INTERNAL: The trace length is the paper's explicit polynomial in the phase cap.
+TEXLINE: main.tex:1348-1355 -/
+private theorem schedule_tau_eq (n : ℕ) (p : InputParams) :
+    (CountingMatroid.Program.schedule n p).val.τ =
+      20 * n ^ 4 *
+        (n * (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1) + 2) := by
+  rfl
+
+/-- INTERNAL: The restart cap is determined by the phase cap and trace length.
+TEXLINE: main.tex:1348-1355 -/
+private theorem schedule_restartCap_eq (n : ℕ) (p : InputParams) :
+    (CountingMatroid.Program.schedule n p).val.restartCap =
+      2000 * ((CountingMatroid.Program.schedule n p).val.L + 1) ^ 2 * n ^ 2 *
+        (CountingMatroid.Program.schedule n p).val.τ := by
+  rfl
+
+/-- INTERNAL: The observation count is the ceiling of the charged rational
+quotient. TEXLINE: main.tex:1348-1355 -/
+private theorem schedule_observations_eq (n : ℕ) (p : InputParams) :
+    (CountingMatroid.Program.schedule n p).val.observations =
+      Nat.ceil (((10000000000 *
+          (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1) *
+          n ^ 14 : ℕ) : ℚ) /
+        (p.ε / (↑(32 *
+          (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1)) : ℚ)) ^ 2) := by
+  have hraw :
+      (CountingMatroid.Program.schedule n p).val.observations =
+        Int.toNat (((((10000000000 *
+            (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1) *
+            (CountingMatroid.Program.natPower n 14).val : ℕ) : ℚ) /
+          ((p.ε / (↑(32 *
+            (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1)) : ℚ)) *
+           (p.ε / (↑(32 *
+            (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1)) : ℚ))))).ceil) := by
+    rfl
+  simpa only [Int.ceil_toNat,
+    CountingMatroid.Analysis.BoundedRunResourceEnvelope.natPower_value,
+    ← pow_two] using hraw
+
+
 
 /-- INTERNAL: The concrete schedule fields have a common polynomial envelope
 in the encoded input size.

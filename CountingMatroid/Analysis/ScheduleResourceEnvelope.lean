@@ -1,5 +1,6 @@
 import CountingMatroid.Model.Run
 import CountingMatroid.Analysis.ScheduleValueEnvelope
+import CountingMatroid.Analysis.ScheduleCostEnvelope
 
 set_option autoImplicit false
 
@@ -58,18 +59,7 @@ theorem schedule_resource_envelope :
         oracleCalls schedule ≤ C * inputSize ^ degree ∧
         otherSteps schedule ≤ C * inputSize ^ degree := by
     obtain ⟨Cv, dv, hv⟩ := ScheduleValueEnvelope.schedule_value_envelope
-    have hcost :
-        ∃ (C degree : ℕ), ∀ (n r : ℕ) (p : InputParams),
-          let inputSize := n + binaryInputLength n r p + Nat.ceil p.ε⁻¹ +
-            binaryNatLength (Nat.ceil p.δ⁻¹) + 1
-          let schedule := CountingMatroid.Program.schedule n p
-          oracleCalls schedule ≤ C * inputSize ^ degree ∧
-          otherSteps schedule ≤ C * inputSize ^ degree := by
-      -- BLOCKER: The rational primitives charge quadratic binary lengths.
-      -- Bound the intermediate eta and observation quotient encodings, then
-      -- sum the two bounded search costs and the straight-line schedule.
-      sorry
-    obtain ⟨Cc, dc, hc⟩ := hcost
+    obtain ⟨Cc, dc, hc⟩ := ScheduleCostEnvelope.schedule_cost_envelope
     refine ⟨Cv + Cc, max dv dc, ?_⟩
     intro n r p
     let N := n + binaryInputLength n r p + Nat.ceil p.ε⁻¹ +
@@ -101,6 +91,7 @@ end CountingMatroid.Analysis.ScheduleResourceEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r9 · partial · moved the charged-cost obligation to ScheduleCostEnvelope, which contains proved oracle-free loop lemmas; the parent combines it with the value envelope.
 * r8 · partial · proved generic search counter caps and a linear bound for schedule repetitions; polynomial rational-size and charge bounds remain open.
 * r7 · repaired · isolated the nonnegative schedule base; the remaining envelope requires intermediate rational encoding bounds.
 * r6 · open · isolated schedule arithmetic from the capped-run state invariant.
