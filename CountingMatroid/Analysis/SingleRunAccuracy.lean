@@ -1,5 +1,7 @@
 import CountingMatroid.Interface.Pseudocode
 import Mathlib.Data.Set.Finite.List
+import CountingMatroid.Analysis.AbortTapeBound
+import CountingMatroid.Analysis.InaccurateNonzeroTapeBound
 
 set_option autoImplicit false
 
@@ -117,17 +119,66 @@ theorem single_run_accuracy_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
   dsimp only
   rw [PMF.toOuterMeasure_map_apply]
   rw [fairTape_event_card]
-  -- It remains to count the length-`blockLength` tapes on which the bounded
-  -- annealing run misses the interval. The paper's conditional phase bounds,
-  -- multiplier/product induction, and finite-bit coupling have not yet been
-  -- expressed for `Program.boundedRun`.
-  sorry
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  let m := CountingMatroid.Model.Run.blockLength n r p
+  let answer : List Bool → ℚ := fun bits =>
+    CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
+      (fun i => (bits[i]?).getD false) s
+  let aborts : Set (List Bool) := {bits | bits.length = m ∧ answer bits = 0}
+  let inaccurate : Set (List Bool) := {bits | bits.length = m ∧
+    answer bits ≠ 0 ∧
+      (answer bits < (1 - p.ε) * (commonBaseCount M₁ M₂ : ℚ) ∨
+       (1 + p.ε) * (commonBaseCount M₁ M₂ : ℚ) < answer bits)}
+  have hsubset :
+      {bits : List Bool | bits.length = m ∧
+        bits ∈ (fun bits => answer bits) ⁻¹'
+          {y : ℚ | y < (1 - p.ε) * (commonBaseCount M₁ M₂ : ℚ) ∨
+            (1 + p.ε) * (commonBaseCount M₁ M₂ : ℚ) < y}} ⊆
+        aborts ∪ inaccurate := by
+    intro bits hbits
+    by_cases hz : answer bits = 0
+    · exact Or.inl ⟨hbits.1, hz⟩
+    · exact Or.inr ⟨hbits.1, hz, hbits.2⟩
+  have hfinite : (aborts ∪ inaccurate).Finite := by
+    apply (List.finite_length_eq Bool m).subset
+    intro bits hbits
+    rcases hbits with h | h
+    · exact h.1
+    · exact h.1
+  have habort := AbortTapeBound.abort_tape_mass_bound n r M₁ M₂ o₁ o₂ p
+    hfull hr h₁ h₂ hpositive
+  have hinaccurate :=
+    InaccurateNonzeroTapeBound.inaccurate_nonzero_tape_mass_bound
+      n r M₁ M₂ o₁ o₂ p hfull hr h₁ h₂ hpositive
+  change (Set.ncard {bits : List Bool | bits.length = m ∧
+    bits ∈ (fun bits => answer bits) ⁻¹'
+      {y : ℚ | y < (1 - p.ε) * (commonBaseCount M₁ M₂ : ℚ) ∨
+        (1 + p.ε) * (commonBaseCount M₁ M₂ : ℚ) < y}} : ENNReal) *
+      (1 / 2 : ENNReal) ^ m ≤ 1 / 4
+  calc
+    _ ≤ (Set.ncard (aborts ∪ inaccurate) : ENNReal) * (1 / 2 : ENNReal) ^ m := by
+      gcongr
+    _ ≤ ((Set.ncard aborts : ENNReal) + Set.ncard inaccurate) *
+          (1 / 2 : ENNReal) ^ m := by
+      gcongr
+      exact_mod_cast Set.ncard_union_le aborts inaccurate
+    _ = (Set.ncard aborts : ENNReal) * (1 / 2 : ENNReal) ^ m +
+          (Set.ncard inaccurate : ENNReal) * (1 / 2 : ENNReal) ^ m := by
+      rw [add_mul]
+    _ ≤ (1 / 8 : ENNReal) + 1 / 8 := add_le_add (by simpa [aborts, answer, s, m] using habort)
+      (by simpa [inaccurate, answer, s, m] using hinaccurate)
+    _ = 1 / 4 := by
+      rw [show (1 / 8 : ENNReal) = (1 / 4 : ENNReal) / 2 by
+        rw [show (8 : ENNReal) = 4 * 2 by norm_num]
+        simp [div_eq_mul_inv, ENNReal.mul_inv]]
+      exact ENNReal.add_halves _
 
 end CountingMatroid.Analysis.SingleRunAccuracy
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r5 · open · split bad finite tapes into zero-output aborts and inaccurate nonzero outputs; the parent union proof checks, but both event-mass bounds remain open and the live child handoff was rejected mechanically.
 * r4 · open · proved the exact finite-event cardinality formula; the bad-tape count still needs conditional phase estimates and capped-draw coupling.
 * r3 · open · proved exact fair-tape point masses; the finite bad-block count still needs conditional phase estimates and capped-draw coupling.
 * r2 · open · proved the fair-tape support/length characterization; the conditional phase estimates and capped-draw coupling are still absent.
