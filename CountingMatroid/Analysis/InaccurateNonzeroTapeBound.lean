@@ -1,5 +1,7 @@
 import CountingMatroid.Interface.Pseudocode
 import Mathlib.Data.Set.Finite.List
+import CountingMatroid.Analysis.TransversalPartition
+import CountingMatroid.Analysis.FiniteTapeProductAccuracy
 
 set_option autoImplicit false
 
@@ -52,22 +54,21 @@ theorem inaccurate_nonzero_tape_mass_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin
     CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
       (fun i => (bits[i]?).getD false) s
   have hz : 0 ≤ z := by simp [z]
-  -- BLOCKER: The witness is the paper's final transversal partition sum c₀(q_L),
-  -- but no analysis-side partition sum or stationary law has been defined.
-  -- To prove its tape-mass bound, one must formalize the conditional restart
-  -- and observable estimates of main.tex:1210-1287, the weight/product induction
-  -- of main.tex:1289-1323, and the uncapped-to-capped finite-bit coupling of
-  -- main.tex:1392-1421. Program.boundedRun exposes only answer and bit cursor,
-  -- so these event bounds require an execution-level correspondence first.
-  have hphase : ∃ c : ℚ,
-      z ≤ c ∧ c ≤ (1 + p.ε / 10) * z ∧
+  let c : ℚ := TransversalPartition.partitionSum r o₁ o₂ (s.ρ ^ s.L)
+  have hcontamination : z ≤ c ∧ c ≤ (1 + p.ε / 10) * z := by
+    simpa only [z, c, s] using
+      (TransversalPartition.transversal_partition_contamination
+        n r M₁ M₂ o₁ o₂ p hfull hr h₁ h₂ hpositive)
+  obtain ⟨hcLower, hcUpper⟩ := hcontamination
+  have hmass :
       (Set.ncard {bits : List Bool | bits.length = m ∧
         answer bits ≠ 0 ∧
           (answer bits < (1 - p.ε / 4) * c ∨
            (1 + p.ε / 4) * c < answer bits)} : ENNReal) *
         (1 / 2 : ENNReal) ^ m ≤ (1 / 8 : ENNReal) := by
-    sorry
-  obtain ⟨c, hcLower, hcUpper, hmass⟩ := hphase
+    simpa only [answer, c, s, m] using
+      (FiniteTapeProductAccuracy.finite_tape_product_accuracy
+        n r M₁ M₂ o₁ o₂ p hfull hr h₁ h₂ hpositive)
   let bad : Set (List Bool) := {bits | bits.length = m ∧
     answer bits ≠ 0 ∧
       (answer bits < (1 - p.ε) * z ∨
@@ -108,6 +109,7 @@ end CountingMatroid.Analysis.InaccurateNonzeroTapeBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r8 · decomposed · the parent now elaborates from a concrete transversal partition sum; its contamination and finite-tape product estimates are separate open children. The live handoff request command was refused before execution.
 * r7 · blocked · exact? and aesop leave the partition-sum/product-error witness; project search found no analytic partition sum, conditional phase law, or capped-draw coupling.
 * r6 · decomposed · proved the deterministic product/contamination comparison and reduced the tape bound to a partition-sum witness with a narrower product-error event; its conditional phase estimate and finite-bit coupling remain open.
 * r5 · open · direct simplification reduces the claim to a nonzero bad-tape count bound; phase estimates and product induction for `Program.boundedRun` are missing.
