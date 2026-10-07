@@ -521,6 +521,46 @@ theorem scheduled_boundedRun_nonneg (n r : ℕ)
   exact (hrun n r o₁ o₂ tape (CountingMatroid.Program.schedule n p).val
     (hschedule n r p).1).1
 
+/-- INTERNAL: An early pretest answer is the estimator's answer, and the
+estimator incurs exactly the pretest charges on that branch.
+TEXLINE: main.tex:1442-1469 -/
+theorem estimate_preliminary_branch (contract : FeasibilityContract)
+    (n r : ℕ) (o₁ o₂ : IndependenceOracle n) (p : InputParams)
+    (tape : ℕ → ℕ → Bool) (q : ℚ)
+    (h : (CountingMatroid.Program.preprocess contract.implementation
+      n r o₁ o₂).val = some q) :
+    let pre := CountingMatroid.Program.preprocess contract.implementation
+      n r o₁ o₂
+    let run := CountingMatroid.Program.estimate contract.implementation
+      n r o₁ o₂ p tape
+    run.val = q ∧ oracleCalls run = oracleCalls pre ∧
+      otherSteps run = otherSteps pre := by
+  dsimp
+  simp [CountingMatroid.Program.estimate, h, oracleCalls, otherSteps]
+
+/-- INTERNAL: The early-answer branch already satisfies the pretest's exact
+resource bounds and answer sign, independently of schedule construction.
+TEXLINE: main.tex:1442-1469 -/
+theorem estimate_preliminary_resource_bound (contract : FeasibilityContract)
+    (n r : ℕ) (o₁ o₂ : IndependenceOracle n) (p : InputParams)
+    (tape : ℕ → ℕ → Bool) (q : ℚ)
+    (h : (CountingMatroid.Program.preprocess contract.implementation
+      n r o₁ o₂).val = some q) :
+    let run := CountingMatroid.Program.estimate contract.implementation
+      n r o₁ o₂ p tape
+    0 ≤ run.val ∧
+    oracleCalls run ≤ contract.callConstant * (n + r + 1) ^ contract.callDegree ∧
+    otherSteps run ≤
+      contract.bitConstant * (n + r + 1) ^ contract.bitDegree + 1 := by
+  obtain ⟨hval, hcalls, hsteps⟩ :=
+    estimate_preliminary_branch contract n r o₁ o₂ p tape q h
+  obtain ⟨hpreCalls, hpreSteps⟩ :=
+    preprocess_resource_bound contract n r o₁ o₂
+  dsimp at *
+  rw [hval, hcalls, hsteps]
+  exact ⟨preprocess_answer_nonneg contract n r o₁ o₂ q h,
+    hpreCalls, hpreSteps⟩
+
 /-- PAPER: main.tex:1333-1440, 1455-1469
 Every branch of the charged estimator, including abort branches, has a
 nonnegative answer and polynomial charged costs. -/
@@ -536,17 +576,97 @@ theorem estimate_run_bound (contract : FeasibilityContract) :
       0 ≤ run.val ∧
       oracleCalls run ≤ C * (size + 1) ^ degree ∧
       otherSteps run ≤ C * (size + 1) ^ degree := by
-  have hrunNonneg := scheduled_boundedRun_nonneg
-  obtain ⟨_, _, hschedule⟩ :=
-    ScheduleResourceEnvelope.schedule_resource_envelope
-  obtain ⟨_, _, hrun⟩ :=
-    BoundedRunResourceEnvelope.boundedRun_resource_envelope
-  -- The envelopes separate schedule arithmetic from the phase-state
-  -- invariant. The remaining composition needs a charged median bound for
-  -- lists of nonnegative outputs with polynomial rational encoding length,
-  -- then combines schedule, repetitions, pretest, and run charges.
-  -- `hrunNonneg`, `hschedule`, and `hrun` are the three inputs to that step.
-  sorry
+  have hnone : ∃ (C degree : ℕ), ∀ (n r : ℕ)
+      (o₁ o₂ : IndependenceOracle n) (p : InputParams)
+      (tape : ℕ → ℕ → Bool), r ≤ n →
+      (CountingMatroid.Program.preprocess contract.implementation
+        n r o₁ o₂).val = none →
+      let run := CountingMatroid.Program.estimate contract.implementation
+        n r o₁ o₂ p tape
+      let size := n + binaryInputLength n r p + Nat.ceil p.ε⁻¹ +
+        binaryNatLength (Nat.ceil p.δ⁻¹)
+      0 ≤ run.val ∧
+      oracleCalls run ≤ C * (size + 1) ^ degree ∧
+      otherSteps run ≤ C * (size + 1) ^ degree := by
+    -- BLOCKER: On this branch, the charged median scan needs a polynomial
+    -- bound from the bounded-run rational lengths; the earlier unfolding
+    -- route did not provide an invariant for its sorted accumulator.
+    sorry
+  obtain ⟨Cnone, Dnone, hnone⟩ := hnone
+  let callCoeff := contract.callConstant * 2 ^ contract.callDegree
+  let bitCoeff := contract.bitConstant * 2 ^ contract.bitDegree
+  let C := Cnone + callCoeff + bitCoeff + 1
+  let degree := Dnone + contract.callDegree + contract.bitDegree + 1
+  refine ⟨C, degree, ?_⟩
+  intro n r o₁ o₂ p tape hr
+  let size := n + binaryInputLength n r p + Nat.ceil p.ε⁻¹ +
+    binaryNatLength (Nat.ceil p.δ⁻¹)
+  let x := size + 1
+  have hx : 1 ≤ x := by dsimp [x]; omega
+  have hpower (c d : ℕ) (hc : c ≤ C) (hd : d ≤ degree) :
+      c * x ^ d ≤ C * x ^ degree := by
+    exact Nat.mul_le_mul hc (pow_le_pow_right₀ hx hd)
+  by_cases hp : (CountingMatroid.Program.preprocess contract.implementation
+      n r o₁ o₂).val = none
+  · obtain ⟨hnonneg, hcalls, hsteps⟩ := hnone n r o₁ o₂ p tape hr hp
+    dsimp at hnonneg hcalls hsteps ⊢
+    refine ⟨hnonneg, le_trans hcalls ?_, le_trans hsteps ?_⟩
+    · exact hpower Cnone Dnone (by dsimp [C]; omega)
+        (by dsimp [degree]; omega)
+    · exact hpower Cnone Dnone (by dsimp [C]; omega)
+        (by dsimp [degree]; omega)
+  · cases hq : (CountingMatroid.Program.preprocess contract.implementation
+        n r o₁ o₂).val with
+    | none => exact False.elim (hp hq)
+    | some q =>
+        obtain ⟨hnonneg, hcalls, hsteps⟩ :=
+          estimate_preliminary_resource_bound contract n r o₁ o₂ p tape q hq
+        dsimp at hnonneg hcalls hsteps ⊢
+        have hnsize : n ≤ size := by dsimp [size]; omega
+        have hbase : n + r + 1 ≤ 2 * x := by
+          dsimp [x]
+          omega
+        have hcallPow := Nat.pow_le_pow_left hbase contract.callDegree
+        have hbitPow := Nat.pow_le_pow_left hbase contract.bitDegree
+        have hcall : contract.callConstant * (n + r + 1) ^ contract.callDegree ≤
+            callCoeff * x ^ contract.callDegree := by
+          calc
+            _ ≤ contract.callConstant * (2 * x) ^ contract.callDegree :=
+              Nat.mul_le_mul_left _ hcallPow
+            _ = callCoeff * x ^ contract.callDegree := by
+              dsimp [callCoeff]
+              rw [mul_pow]
+              ring
+        have hbit : contract.bitConstant * (n + r + 1) ^ contract.bitDegree ≤
+            bitCoeff * x ^ contract.bitDegree := by
+          calc
+            _ ≤ contract.bitConstant * (2 * x) ^ contract.bitDegree :=
+              Nat.mul_le_mul_left _ hbitPow
+            _ = bitCoeff * x ^ contract.bitDegree := by
+              dsimp [bitCoeff]
+              rw [mul_pow]
+              ring
+        refine ⟨hnonneg, le_trans hcalls (le_trans hcall ?_), ?_⟩
+        · exact hpower callCoeff contract.callDegree
+            (by dsimp [C]; omega) (by dsimp [degree]; omega)
+        · have hbitMain : bitCoeff * x ^ contract.bitDegree ≤
+              bitCoeff * x ^ degree :=
+            Nat.mul_le_mul_left _ (pow_le_pow_right₀ hx
+              (by dsimp [degree]; omega))
+          have hone : 1 ≤ x ^ degree := one_le_pow₀ hx
+          have hcoef : (bitCoeff + 1) * x ^ degree ≤ C * x ^ degree :=
+            Nat.mul_le_mul_right _ (by dsimp [C]; omega)
+          change otherSteps (CountingMatroid.Program.estimate
+            contract.implementation n r o₁ o₂ p tape) ≤ C * x ^ degree
+          calc
+            _ ≤ contract.bitConstant * (n + r + 1) ^ contract.bitDegree + 1 :=
+              hsteps
+            _ ≤ bitCoeff * x ^ contract.bitDegree + 1 :=
+              Nat.add_le_add_right hbit 1
+            _ ≤ bitCoeff * x ^ degree + x ^ degree :=
+              Nat.add_le_add hbitMain hone
+            _ = (bitCoeff + 1) * x ^ degree := by ring
+            _ ≤ C * x ^ degree := hcoef
 
 /-- INTERNAL: A pointwise charged-run bound transfers to every supported
 value of the output law. -/
@@ -579,6 +699,7 @@ end CountingMatroid.Analysis.ResourceBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r7 · open · proved exact and bounded early-answer branches; reduced the estimator theorem to the `preprocess = none` branch, whose median scan still needs a rational-length cost invariant.
 * r6 · open · split schedule arithmetic and capped-run rational invariants into independently elaborated resource envelopes; the estimator still needs median and charge composition.
 * r5 · open · proved charged rational-power value and nonnegativity, and zero oracle calls for rational acceptance; the full polynomial bound still needs rational-size invariants.
 * r4 · open · proved zero oracle cost for classification, bounded uniform draws, and paired selection, plus a `2*n` oracle cap for observation recording; rational-size invariants still block the full run bound.
