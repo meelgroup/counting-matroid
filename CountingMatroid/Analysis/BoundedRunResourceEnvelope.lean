@@ -25,6 +25,43 @@ theorem natPower_value (base exponent : ℕ) :
   unfold CountingMatroid.Program.natPower Arlib.Computation.Charged.repeatFor
   simpa using natPower_fold_value base (List.range exponent) 1
 
+/-- INTERNAL: The charged rational-power loop computes exponentiation. -/
+theorem ratPower_value (base : ℚ) (exponent : ℕ) :
+    (CountingMatroid.Program.ratPower base exponent).val = base ^ exponent := by
+  have fold_value (l : List ℕ) (acc : ℚ) :
+      (Arlib.Computation.Charged.foldl (fun acc _ => ratMul acc base) l acc).val =
+        acc * base ^ l.length := by
+    induction l generalizing acc with
+    | nil => simp
+    | cons _ xs ih =>
+        rw [Arlib.Computation.Charged.val_foldl_cons, ih]
+        simp [ratMul, pow_succ]
+        ring
+  unfold CountingMatroid.Program.ratPower Arlib.Computation.Charged.repeatFor
+  simpa using fold_value (List.range exponent) 1
+
+/-- INTERNAL: Recording an observation preserves a nonnegative rational accumulator.
+TEXLINE: main.tex:1362-1378 -/
+theorem recordObservation_numerator_nonneg {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (rho : ℚ)
+    (current next : CountingMatroid.Program.ObservationCursor n)
+    (hρ : 0 ≤ rho) (hcur : 0 ≤ current.numeratorSum)
+    (h : (CountingMatroid.Program.recordObservation r o₁ o₂ rho current).val =
+      some next) : 0 ≤ next.numeratorSum := by
+  simp only [CountingMatroid.Program.recordObservation,
+    Arlib.Computation.Charged.val_bind] at h
+  split at h
+  · simp at h
+  · simp [countIncrement] at h
+    subst next
+    exact hcur
+  · simp only [Arlib.Computation.Charged.val_bind,
+      Arlib.Computation.Charged.val_pure] at h
+    cases Option.some.inj h
+    simp only [ratAdd, Arlib.Computation.Charged.val_opMany, ratPower_value,
+      CountingMatroid.Model.Operations.natSub] at *
+    positivity
+
 /-- INTERNAL: With no annealing phases the run returns the initial scale.
 TEXLINE: main.tex:1430-1440 -/
 theorem boundedRun_zero_phases_value (n r : ℕ) (o₁ o₂ : IndependenceOracle n)
