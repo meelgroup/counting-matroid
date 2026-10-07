@@ -181,9 +181,42 @@ private theorem schedule_observations_eq (n : ℕ) (p : InputParams) :
            (p.ε / (↑(32 *
             (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1)) : ℚ))))).ceil) := by
     rfl
-  simpa only [Int.ceil_toNat,
+  have hceil (q : ℚ) : q.ceil = ⌈q⌉ := by
+    symm
+    apply Int.ceil_eq_iff.mpr
+    constructor
+    · have h := Rat.ceil_lt (x := q)
+      linarith
+    · exact Rat.le_ceil
+  rw [hceil, Int.ceil_toNat,
     CountingMatroid.Analysis.BoundedRunResourceEnvelope.natPower_value,
-    ← pow_two] using hraw
+    ← pow_two] at hraw
+  exact hraw
+
+/-- INTERNAL: The observation count is bounded using the ceiling of inverse
+accuracy, so the rational division cannot make it superpolynomial.
+TEXLINE: main.tex:1348-1355 -/
+private theorem schedule_observations_le (n : ℕ) (p : InputParams) :
+    (CountingMatroid.Program.schedule n p).val.observations ≤
+      10000000000 * ((CountingMatroid.Program.schedule n p).val.L + 1) * n ^ 14 *
+        (32 * ((CountingMatroid.Program.schedule n p).val.L + 1)) ^ 2 *
+        (Nat.ceil p.ε⁻¹) ^ 2 := by
+  rw [schedule_observations_eq, schedule_L_eq]
+  let A := 10000000000 *
+    (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1) * n ^ 14
+  let B := 32 *
+    (2 * n * (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val) + 1)
+  change Nat.ceil ((A : ℚ) / (p.ε / (B : ℚ)) ^ 2) ≤
+    A * B ^ 2 * (Nat.ceil p.ε⁻¹) ^ 2
+  rw [Nat.ceil_le]
+  have h : (A : ℚ) / (p.ε / (B : ℚ)) ^ 2 =
+      (A : ℚ) * (B : ℚ) ^ 2 * p.ε⁻¹ ^ 2 := by
+    field_simp
+  rw [h]
+  push_cast
+  gcongr
+  · exact (inv_pos.mpr p.ε_pos).le
+  · exact Nat.le_ceil _
 
 
 
@@ -197,10 +230,10 @@ theorem schedule_value_envelope :
       let s := (CountingMatroid.Program.schedule n p).val
       n + s.L + s.τ + s.restartCap + s.observations + s.drawTrials +
         binaryRatLength s.ρ + s.repetitions + 1 ≤ C * inputSize ^ degree := by
-  -- BLOCKER: L and repetitions are bounded above; still derive polynomial
-  -- bounds for tau, restartCap, observations, drawTrials, and rho's encoding.
-  -- In particular observationQuotient contains eta⁻², and its rational
-  -- encoding size needs a bound before the ceiling can be estimated.
+  -- BLOCKER: schedule_observations_le now bounds the eta⁻² ceiling. The
+  -- remaining goal is to combine all explicit field bounds into one power
+  -- of inputSize. This still needs a bound on binaryRatLength s.ρ, which
+  -- requires numerator and denominator bounds for 1 - 1 / (2 * n).
   sorry
 
 end CountingMatroid.Analysis.ScheduleValueEnvelope
@@ -208,5 +241,6 @@ end CountingMatroid.Analysis.ScheduleValueEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r9 · partial · proved tau and restart formulas and a polynomial observation ceiling bound; the rho encoding and common envelope remain open.
 * r8 · open · proved search caps, denominator growth under division by ten, and L and repetition bounds; full value envelope still needs observation quotient and later-field bounds.
 -/
