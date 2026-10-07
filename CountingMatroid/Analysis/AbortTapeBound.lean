@@ -88,6 +88,7 @@ end CountingMatroid.Analysis.AbortTapeBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r10 · blocked · checked the positive-ground branch against `Program.boundedRun`, `traceReturn`, `observePhase`, and the project analysis: no finite-tape abort-event law or uncapped-to-capped coupling is available; the paper's Markov and MSE bounds have no Lean counterparts here.
 * r9 · blocked · `aesop` and `simp_all` leave the exact positive-ground abort-tape mass inequality; source search found no uncapped phase-failure law, abort-status cover, or finite-tape coupling for `boundedRun`.
 * r8 · partial · proved the empty-ground case using the schedule's zero phase count and `boundedRun_zero_phases_value`; the positive-ground tape mass remains open.
 * r7 · blocked · source audit found no abort-status cover, uncapped restart law, or finite-tape coupling; direct `rfl` and targeted schedule simplification did not yield even the empty-ground subcase.
