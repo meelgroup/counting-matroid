@@ -1,0 +1,28 @@
+name = "countingmatroid"
+defaultTargets = ["CountingMatroid", "CountingMatroidTest"]
+
+# Pinned so a fresh clone builds without a version hunt. If you bump the
+# toolchain in lean-toolchain, bump both revs below to match.
+#
+# Run `lake exe cache get` after `lake update` — otherwise you compile
+# Mathlib from source, which takes hours.
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.33.0"
+
+# Reusable, problem-independent material (finite probability, multiplicative
+# error algebra, automata lower bounds, MDPs, …) lives here. Look for a lemma
+# in arlib before proving it in this project.
+[[require]]
+name = "arlib"
+git = "https://github.com/meelgroup/arlib.git"
+rev = "main"
+
+[[lean_lib]]
+name = "CountingMatroid"
+
+[[lean_lib]]
+name = "CountingMatroidTest"

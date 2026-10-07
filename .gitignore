@@ -1,0 +1,13 @@
+# The build directory is gigabytes (Mathlib cache + oleans).
+# Letting it into the repo is the single most common release hazard.
+/.lake/
+/build/
+*.olean
+*.olean.tmp
+.DS_Store
+
+# Where agents put throwaway files — a two-line module that imports one
+# declaration and runs '#print axioms' on it, and nothing else. They need
+# somewhere inside the project for these: /tmp is outside the directories an
+# agent is given, so every route to it is refused.
+/scratch/
