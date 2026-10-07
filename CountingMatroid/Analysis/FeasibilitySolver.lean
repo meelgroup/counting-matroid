@@ -64,6 +64,9 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
   -- `oracleCalls` and `otherSteps` on that same implementation.
   -- The bridge from that decision to the required common-base answer is
   -- proved above; no executable polynomial solver is installed here.
+  -- Enumerating candidate `Finset (Fin n)`s gives a decision procedure,
+  -- but has exponentially many oracle queries and cannot establish
+  -- `FeasibilityBounded`.
   sorry
 
 end CountingMatroid.Analysis.FeasibilitySolver
@@ -71,6 +74,7 @@ end CountingMatroid.Analysis.FeasibilitySolver
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r5 · open · searched pinned Mathlib and Arlib for matroid-intersection code; none supplies a charged polynomial pretest, while exhaustive candidate enumeration has exponential oracle cost.
 * r4 · decomposed · proved the common-base/size-r-independent bridge and narrowed the remaining executable solver obligation to the predicate in Schrijver's cited pretest.
 * r3 · open · recovery identified the irreducible boundary as executable charged code plus correctness and two uniform cost bounds; no smaller cited library theorem supplies it.
 * r2 · open · checked the contract, its project uses, and pinned Matroid/Computation sources; no executable polynomial matroid-intersection result supplies this contract.
