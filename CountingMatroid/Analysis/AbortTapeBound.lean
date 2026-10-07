@@ -22,8 +22,21 @@ theorem abort_tape_mass_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
         (fun i => (bits[i]?).getD false) s = 0} : ENNReal) *
       (1 / 2 : ENNReal) ^ m ≤ (1 / 8 : ENNReal) := by
-  -- The restart and capped-draw estimates have not been formalized for
-  -- `Program.boundedRun`; unfolding the program leaves those estimates open.
+  -- BLOCKER (main.tex:1202-1280,1392-1421): the paper bounds two events in
+  -- an uncapped experiment: an unsuccessful restart or a missing observed
+  -- type, and exhaustion of the rejection sampler's trial cap. Neither that
+  -- experiment nor a coupling to `Program.boundedRun` exists in the current
+  -- analysis. `Program.boundedRun` returns only `(estimate, bitCursor)`, so
+  -- unfolding its value cannot identify which abort branch produced zero.
+  -- Executable next step: instrument an analysis-only run with a status that
+  -- distinguishes restart, zero-type, and bounded-draw aborts. Prove its
+  -- estimate equals `Program.boundedRun.val.1` on every tape, then prove that
+  -- positive completed ratios exclude zero output. This gives a *cover* of
+  -- this exact zero-output event by the three status events. Bound restart and
+  -- zero-type statuses using the paper's conditional phase estimates, and
+  -- draw status using the trial-cap coupling. Only then apply a finite-tape
+  -- union bound. Merely changing the event to `singleRun = 0` under another
+  -- name does not reduce the present obligation.
   sorry
 
 end CountingMatroid.Analysis.AbortTapeBound
@@ -31,5 +44,6 @@ end CountingMatroid.Analysis.AbortTapeBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r6 · blocked · `boundedRun` erases abort causes and no uncapped experiment or coupling is formalized; the exact event cover and conditional bounds are specified above.
 * r5 · open · direct simplification reduces the claim to an abort-tape count bound; restart and capped-draw estimates for `Program.boundedRun` are missing.
 -/
