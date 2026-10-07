@@ -246,6 +246,32 @@ theorem ratPower_oracleCalls_zero (q : ℚ) (exponent : ℕ) :
     (by intro _ _; simp [ratMul, oracleCalls]) exponent 1
   simpa [CountingMatroid.Program.ratPower] using Nat.eq_zero_of_le_zero h
 
+/-- INTERNAL: The charged power loop computes ordinary rational exponentiation.
+TEXLINE: main.tex:1386-1390 -/
+theorem ratPower_val_eq (q : ℚ) (exponent : ℕ) :
+    (CountingMatroid.Program.ratPower q exponent).val = q ^ exponent := by
+  have hfold : ∀ (l : List ℕ) (acc : ℚ),
+      (Arlib.Computation.Charged.foldl (fun acc _ => ratMul acc q) l acc).val =
+        acc * q ^ l.length := by
+    intro l
+    induction l with
+    | nil => intro acc; simp
+    | cons _ l ih =>
+        intro acc
+        simp only [Arlib.Computation.Charged.val_foldl_cons, List.length_cons]
+        rw [ih]
+        simp [ratMul, pow_succ]
+        ring
+  unfold CountingMatroid.Program.ratPower Arlib.Computation.Charged.repeatFor
+  simpa using hfold (List.range exponent) 1
+
+/-- INTERNAL: Nonnegative phase weights remain nonnegative through the charged
+power loop. TEXLINE: main.tex:1386-1390 -/
+theorem ratPower_val_nonneg (q : ℚ) (exponent : ℕ) (hq : 0 ≤ q) :
+    0 ≤ (CountingMatroid.Program.ratPower q exponent).val := by
+  rw [ratPower_val_eq]
+  positivity
+
 /-- INTERNAL: Evaluating one paired-state weight uses at most one paired rank.
 TEXLINE: main.tex:1380-1390 -/
 theorem weightOfKind_oracleCalls_le {n : ℕ} (r : ℕ)
@@ -433,6 +459,50 @@ theorem selectPaired_oracleCalls_zero {n : ℕ} (state : PairedSet n)
   rw [hz]
   simp [oracleCalls]
 
+/-- INTERNAL: The rational acceptance comparison uses no independence query.
+TEXLINE: main.tex:1392-1421 -/
+theorem acceptance_oracleCalls_zero {n : ℕ} (tape : ℕ → Bool)
+    (drawTrials : ℕ) (oldWeight newWeight : ℚ)
+    (state candidate : PairedSet n) (cursor : ℕ) :
+    oracleCalls (do
+      let ratio ← ratDiv newWeight oldWeight
+      let needsDraw ← ratLess ratio 1
+      if needsDraw then
+        let denominator ← rationalDenominator ratio
+        let numerator ← rationalNumerator ratio
+        let acceptedDraw ← CountingMatroid.Program.boundedUniform tape drawTrials
+          denominator cursor
+        match acceptedDraw.1 with
+        | none => pure none
+        | some value =>
+            let accepted ← lessThan value numerator
+            if accepted then pure (some (candidate, acceptedDraw.2))
+            else pure (some (state, acceptedDraw.2))
+      else pure (some (candidate, cursor))) = 0 := by
+  simp only [oracleCalls_bind]
+  have hdiv : oracleCalls (ratDiv newWeight oldWeight) = 0 := by
+    simp [ratDiv, oracleCalls]
+  have hless : ∀ a b : ℚ, oracleCalls (ratLess a b) = 0 := by
+    intro a b
+    simp [ratLess, oracleCalls]
+  have hden : ∀ a : ℚ, oracleCalls (rationalDenominator a) = 0 := by
+    intro a
+    simp [rationalDenominator, oracleCalls]
+  have hnum : ∀ a : ℚ, oracleCalls (rationalNumerator a) = 0 := by
+    intro a
+    simp [rationalNumerator, oracleCalls]
+  simp only [hdiv, hless, Nat.zero_add]
+  split_ifs
+  · simp only [oracleCalls_bind]
+    simp only [hden, hnum, Nat.zero_add]
+    rw [boundedUniform_oracleCalls_zero]
+    simp only [Nat.zero_add]
+    split
+    · simp [oracleCalls]
+    · simp [lessThan, oracleCalls]
+      split_ifs <;> simp
+  · simp [oracleCalls]
+
 /-- PAPER: main.tex:1333-1440, 1455-1469
 Every branch of the charged estimator, including abort branches, has a
 nonnegative answer and polynomial charged costs. -/
@@ -490,6 +560,7 @@ end CountingMatroid.Analysis.ResourceBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r5 · open · proved charged rational-power value and nonnegativity, and zero oracle calls for rational acceptance; the full polynomial bound still needs rational-size invariants.
 * r4 · open · proved zero oracle cost for classification, bounded uniform draws, and paired selection, plus a `2*n` oracle cap for observation recording; rational-size invariants still block the full run bound.
 * r3 · open · proved greedy and paired rank oracle caps and zero oracle cost of rational powers; the annealing phase still needs rational-size invariants.
 * r2 · open · proved charged bind/loop and pretest resource lemmas; the annealing phase bound still needs rational-size invariants.
