@@ -29,15 +29,65 @@ theorem finite_tape_product_accuracy (n r : ℕ)
         (y < (1 - p.ε / 4) * c ∨
          (1 + p.ε / 4) * c < y)} : ENNReal) *
       (1 / 2 : ENNReal) ^ m ≤ (1 / 8 : ENNReal) := by
-  -- BLOCKER: No law for an uncapped run, conditional stationary phase bound,
-  -- or coupling to `singleRun` has been formalized. `Program.boundedRun`
-  -- retains only estimate and bit cursor after folding phase status.
-  sorry
+  by_cases hn : n = 0
+  · subst n
+    have hL : (CountingMatroid.Interface.Pseudocode.setup 0 p).L = 0 := by
+      unfold CountingMatroid.Interface.Pseudocode.setup CountingMatroid.Program.schedule
+      simp only [Arlib.Computation.Charged.val_bind,
+        Arlib.Computation.Charged.val_pure, CountingMatroid.Model.Operations.natMul,
+        CountingMatroid.Model.Operations.natAdd,
+        CountingMatroid.Model.Operations.ratDiv,
+        Arlib.Computation.Charged.val_op,
+        Arlib.Computation.Charged.val_opMany]
+      simp
+    have hrun (bits : List Bool) :
+        CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
+          (fun i => (bits[i]?).getD false)
+          (CountingMatroid.Interface.Pseudocode.setup 0 p) = (1 : ℚ) := by
+      simp [CountingMatroid.Interface.Pseudocode.singleRun,
+        CountingMatroid.Program.boundedRun, hL,
+        CountingMatroid.Program.natPower,
+        CountingMatroid.Model.Operations.ratMul,
+        CountingMatroid.Model.Operations.ratOfNat,
+        Arlib.Computation.Charged.repeatFor]
+    have hc : CountingMatroid.Analysis.TransversalPartition.partitionSum
+        r o₁ o₂ ((CountingMatroid.Interface.Pseudocode.setup 0 p).ρ ^
+          (CountingMatroid.Interface.Pseudocode.setup 0 p).L) = 1 := by
+      simp [CountingMatroid.Analysis.TransversalPartition.partitionSum,
+        CountingMatroid.Analysis.TransversalPartition.transversalDeficiency,
+        CountingMatroid.Analysis.TransversalPartition.transversalState]
+    have hempty : {bits : List Bool |
+        bits.length = CountingMatroid.Model.Run.blockLength 0 r p ∧
+        let y := CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
+          (fun i => (bits[i]?).getD false)
+          (CountingMatroid.Interface.Pseudocode.setup 0 p)
+        y ≠ 0 ∧
+          (y < (1 - p.ε / 4) * 1 ∨ (1 + p.ε / 4) * 1 < y)} = ∅ := by
+      ext bits
+      simp only [Set.mem_ofPred_eq, Set.mem_empty_iff_false, iff_false]
+      intro h
+      rw [hrun] at h
+      rcases h.2.2 with hbad | hbad <;> nlinarith [p.ε_pos]
+    simp only [hc, hempty, Set.ncard_empty, Nat.cast_zero, zero_mul]
+    norm_num
+  · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
+    -- BLOCKER (main.tex:1207-1315,1392-1421): `aesop` leaves precisely this
+    -- positive-ground event-mass inequality. Unfolding the schedule and run
+    -- closes only the zero-phase case above. The imported analysis has no
+    -- conditional phase law for successful prior histories: in particular no
+    -- restart-cap Markov bound, observation MSE bound, or learned-weight
+    -- invariant. It also has no coupling of those uncapped laws to
+    -- `Program.boundedRun`, which folds phase status into `Option` and returns
+    -- only `(estimate, bitCursor)`. A finite-tape event bound for this exact
+    -- `singleRun` is needed after that coupling; no theorem in the current
+    -- imports supplies one. This is a same-paper proof obligation, not Prior.
+    sorry
 
 end CountingMatroid.Analysis.FiniteTapeProductAccuracy
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r9 · partial · proved the empty-ground event is empty; positive-ground `aesop` leaves the event-mass inequality, with conditional phase bounds and capped finite-tape coupling absent.
 * r8 · open · `aesop` leaves the finite-tape product-event bound; no conditional phase law or uncapped-to-capped coupling is formalized.
 -/
