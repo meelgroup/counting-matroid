@@ -1,4 +1,5 @@
 import CountingMatroid.Interface.Pseudocode
+import Mathlib.Data.Set.Finite.List
 
 set_option autoImplicit false
 
@@ -61,6 +62,40 @@ theorem fairTape_apply (m : ℕ) (bits : List Bool) :
           cases b <;> simp [PMF.bind_apply, PMF.pure_apply, ih,
             CountingMatroid.Model.Run.fairBitLaw, pow_succ] <;> simp [mul_comm]
 
+/-- INTERNAL: The probability of a finite-tape event is its number of
+length-`m` tapes times the mass of one tape.
+TEXLINE: main.tex:1392-1421 -/
+theorem fairTape_event_card (m : ℕ) (event : Set (List Bool)) :
+    (CountingMatroid.Model.Run.fairTape m).toOuterMeasure event =
+      (Set.ncard {bits : List Bool | bits.length = m ∧ bits ∈ event} : ENNReal) *
+        (1 / 2 : ENNReal) ^ m := by
+  classical
+  let good : Set (List Bool) := {bits | bits.length = m ∧ bits ∈ event}
+  have hfinite : good.Finite :=
+    (List.finite_length_eq Bool m).subset (by intro bits h; exact h.1)
+  have hevent :
+      (CountingMatroid.Model.Run.fairTape m).toOuterMeasure event =
+        (CountingMatroid.Model.Run.fairTape m).toOuterMeasure good := by
+    apply PMF.toOuterMeasure_apply_eq_of_inter_support_eq
+    ext bits
+    simp only [Set.mem_inter_iff, fairTape_support_iff_length]
+    change (bits ∈ event ∧ bits.length = m) ↔
+      (bits.length = m ∧ bits ∈ event) ∧ bits.length = m
+    tauto
+  rw [hevent, ← hfinite.coe_toFinset, PMF.toOuterMeasure_apply_finset]
+  simp only [fairTape_apply]
+  have hlen : ∀ bits ∈ hfinite.toFinset, bits.length = m := by
+    intro bits hbits
+    exact (hfinite.mem_toFinset.mp hbits).1
+  calc
+    ∑ bits ∈ hfinite.toFinset,
+        (if bits.length = m then (1 / 2 : ENNReal) ^ m else 0) =
+        ∑ _bits ∈ hfinite.toFinset, (1 / 2 : ENNReal) ^ m := by
+          apply Finset.sum_congr rfl
+          intro bits hbits
+          rw [if_pos (hlen bits hbits)]
+    _ = _ := by simp [good, Set.ncard_eq_toFinset_card good hfinite]
+
 /-- PAPER: main.tex:1253-1421
 The capped annealing run, fed one fresh finite fair-bit block, misses the
 relative-error interval with probability at most one quarter. -/
@@ -79,28 +114,13 @@ theorem single_run_accuracy_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       {y : ℚ | y < (1 - p.ε) * (commonBaseCount M₁ M₂ : ℚ) ∨
         (1 + p.ε) * (commonBaseCount M₁ M₂ : ℚ) < y} ≤
       (1 / 4 : ENNReal) := by
-  -- The remaining goal is a bound on the fair-tape preimage of the error set.
-  -- It needs the paper's conditional phase estimates (main.tex:1211-1292),
-  -- the multiplier invariant and product estimate (main.tex:1294-1329),
-  -- and a coupling/coverage proof for capped draws and this finite block
-  -- (main.tex:1392-1421). None is yet expressed for `Program.boundedRun`.
-  unfold CountingMatroid.Interface.Pseudocode.singleRun
   dsimp only
   rw [PMF.toOuterMeasure_map_apply]
-  have hlength := fairTape_support_iff_length
-    (CountingMatroid.Model.Run.blockLength n r p)
-  -- Every tape outside this finite set has zero mass. The remaining bound
-  -- concerns the annealing program's behavior on tapes of this width.
-  rw [← PMF.toOuterMeasure_apply_inter_support]
-  rw [show (CountingMatroid.Model.Run.fairTape
-      (CountingMatroid.Model.Run.blockLength n r p)).support =
-      {bits : List Bool |
-        bits.length = CountingMatroid.Model.Run.blockLength n r p} from
-    Set.ext (fun bits => hlength bits)]
-  rw [PMF.toOuterMeasure_apply]
-  simp only [Set.indicator, fairTape_apply]
-  -- The summand is now the explicit fair-tape mass of each bad block. Its
-  -- total requires the uncapped phase analysis and a finite-bit coupling.
+  rw [fairTape_event_card]
+  -- It remains to count the length-`blockLength` tapes on which the bounded
+  -- annealing run misses the interval. The paper's conditional phase bounds,
+  -- multiplier/product induction, and finite-bit coupling have not yet been
+  -- expressed for `Program.boundedRun`.
   sorry
 
 end CountingMatroid.Analysis.SingleRunAccuracy
@@ -108,6 +128,7 @@ end CountingMatroid.Analysis.SingleRunAccuracy
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r4 · open · proved the exact finite-event cardinality formula; the bad-tape count still needs conditional phase estimates and capped-draw coupling.
 * r3 · open · proved exact fair-tape point masses; the finite bad-block count still needs conditional phase estimates and capped-draw coupling.
 * r2 · open · proved the fair-tape support/length characterization; the conditional phase estimates and capped-draw coupling are still absent.
 * r1 · open · reduced the theorem to the fair-tape error event; `simp_all` and `aesop` leave the same probability bound, and the paper's phase estimates and finite-bit coupling are not formalized.
