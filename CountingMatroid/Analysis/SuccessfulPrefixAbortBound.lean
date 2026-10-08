@@ -1,14 +1,18 @@
 import CountingMatroid.Analysis.FinitePhaseExecutionAbort
 import CountingMatroid.Analysis.InitialMultipliersGood
 import CountingMatroid.Analysis.FinitePhaseEstimationBound
+import CountingMatroid.Analysis.ConditionalRestartAbortMass
+import CountingMatroid.Analysis.ConditionalObservationAbortMass
+import CountingMatroid.Analysis.ScheduleAbortBudget
 
 set_option autoImplicit false
 
 /-!
 The conditional execution-abort estimate needed for the lower-tail proof.
-The completion-failure characterization below is proved. The quantitative
-estimate remains open: its concrete events are the actual restart and
-observation outputs, rather than an abstract independent phase law.
+The completion-failure characterization and the finite union-bound assembly
+are proved. The quantitative estimate uses the separate conditional restart
+and observation abort bounds; their operational coupling proofs remain open
+in their respective modules. All events retain the actual program outputs.
 -/
 
 namespace CountingMatroid.Analysis.SuccessfulPrefixAbortBound
@@ -153,24 +157,76 @@ theorem conditional_successful_prefix_abort_mass (n r : ℕ)
       ¬ ObservationCompleted r o₁ o₂
         (fun i => ((pref ++ suffix)[i]?).getD false) s j} : ENNReal) *
       (1 / 2 : ENNReal) ^ t ≤ 3 / (32 * ((s.L : ENNReal) + 1)) := by
-  obtain ⟨bits, current, hlen, hprevious, hhistory, hstored, hpref, hprefLength⟩ :=
-    successful_prefix_has_good_cursor n r o₁ o₂ p j hj pref hprefix
-  dsimp only
-  simp_rw [observation_not_completed_iff]
-  -- Concrete route: the event now separates absence of operational data
-  -- from failure of its invariant checks. Successful-prefix replay gives
-  -- fixed good tables once cursor coverage is established. For absent data,
-  -- observation_data_iff identifies the restart/observation Option outputs.
-  -- BLOCKER: construct the uncapped trace law, prove its expected restart
-  -- cost ≤20*n²*L*τ, and couple every boundedUniform draw until its cap.
-  -- Cursor and denominator-width bounds are needed to justify fresh suffix
-  -- bits within blockLength; operational locality alone does not imply them.
-  sorry
+  classical
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  let t := CountingMatroid.Model.Run.blockLength n r p - pref.length
+  let tape := fun suffix : List Bool => fun i : ℕ => ((pref ++ suffix)[i]?).getD false
+  let previous := fun suffix : List Bool =>
+    ∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂ (tape suffix) s a
+  let restartBad : Set (List Bool) := {suffix | suffix.length = t ∧ previous suffix ∧
+    ∃ current : AnnealingCursor n,
+      BoundedRunPhaseHistory.phaseHistory r o₁ o₂ (tape suffix) s j = some current ∧
+      (restartPhase r o₁ o₂ (tape suffix) s current.tables j current.bitCursor).val = none}
+  let observationBad : Set (List Bool) := {suffix | suffix.length = t ∧ previous suffix ∧
+    ∃ current : AnnealingCursor n,
+      BoundedRunPhaseHistory.phaseHistory r o₁ o₂ (tape suffix) s j = some current ∧
+      ∃ start, (restartPhase r o₁ o₂ (tape suffix) s current.tables j
+        current.bitCursor).val = some start ∧
+        (observePhase r o₁ o₂ (tape suffix) s (s.ρ ^ j)
+          current.currentWeights start).val = none}
+  let bad : Set (List Bool) := {suffix | suffix.length = t ∧ previous suffix ∧
+    ¬ ObservationCompleted r o₁ o₂ (tape suffix) s j}
+  have hcover : bad ⊆ restartBad ∪ observationBad := by
+    intro suffix hsuffix
+    obtain ⟨current, hh, hf⟩ := observation_failure_cases r o₁ o₂ p hn
+      (tape suffix) j hj hsuffix.2.1 hsuffix.2.2
+    rcases hf with hr | ⟨start, hr, ho⟩
+    · exact Or.inl ⟨hsuffix.1, hsuffix.2.1, current, hh, hr⟩
+    · exact Or.inr ⟨hsuffix.1, hsuffix.2.1, current, hh, start, hr, ho⟩
+  have hrfinite : restartBad.Finite :=
+    (List.finite_length_eq Bool t).subset (fun _ h => h.1)
+  have hofinite : observationBad.Finite :=
+    (List.finite_length_eq Bool t).subset (fun _ h => h.1)
+  have hcard : bad.ncard ≤ restartBad.ncard + observationBad.ncard :=
+    (Set.ncard_le_ncard hcover (hrfinite.union hofinite)).trans
+      (Set.ncard_union_le restartBad observationBad)
+  have hrmass := ConditionalRestartAbortMass.conditional_restart_abort_mass
+    n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive j hj pref hprefix
+  have homass := ConditionalObservationAbortMass.conditional_observation_abort_mass
+    n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive j hj pref hprefix
+  change (restartBad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ t ≤ _ at hrmass
+  change (observationBad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ t ≤ _ at homass
+  change (bad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ t ≤ _
+  calc
+    _ ≤ ((restartBad.ncard + observationBad.ncard : ℕ) : ENNReal) *
+        (1 / 2 : ENNReal) ^ t := by
+      exact mul_le_mul_of_nonneg_right (by exact_mod_cast hcard) bot_le
+    _ = (restartBad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ t +
+        (observationBad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ t := by
+      rw [Nat.cast_add, add_mul]
+    _ ≤ ENNReal.ofReal (((s.L : ℚ) / (100 * ((s.L : ℚ) + 1) ^ 2) +
+        3 * (s.restartCap : ℚ) * (1 / 2 : ℚ) ^ s.drawTrials : ℚ) : ℝ) +
+        ENNReal.ofReal ((3 * (s.observations : ℚ) *
+          (1 / 2 : ℚ) ^ s.drawTrials : ℚ) : ℝ) := add_le_add hrmass homass
+    _ = ENNReal.ofReal (((s.L : ℚ) / (100 * ((s.L : ℚ) + 1) ^ 2) +
+        3 * (s.restartCap : ℚ) * (1 / 2 : ℚ) ^ s.drawTrials +
+        3 * (s.observations : ℚ) * (1 / 2 : ℚ) ^ s.drawTrials : ℚ) : ℝ) := by
+      conv_rhs => rw [Rat.cast_add]
+      exact (ENNReal.ofReal_add (by positivity) (by positivity)).symm
+    _ ≤ ENNReal.ofReal ((3 / (32 * ((s.L : ℚ) + 1)) : ℚ) : ℝ) := by
+      apply ENNReal.ofReal_le_ofReal
+      exact_mod_cast ScheduleAbortBudget.schedule_abort_budget n p hn
+    _ = 3 / (32 * ((s.L : ENNReal) + 1)) := by
+      push_cast
+      rw [ENNReal.ofReal_div_of_pos (by positivity)]
+      simp [ENNReal.ofReal_mul, ENNReal.ofReal_add]
 
 end CountingMatroid.Analysis.SuccessfulPrefixAbortBound
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r24 · assembled · covered completion failure by the actual restart and post-restart observation abort events; combined their existing conditional bounds using the proved schedule budget. The two imported quantitative coupling proofs remain open in their owning modules; no new open helper was introduced.
 
 * r23 · reduced · proved `successful_prefix_has_good_cursor`, including the exact min(cursor, blockLength) prefix length; extracting fixed good tables does not establish cursor coverage or a restart tail.
 
