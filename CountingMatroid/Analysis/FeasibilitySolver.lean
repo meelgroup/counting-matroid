@@ -64,6 +64,8 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
   -- Construct an actual charged implementation of the cited test,
   -- then prove its size-r independent-set answer and uniform polynomial
   -- bounds for `oracleCalls` and `otherSteps` on that same implementation.
+  -- Mathlib's `Matroid.Indep.augment` is for one matroid and supplies
+  -- neither a two-oracle algorithm nor a charged complexity bound.
   -- The bridge from that decision to the required common-base answer is
   -- proved above; no executable polynomial solver is installed here.
   -- Enumerating candidate `Finset (Fin n)`s gives a decision procedure,
@@ -76,6 +78,7 @@ end CountingMatroid.Analysis.FeasibilitySolver
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r9 · open · searched pinned Mathlib and Arlib for a two-oracle intersection algorithm or submodular minimization route; only single-matroid augmentation is present. The remaining goal is the cited solver's charged implementation and both uniform polynomial bounds.
 * r8 · open · rechecked the entire pinned Mathlib and Arlib sources by matroid-intersection, common-independent-set, and augmenting-path statements; no executable two-oracle solver or cost certificate matches `FeasibilityContract`. The Schrijver citation remains the missing borrowed dependency.
 * r7 · open · searched the pinned Mathlib matroid sources and all Arlib Lean sources by matroid-intersection and augmentation statement shape; no two-oracle implementation or polynomial charged certificate exists. The cited Schrijver theorem supplies an external algorithmic result, but the custom charged realization remains a local obligation.
 * r6 · open · rechecked the contract shape and pinned Matroid/Computation sources; Mathlib has single-matroid augmentation but no executable matroid-intersection pretest or polynomial charged cost certificate. The Schrijver result remains a Prior proposal.
