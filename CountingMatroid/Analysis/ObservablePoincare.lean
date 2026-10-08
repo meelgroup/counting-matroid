@@ -1,5 +1,6 @@
 import CountingMatroid.Analysis.ObservableProjection
 import CountingMatroid.Analysis.ObservableVarianceDecomposition
+import CountingMatroid.Analysis.TransversalEventMean
 
 set_option autoImplicit false
 
@@ -16,6 +17,7 @@ open CountingMatroid.Model CountingMatroid.Program
 open CountingMatroid.Analysis.IdealExchangeChain
 open CountingMatroid.Analysis.ObservableProjection
 open CountingMatroid.Analysis.ObservableVarianceDecomposition
+open CountingMatroid.Analysis.TransversalEventMean
 open Arlib.Probability Arlib.Probability.FinDist Arlib.MarkovChains
 
 /-- INTERNAL: Write the ideal Metropolis energy using symmetric proposal
@@ -112,21 +114,35 @@ theorem observable_poincare (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
   have hp : 1 / (5 * (n : ℝ) ^ 2) ≤ p₀ := by
     dsimp only [p₀, π]
     rw [operational_class_mass]
-    exact_mod_cast (TypeMassLowerBounds.good_type_mass_bounds
+    have hmass := (TypeMassLowerBounds.good_type_mass_bounds
       r o₁ o₂ q w hn hq hgood).2.1
+    have hcast := (Rat.cast_le (K := ℝ)).mpr hmass
+    simpa only [Rat.cast_div, Rat.cast_one, Rat.cast_mul, Rat.cast_ofNat,
+      Rat.cast_pow, Rat.cast_natCast] using hcast
   have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
   have hp₀ : 0 < p₀ := (div_pos (by norm_num) (by positivity)).trans_le hp
   let R := 2 * (n : ℝ) ^ 2 * E / p₀
-  -- The remaining conjunction is precisely the two quantitative paper
-  -- steps in the normalization D(H)/c₀ = 2n² E(H)/π(Ω₀).
-  -- No auxiliary declaration is assumed, and the original theorem remains
-  -- open until both transport estimates are proved.
+  choose a b hlarge using (fun i k : Fin n => large_pair_event π i k)
+  -- Choose the large two-pair event before asking for transport. Event
+  -- selection and its conditional-mean variance bound are already proved.
+  -- R is the paper's normalization D(H)/c₀ = 2n² E(H)/π(Ω₀).
   suffices hpaper :
       V ≤ (n : ℝ) * (1 + 8 * (n : ℝ)) * R ∧
       ∀ i k : Fin n, i ≠ k →
+        (classMean π H (.defect i k) -
+          eventMean π H (pairEvent i k (a i k) (b i k))) ^ 2 ≤
+          (8 + 32 * (n : ℝ)) * R by
+    obtain ⟨htrans, htransport⟩ := hpaper
+    have hdef (i k : Fin n) (hik : i ≠ k) :
         (classMean π H (.defect i k) - m₀) ^ 2 ≤
-          2 * (8 + 32 * (n : ℝ)) * R + 8 * V by
-    obtain ⟨htrans, hdef⟩ := hpaper
+          2 * (8 + 32 * (n : ℝ)) * R + 8 * V := by
+      have hevent := large_pair_event_mean_bound π H i k (a i k) (b i k)
+        hp₀ (hlarge i k)
+      change (eventMean π H (pairEvent i k (a i k) (b i k)) - m₀) ^ 2 ≤
+        4 * V at hevent
+      have ht := htransport i k hik
+      nlinarith [sq_nonneg (classMean π H (.defect i k) + m₀ -
+        2 * eventMean π H (pairEvent i k (a i k) (b i k)))]
     have hV : 0 ≤ V := transversal_variance_nonneg π H
     have hR : 0 ≤ R := by dsimp [R]; positivity
     let B := 2 * (8 + 32 * (n : ℝ)) * R + 8 * V
@@ -165,6 +181,7 @@ theorem observable_poincare (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
           π state * (H state - m₀) ^ 2 else 0) / p₀)
       field_simp [hp₀.ne']
     have hvar := observable_variance_decomposition r o₁ o₂ q w hq hw H m₀
+    dsimp only at hvar
     rw [hmoment] at hvar
     have hweighted : p₀ * V ≤ V := by
       simpa only [one_mul] using
@@ -177,14 +194,15 @@ theorem observable_poincare (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       _ = 9 * V + 2 * (8 + 32 * (n : ℝ)) * R := by dsimp [B]; ring
       _ ≤ 9 * ((n : ℝ) * (1 + 8 * (n : ℝ)) * R) +
           2 * (8 + 32 * (n : ℝ)) * R :=
-        add_le_add_right (mul_le_mul_of_nonneg_left htrans (by norm_num)) _
+        add_le_add (mul_le_mul_of_nonneg_left htrans (by norm_num : (0 : ℝ) ≤ 9)) le_rfl
       _ = (72 * (n : ℝ) ^ 2 + 73 * (n : ℝ) + 16) * R := by ring
       _ ≤ 2000 * (n : ℝ) ^ 6 * E := observable_poincare_constant_bound n hn p₀ E hp hE
       _ = _ := by rw [hEeq]
   -- STILL OPEN: main.tex:777-839 requires the binary conditioning tree,
   -- the conditional defect-coefficient inequalities (397-449), and the
   -- signed transport construction (493-709). main.tex:851-911 requires
-  -- the same transport applied to a four-way transversal event.
+  -- the same transport applied to the chosen large two-pair event. The
+  -- choice and Jensen step (868-873,909-911) are now proved and used above.
   -- Library entrywise Dirichlet comparison cannot supply this: it asks for
   -- pointwise domination on non-neighbors, where exchangeProposal is zero.
   -- The pinned sources have no Lorentzian/rank-weight quadratic-signature

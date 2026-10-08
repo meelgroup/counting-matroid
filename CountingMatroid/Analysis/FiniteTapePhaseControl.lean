@@ -12,6 +12,7 @@ import CountingMatroid.Analysis.IdealExchangeChain
 import CountingMatroid.Analysis.ObservableProjection
 import CountingMatroid.Analysis.ExchangeProposalGeometry
 import CountingMatroid.Analysis.ObservablePoincare
+import CountingMatroid.Analysis.FiniteTapeRawPhaseFailureBound
 
 set_option autoImplicit false
 
@@ -60,9 +61,12 @@ annealing numerator satisfy the required projection range conditions.
 uniform-label proposal is the paper's half-lazy occupied/unoccupied proposal,
 and proves that rejection preserves half-laziness. `ObservablePoincare`
 proves the symmetric-conductance energy identity and states the independent
-same-paper observable variance estimate; its weighted transport proof is open.
-The remaining local stochastic obligation bounds failure of empirical means,
-including capped draws and adaptive finite-tape coverage. `InitialRestartLaw`
+same-paper observable variance estimate.
+`FiniteTapeRawPhaseFailureBound` combines the existing conditional abort and
+masked-observation-MSE bounds over prefix-free successful consumed histories.
+This closes the local finite-tape failure estimate without importing the
+lower-tail module. The imported analytic estimates retain their own proof
+obligations; this file introduces no additional stochastic proof debt. `InitialRestartLaw`
 retains the proved phase-zero fresh-prefix/suffix identity.
 `FirstPhaseFailure` supplies the operational certificates and counting cover.
 TEXLINE: main.tex:1207-1296,1392-1427 -/
@@ -351,29 +355,21 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
           (hq j) hqone hw hgood.2 H
     have hcontrolled : ((controlledBad j).ncard : ENNReal) *
         (1 / 2 : ENNReal) ^ m ≤ 1 / (8 * ((s.L : ENNReal) + 1)) := by
-      -- RECOVERY BOUNDARY: good initialization and every normalized type-mass
-      -- lower bound are now proved, and the event retains the actual reached
-      -- good cursor and complete successful history. Fixed operational means,
-      -- deterministic finishing, and learned-weight preservation are proved.
-      -- IdealExchangeChain now constructs a symmetric exchange proposal,
-      -- normalized law, and a stationary Metropolis kernel, extended by zero
-      -- weights to invalid states. All means are its real expectations,
-      -- with polynomial lower bounds; the observables are fixed by the
-      -- projection on positive-mass states. The ideal proposal is now proved
-      -- to be half holding plus a uniform occupied/unoccupied exchange on
-      -- every n-element state, and its Metropolis kernel is half-lazy there.
-      -- ObservablePoincare.observable_poincare supplies the precisely stated
-      -- same-paper projected-variance estimate, whose independent weighted
-      -- transport proof is still open in that child. The energy identity in
-      -- that child is proved, including invalid states with zero target mass.
-      -- NEXT STEP: identify selectPaired and boundedUniform with ideal draws
-      -- on reached n-element states and construct the positive-time trace.
-      -- Then prove trace mixing/return-cost (main.tex:1029-1087), conditional
-      -- restart expectation ≤ 20*n^2*L*τ, and correlated-observation MSE
-      -- ≤ 40000*n^8/N_av under a 10*n^2-warm start. Couple this law
-      -- to the capped draws and prove coverage by the remaining finite block.
-      -- These are same-paper obligations, main.tex:1207-1285,1392-1427.
-      sorry
+      have hsubsetRaw : controlledBad j ⊆ rawBad j := by
+        intro bits hb
+        rcases hb with ⟨hlen, hprevious, current, hcurrent, hgood, hw,
+          hstationary, hlazy, hproposal, htypeProjection, hnumeratorProjection,
+          hzeroMean, hnumeratorMean, hdefectMeans, hpoincare, hraw⟩
+        exact ⟨hlen, hprevious, hraw⟩
+      have hfiniteRaw : (rawBad j).Finite :=
+        (List.finite_length_eq Bool m).subset (fun _ hb => hb.1)
+      have hc : ((controlledBad j).ncard : ENNReal) ≤
+          ((rawBad j).ncard : ENNReal) := by
+        exact_mod_cast Set.ncard_le_ncard hsubsetRaw hfiniteRaw
+      exact (mul_le_mul_of_nonneg_right hc bot_le).trans
+        (FiniteTapeRawPhaseFailureBound.finite_tape_raw_phase_failure_bound
+          n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive j
+          (Finset.mem_range.mp hj))
     have hfiniteControlled : (controlledBad j).Finite :=
       (List.finite_length_eq Bool m).subset (fun _ hb => hb.1)
     have hc : ((rawBad j).ncard : ENNReal) ≤ ((controlledBad j).ncard : ENNReal) := by
@@ -417,6 +413,10 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r25 · publication blocked · the helper's granted build and the parent's standalone elaboration passed without local sorry warnings. After concurrent dependency updates, the final parent check cannot load ConditionalObservationAbortMass.olean. A later publication build was interrupted while recompiling live-owned dependency files; their owners must publish their artifacts. No source proof was discarded and no new mathematical obligation was introduced.
+
+* r25 · assembled · closed the local raw-mean finite-tape bound through a proved prefix-free counting helper, using the existing conditional abort and observation-MSE declarations. The assigned theorem has no local sorry; imported quantitative analytic obligations remain in their owning modules.
 
 * r23 · decomposed · proved the exact n-element proposal average, half-laziness, and the zero-weight-safe Metropolis energy identity. The parent semantically uses proposal averaging and laziness and the separately stated same-paper observable Poincare estimate. Its weighted transport proof and the parent's conditional finite-tape failure bound remain open; a live handoff is being requested.
 
