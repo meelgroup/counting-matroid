@@ -1,6 +1,16 @@
 import CountingMatroid.Model.Program
 import CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
 import CountingMatroid.Analysis.BoundedRunOracleCalls
+import CountingMatroid.Analysis.RationalHeight
+import CountingMatroid.Analysis.BoundedRunOtherSteps
+
+/-!
+Polynomial output encoding length is proved for every schedule and execution,
+using additive observation heights and a phase-product invariant. Nonnegativity
+and the zero-phase costs are also proved here. The complete resource envelope
+uses separate oracle-call and nonoracle-work obligations; those dependencies
+must be closed before the envelope has a complete proof.
+-/
 
 set_option autoImplicit false
 
@@ -504,6 +514,140 @@ theorem ratPower_otherSteps_le (q : ℚ) (j : ℕ) :
   unfold CountingMatroid.Program.ratPower Arlib.Computation.Charged.repeatFor
   simpa using ratPower_fold_otherSteps_le q 1 (List.range j)
 
+open CountingMatroid.Analysis.RationalHeight
+
+/-- INTERNAL: One observation has additive component-height growth, independently
+of the state and of the supplied oracles. TEXLINE: main.tex:1362-1378 -/
+private theorem recordObservation_height_le {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (rho : ℚ)
+    (current next : CountingMatroid.Program.ObservationCursor n)
+    (h : (CountingMatroid.Program.recordObservation r o₁ o₂ rho current).val =
+      some next) : rationalHeight next.numeratorSum ≤ rationalHeight current.numeratorSum +
+        (binaryRatLength 1 + n * binaryRatLength rho + 1) := by
+  simp only [CountingMatroid.Program.recordObservation,
+    Arlib.Computation.Charged.val_bind] at h
+  split at h
+  · simp at h
+  · simp [countIncrement] at h
+    subst next
+    exact Nat.le_add_right _ _
+  · simp only [Arlib.Computation.Charged.val_bind,
+      Arlib.Computation.Charged.val_pure] at h
+    cases Option.some.inj h
+    simp only [ratAdd, Arlib.Computation.Charged.val_opMany,
+      CountingMatroid.Model.Operations.natSub, Arlib.Computation.Charged.val_op]
+    have hp := ratPower_binary_length_le rho
+      (n - (pairedRank r o₁ o₂ current.state).val)
+    have hh := rationalHeight_le_length
+      (CountingMatroid.Program.ratPower rho
+        (n - (pairedRank r o₁ o₂ current.state).val)).val
+    have ha := rationalHeight_add_le current.numeratorSum
+      (CountingMatroid.Program.ratPower rho
+        (n - (pairedRank r o₁ o₂ current.state).val)).val
+    have hm := Nat.mul_le_mul_right (binaryRatLength rho)
+      (Nat.sub_le n (pairedRank r o₁ o₂ current.state).val)
+    omega
+
+/-- INTERNAL: The observation accumulator has linear height growth in the loop cap.
+TEXLINE: main.tex:1362-1378 -/
+private theorem observePhase_height_le {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool)
+    (s : AnnealingSchedule) (q : ℚ) (weights : Multipliers n)
+    (start : PairedSet n × ℕ)
+    (next : CountingMatroid.Program.ObservationCursor n)
+    (h : (CountingMatroid.Program.observePhase r o₁ o₂ tape s q weights start).val =
+      some next) : rationalHeight next.numeratorSum ≤
+      1 + s.observations * (binaryRatLength 1 + n * binaryRatLength s.ρ + 1) := by
+  let K := binaryRatLength 1 + n * binaryRatLength s.ρ + 1
+  let P : Option (CountingMatroid.Program.ObservationCursor n) → ℕ → Prop :=
+    fun acc k => ∀ next, acc = some next → rationalHeight next.numeratorSum ≤ 1 + k * K
+  let f : Option (CountingMatroid.Program.ObservationCursor n) → ℕ →
+      Arlib.Computation.Charged Op Cell
+        (Option (CountingMatroid.Program.ObservationCursor n)) :=
+    fun acc index =>
+      match acc with
+      | none => pure none
+      | some current => do
+          let onStart ← natEqual index 0
+          if onStart then CountingMatroid.Program.recordObservation r o₁ o₂ s.ρ current
+          else do
+            let next ← CountingMatroid.Program.chainStep r o₁ o₂ tape s.drawTrials q
+              weights current.state current.bitCursor
+            match next with
+            | none => pure none
+            | some (state, bitCursor) =>
+                CountingMatroid.Program.recordObservation r o₁ o₂ s.ρ
+                  ⟨state, bitCursor, current.counts, current.numeratorSum⟩
+  have hstep : ∀ acc index k, P acc k → P (f acc index).val (k + 1) := by
+    intro acc index k hacc next hnext
+    cases acc with
+    | none => simp [f] at hnext
+    | some current =>
+        dsimp [f] at hnext
+        by_cases hon : (natEqual index 0).val = true
+        · simp only [hon, ite_true] at hnext
+          have hcur := hacc current rfl
+          have hg := recordObservation_height_le r o₁ o₂ s.ρ current next hnext
+          dsimp [K] at *
+          nlinarith
+        · simp only [Bool.not_eq_true] at hon
+          simp only [hon, Bool.false_eq_true, ↓reduceIte,
+            Arlib.Computation.Charged.val_bind] at hnext
+          split at hnext
+          · simp at hnext
+          · have hcur := hacc current rfl
+            have hg := recordObservation_height_le r o₁ o₂ s.ρ _ next hnext
+            dsimp [K, P] at *
+            nlinarith
+  unfold CountingMatroid.Program.observePhase at h
+  simp only [Arlib.Computation.Charged.val_bind] at h
+  unfold Arlib.Computation.Charged.repeatFor at h
+  have hinit : P (some ⟨start.1, start.2, (allocateCounts n).val, 0⟩) 0 := by
+    intro initial hin
+    cases Option.some.inj hin
+    norm_num [rationalHeight, Nat.log2_eq_log_two]
+  have hfinal := chargedFold_count_growth P f hstep
+    (List.range s.observations) _ 0 hinit
+  simpa using hfinal next h
+
+/-- INTERNAL: Successful finishing contributes only the accumulator length and
+three bounded natural-count encodings to the ratio. TEXLINE: main.tex:1370-1378 -/
+private theorem finishPhase_ratio_length_le {n : ℕ} (s : AnnealingSchedule) (j : ℕ)
+    (weights : Multipliers n) (observed : CountingMatroid.Program.ObservationCursor n)
+    (hc : observed.counts .transversal ≤ s.observations)
+    (ratio : ℚ) (nextWeights : Multipliers n)
+    (h : (CountingMatroid.Program.finishPhase s j weights observed).val =
+      some (ratio, nextWeights)) :
+    binaryRatLength ratio ≤ binaryRatLength observed.numeratorSum +
+      3 * (s.observations + 4) := by
+  simp only [CountingMatroid.Program.finishPhase,
+    Arlib.Computation.Charged.val_bind] at h
+  split at h
+  · simp at h
+  · simp only [Arlib.Computation.Charged.val_bind, ratOfNat, ratDiv,
+      Arlib.Computation.Charged.val_opMany] at h
+    split at h
+    · simp at h
+    · simp only [Arlib.Computation.Charged.val_pure, Option.some.injEq,
+        Prod.mk.injEq] at h
+      rcases h with ⟨rfl, _⟩
+      have hcast (m : ℕ) : binaryRatLength (m : ℚ) ≤ m + 4 := by
+        rw [ScheduleOtherStepsEnvelope.binaryRatLength_natCast]
+        have hm := Nat.log_le_self 2 m
+        rw [← Nat.log2_eq_log_two] at hm
+        omega
+      have hobs := hcast s.observations
+      have hcount := hcast (observed.counts .transversal)
+      have hu := ScheduleOtherStepsEnvelope.binaryRatLength_div_le
+        observed.numeratorSum (s.observations : ℚ)
+      have hp := ScheduleOtherStepsEnvelope.binaryRatLength_div_le
+        (observed.counts .transversal : ℚ) (s.observations : ℚ)
+      have hr := ScheduleOtherStepsEnvelope.binaryRatLength_div_le
+        (observed.numeratorSum / (s.observations : ℚ))
+        ((observed.counts .transversal : ℚ) / (s.observations : ℚ))
+      simp only [countRead, Arlib.Computation.Charged.val_opMany]
+      omega
+
 /-- INTERNAL: The capped run has a resource bound expressed only in the
 schedule fields that its code reads. This separates the phase-state invariant
 from the arithmetic used to construct the schedule and amplify the answer.
@@ -542,37 +686,157 @@ theorem boundedRun_resource_envelope :
     · rw [boundedRun_zero_phases_oracleCalls n r o₁ o₂ tape s hL]
       exact Nat.zero_le _
     · exact (boundedRun_zero_phases_otherSteps n r o₁ o₂ tape s hL).trans hquad
-  · -- BLOCKER: The output-size and nonoracle-charge bounds require a phase invariant
-    -- for every reachable current/stored multiplier, observation numeratorSum,
-    -- observation type count (at most s.observations), and running product.
-    -- A bound on all AnnealingCursor values cannot serve as the step hypothesis
-    -- of Charged.steps_repeatFor_le: an arbitrary cursor can contain multipliers
-    -- of unbounded binary length. Even the isolated charge
-    -- otherSteps (ratMul (2 ^ K : ℚ) 1) is at least K for every K.
-    -- The invariant must then bound restartPhase, observePhase, and finishPhase
-    -- nonoracle costs, including acceptance denominators in capped uniform draws.
-    have hphasePower (j : ℕ) :
-        binaryRatLength (CountingMatroid.Program.ratPower s.ρ j).val ≤
-          binaryRatLength 1 + j * binaryRatLength s.ρ :=
-      ratPower_binary_length_le s.ρ j
-    have hphasePowerCost (j : ℕ) :
-        otherSteps (CountingMatroid.Program.ratPower s.ρ j) ≤
-          j * (binaryRatLength 1 + j * binaryRatLength s.ρ) ^ 2 :=
-      ratPower_otherSteps_le s.ρ j
-    have hproductCost (a b : ℚ) :
-        otherSteps (ratMul a b) ≤ (binaryRatLength a + binaryRatLength b) ^ 2 :=
-      otherSteps_ratMul_le a b
+  · -- The value bound is independent of stored multiplier sizes. Charges on
+    -- unsuccessful paths are handled by the separate nonoracle-work obligation.
     refine ⟨boundedRun_value_nonneg n r o₁ o₂ tape s hρ, ?_, ?_, ?_⟩
-    · sorry
+    · let K := 2 * (1 + s.observations *
+          (binaryRatLength 1 + n * binaryRatLength s.ρ + 1)) + 2 +
+          3 * (s.observations + 4)
+      have hout : binaryRatLength
+          (CountingMatroid.Program.boundedRun r o₁ o₂ tape s 0).val.1 ≤
+          (n + 4) + (4 + s.L * K) := by
+        let P : Option (CountingMatroid.Program.AnnealingCursor n) → ℕ → Prop :=
+          fun acc k => ∀ current, acc = some current → binaryRatLength current.product ≤ 4 + k * K
+        let f : ℕ → Option (CountingMatroid.Program.AnnealingCursor n) →
+            Arlib.Computation.Charged Op Cell
+              (Option (CountingMatroid.Program.AnnealingCursor n)) :=
+          fun j acc =>
+            match acc with
+            | none => pure none
+            | some current => do
+                let q ← CountingMatroid.Program.ratPower s.ρ j
+                let started ← CountingMatroid.Program.restartPhase r o₁ o₂ tape s
+                  current.tables j current.bitCursor
+                match started with
+                | none => pure none
+                | some started =>
+                    let observed ← CountingMatroid.Program.observePhase r o₁ o₂ tape s q
+                      current.currentWeights started
+                    match observed with
+                    | none => pure none
+                    | some observed =>
+                        let finished ← CountingMatroid.Program.finishPhase s j
+                          current.currentWeights observed
+                        match finished with
+                        | none => pure none
+                        | some (ratio, nextWeights) =>
+                            let product ← ratMul current.product ratio
+                            let next ← successor j
+                            let update ← lessThan next s.L
+                            if update then
+                              let tables ← learnedWeightWrite current.tables next s.L nextWeights
+                              pure (some ⟨tables, nextWeights, product, observed.bitCursor⟩)
+                            else pure (some ⟨current.tables, nextWeights, product,
+                              observed.bitCursor⟩)
+        have hstep : ∀ acc j k, P acc k → P (f j acc).val (k + 1) := by
+          intro acc j k hacc next hnext
+          cases acc with
+          | none => simp [f] at hnext
+          | some current =>
+              dsimp [f] at hnext
+              cases hstarted : (CountingMatroid.Program.restartPhase r o₁ o₂ tape s
+                current.tables j current.bitCursor).val with
+              | none => simp [hstarted] at hnext
+              | some started =>
+                  simp only [hstarted, Arlib.Computation.Charged.val_bind] at hnext
+                  cases hobserved : (CountingMatroid.Program.observePhase r o₁ o₂ tape s
+                    (CountingMatroid.Program.ratPower s.ρ j).val current.currentWeights
+                    started).val with
+                  | none => simp [hobserved] at hnext
+                  | some observed =>
+                      simp only [hobserved, Arlib.Computation.Charged.val_bind] at hnext
+                      cases hfinished : (CountingMatroid.Program.finishPhase s j
+                        current.currentWeights observed).val with
+                      | none => simp [hfinished] at hnext
+                      | some result =>
+                          rcases result with ⟨ratio, nextWeights⟩
+                          simp only [hfinished, Arlib.Computation.Charged.val_bind,
+                            ratMul, Arlib.Computation.Charged.val_opMany] at hnext
+                          have hobs := observePhase_height_le r o₁ o₂ tape s
+                            (CountingMatroid.Program.ratPower s.ρ j).val
+                            current.currentWeights started observed hobserved
+                          have hcounts := observePhase_counts_le r o₁ o₂ tape s
+                            (CountingMatroid.Program.ratPower s.ρ j).val
+                            current.currentWeights started observed hobserved
+                          have hratio := finishPhase_ratio_length_le s j current.currentWeights
+                            observed (hcounts .transversal) ratio nextWeights hfinished
+                          have hl := binaryRatLength_le_height observed.numeratorSum
+                          have hr : binaryRatLength ratio ≤ K := by dsimp [K]; omega
+                          have hm := ScheduleOtherStepsEnvelope.binaryRatLength_mul_le
+                            current.product ratio
+                          have hc := hacc current rfl
+                          split at hnext
+                          · simp only [Arlib.Computation.Charged.val_bind,
+                              Arlib.Computation.Charged.val_pure,
+                              learnedWeightWrite, Arlib.Computation.Charged.val_opMany] at hnext
+                            cases Option.some.inj hnext
+                            dsimp at *
+                            nlinarith
+                          · simp only [Arlib.Computation.Charged.val_pure] at hnext
+                            cases Option.some.inj hnext
+                            dsimp at *
+                            nlinarith
+        unfold CountingMatroid.Program.boundedRun
+        simp only [Arlib.Computation.Charged.val_bind]
+        unfold Arlib.Computation.Charged.repeatFor
+        have hinit : P (some ⟨(allocateLearnedWeights n s.L (initialWeights n).val).val,
+            (initialWeights n).val, 1, 0⟩) 0 := by
+          intro current hc
+          cases Option.some.inj hc
+          norm_num [binaryRatLength, binaryNatLength, Nat.log2_eq_log_two]
+        have hphases := chargedFold_count_growth P (fun acc j => f j acc) hstep
+          (List.range s.L) _ 0 hinit
+        split
+        · norm_num [binaryRatLength, binaryNatLength, Nat.log2_eq_log_two]
+          omega
+        · simp only [Arlib.Computation.Charged.val_bind, natPower_value,
+            ratOfNat, ratMul, Arlib.Computation.Charged.val_opMany]
+          rename_i result hresult
+          have hp := hphases result hresult
+          simp only [List.length_range, Nat.zero_add] at hp
+          have hm := ScheduleOtherStepsEnvelope.binaryRatLength_mul_le (2 ^ n : ℚ) result.product
+          rw [binaryRatLength_two_pow] at hm
+          simpa using hm.trans (Nat.add_le_add_left hp _)
+      let size := n + s.L + s.τ + s.restartCap + s.observations +
+        s.drawTrials + binaryRatLength s.ρ + 1
+      have hn : n ≤ size := by dsimp [size]; omega
+      have hLsize : s.L ≤ size := by dsimp [size]; omega
+      have hN : s.observations ≤ size := by dsimp [size]; omega
+      have hR : binaryRatLength s.ρ ≤ size := by dsimp [size]; omega
+      have hs : 1 ≤ size := by dsimp [size]; omega
+      have hcube : size ≤ size ^ 3 := by
+        simpa using Nat.pow_le_pow_right hs (show 1 ≤ 3 by decide)
+      have hK : K ≤ 31 * size ^ 3 := by
+        have h1 : binaryRatLength (1 : ℚ) = 4 := by decide
+        dsimp [K]
+        rw [h1]
+        calc
+          2 * (1 + s.observations * (4 + n * binaryRatLength s.ρ + 1)) + 2 +
+              3 * (s.observations + 4) ≤
+              2 * (1 + size * (4 + size * size + 1)) + 2 + 3 * (size + 4) := by
+                gcongr
+          _ ≤ 31 * size ^ 3 := by nlinarith
+      have hfour : size ≤ size ^ 4 := by
+        simpa using Nat.pow_le_pow_right hs (show 1 ≤ 4 by decide)
+      calc
+        binaryRatLength (CountingMatroid.Program.boundedRun r o₁ o₂ tape s 0).val.1 ≤
+            (n + 4) + (4 + s.L * K) := hout
+        _ ≤ (size + 4) + (4 + size * (31 * size ^ 3)) := by gcongr
+        _ ≤ 100 * size ^ 4 := by nlinarith only [hfour, hs]
+        _ ≤ 100 * size ^ 100 := Nat.mul_le_mul_left 100
+          (Nat.pow_le_pow_right hs (by decide))
     · exact BoundedRunOracleCalls.boundedRun_oracleCalls_envelope
         n r o₁ o₂ tape s
-    · sorry
+    · exact BoundedRunOtherSteps.boundedRun_otherSteps_envelope
+        n r o₁ o₂ tape s hρ
 
 end CountingMatroid.Analysis.BoundedRunResourceEnvelope
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r16 · handoff blocked · the child-ready shell command was rejected because it used rm -f to remove the old response; no handoff was submitted and BoundedRunOtherSteps remains owned here.
+* r16 · partial recovery · proved the all-phase output-length conjunct via rational height and phase-product induction; isolated nonoracle work in BoundedRunOtherSteps for live handoff.
 * r15 · decomposed · separated the state-independent oracle charge into BoundedRunOracleCalls; output size and nonoracle charge still need a reachable-state invariant.
 * r14 · partial recovery · proved observation type-count and phase-power charge bounds; the positive-phase rational-size and abort-path invariant remains open.
 * r13 · partial recovery · proved phase-power binary length and a quadratic charge bound for rational multiplication; the reachable phase-state and abort-path cost invariant is still missing.
