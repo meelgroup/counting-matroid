@@ -1,5 +1,7 @@
 import CountingMatroid.Analysis.TransversalPartition
 import Mathlib.Data.Set.Finite.List
+import CountingMatroid.Analysis.RatioProductAccuracy
+import CountingMatroid.Analysis.FiniteTapePhaseControl
 
 set_option autoImplicit false
 
@@ -9,8 +11,9 @@ open CountingMatroid.Model
 
 /-- INTERNAL: At most one eighth of capped finite tapes yield a completed
 product farther than ε/4 from the concrete final transversal partition sum.
-This is the conditional restart and observation analysis, learned-weight
-induction, product estimate, and uncapped-to-capped tape coupling.
+The deterministic product implication is proved in `RatioProductAccuracy`;
+the remaining phase probability and finite-tape coupling obligation is
+`FiniteTapePhaseControl.finite_tape_inaccurate_ratios`.
 TEXLINE: main.tex:1207-1315,1392-1421 -/
 theorem finite_tape_product_accuracy (n r : ℕ)
     (M₁ M₂ : Matroid (Fin n)) (o₁ o₂ : IndependenceOracle n)
@@ -71,66 +74,81 @@ theorem finite_tape_product_accuracy (n r : ℕ)
     simp only [hc, hempty, Set.ncard_empty, Nat.cast_zero, zero_mul]
     norm_num
   · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
-    -- BLOCKER (main.tex:1207-1315,1392-1421): the next sound decomposition is
-    -- a proof-side *uncapped phase transcript*, with each phase carrying its
-    -- restart endpoint, observation counts, ratio, and next multiplier table.
-    -- This transcript must be related to the existing `Program.boundedRun`
-    -- fold, not merely to a new estimator: on every non-aborting execution,
-    -- its ratios multiply to `singleRun`, and its tables are the ones read by
-    -- the next `restartPhase`.
-    --
-    -- The first independent mathematical obligation is a transition-law
-    -- identity for a proof-side *uncapped* step from a valid paired state,
-    -- identifying its state kernel with the paper's lazy exchange Metropolis
-    -- chain (main.tex:712-768). Couple that step to `Program.chainStep` on
-    -- the event that all bounded uniform draws finish, bounding draw aborts
-    -- separately. Conditioning `Program.chainStep` on no abort is insufficient:
-    -- proposals needing an acceptance draw have a different abort chance,
-    -- so that conditioning can bias the state kernel. The existing
-    -- `Interface.Pseudocode.chainStepLaw` is a PMF built from a finite
-    -- `fairTape`; it is not the required uncapped transition identity.
-    --
-    -- The missing primitive below this identity is the joint value/cursor
-    -- law of `Program.boundedUniform`, not just uniformity of its value.
-    -- For v > 1, put w = (v - 1).log2 + 1. With fresh fair bits and enough
-    -- tape, acceptance of k < v on trial t < trials, counted from zero,
-    -- has mass (1 - v / 2^w)^t / 2^w and ends at cursor + (t+1)*w.
-    -- A composition proof must also retain independence of the unused suffix;
-    -- a marginal result at cursor zero cannot justify the adaptive calls in
-    -- `chainStep`. Source search finds only an oracle-cost theorem for this
-    -- sampler, not this probability law. Arlib's `metropolis_stationary`
-    -- takes an already constructed `FinDist` and symmetric `FinChain`; it
-    -- supplies neither this sampler law nor the exchange proposal bridge.
-    --
-    -- From that identity, prove the paper's conditional claim: for *each*
-    -- prior successful transcript, a fresh phase has restart-cap or relative
-    -- observation error probability at most 1/(16*(s.L+1)), and an accurate
-    -- phase preserves the multiplier invariant (main.tex:1207-1285). Then
-    -- induct on the `s.L` transcripts, prove the deterministic telescoping
-    -- estimate (main.tex:1287-1315), and couple the uncapped transcript to
-    -- `Program.boundedRun`. The final coupling must show that every needed
-    -- bit lies below `Run.blockLength`; beyond that point `blockTape` defaults
-    -- to false. Only then does the resulting infinite-tape probability equal
-    -- this `Set.ncard` finite-tape mass. None of those three bridge facts is
-    -- present in the imports, and a child stated merely as this final count
-    -- inequality would only rename the current `sorry`. They are same-paper
-    -- obligations, not a Prior citation. The paper includes proofs of both
-    -- its time-average MSE and trace estimates at main.tex:975-1087, despite
-    -- also citing earlier work there; those claims cannot be borrowed whole.
-    --
-    -- The purely finite counting conversion is already proved as
-    -- `SingleRunAccuracy.fairTape_event_card`, using `fairTape_apply` and
-    -- `fairTape_support_iff_length`. It is downstream of this file through
-    -- `InaccurateNonzeroTapeBound`, so importing it here creates a cycle.
-    -- Moving those three existing declarations to an upstream module would
-    -- expose that conversion, but would not supply the missing phase law.
-    sorry
+    let s := CountingMatroid.Interface.Pseudocode.setup n p
+    let m := CountingMatroid.Model.Run.blockLength n r p
+    let C := fun j => TransversalPartition.partitionSum r o₁ o₂ (s.ρ ^ j)
+    let answer := fun bits : List Bool =>
+      CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
+        (fun i => (bits[i]?).getD false) s
+    have hρ : 0 < s.ρ := by
+      change 0 < 1 - 1 / ((2 * n : ℕ) : ℚ)
+      push_cast
+      have hnq : (1 : ℚ) ≤ n := by exact_mod_cast hnpos
+      apply sub_pos.mpr
+      apply (div_lt_one (by positivity : (0 : ℚ) < 2 * n)).mpr
+      linarith
+    have hη : s.η = p.ε / (32 * ((s.L : ℚ) + 1)) := by
+      change p.ε / ((32 * (s.L + 1) : ℕ) : ℚ) = _
+      push_cast
+      rfl
+    have hC : ∀ j, 0 < C j := by
+      intro j
+      apply Finset.sum_pos
+      · intro A _
+        exact pow_pos (pow_pos hρ j) _
+      · exact Finset.univ_nonempty
+    have hCzero : C 0 = (2 : ℚ) ^ n := by
+      simp [C, TransversalPartition.partitionSum]
+    have hgood (bits : List Bool)
+        (h : FiniteTapePhaseControl.AccurateRatioProduct n r o₁ o₂ p
+          (fun i => (bits[i]?).getD false)) :
+        (1 - p.ε / 4) * C s.L ≤ answer bits ∧
+          answer bits ≤ (1 + p.ε / 4) * C s.L := by
+      obtain ⟨R, hout, hR⟩ := h
+      have hratios : ∀ j < s.L,
+          (1 - p.ε / (32 * ((s.L : ℚ) + 1))) /
+            (1 + p.ε / (32 * ((s.L : ℚ) + 1))) ≤ R j / (C (j + 1) / C j) ∧
+          R j / (C (j + 1) / C j) ≤
+            (1 + p.ε / (32 * ((s.L : ℚ) + 1))) /
+              (1 - p.ε / (32 * ((s.L : ℚ) + 1))) := by
+        simpa only [← hη] using hR
+      have hp := RatioProductAccuracy.ratio_product_accuracy s.L p.ε C R
+        p.ε_pos p.ε_lt_one hC hratios
+      rw [hCzero] at hp
+      simpa only [answer, s, hout] using hp
+    let bad : Set (List Bool) := {bits | bits.length = m ∧
+      answer bits ≠ 0 ∧ (answer bits < (1 - p.ε / 4) * C s.L ∨
+        (1 + p.ε / 4) * C s.L < answer bits)}
+    let phaseBad : Set (List Bool) := {bits | bits.length = m ∧
+      answer bits ≠ 0 ∧ ¬ FiniteTapePhaseControl.AccurateRatioProduct
+        n r o₁ o₂ p (fun i => (bits[i]?).getD false)}
+    have hsubset : bad ⊆ phaseBad := by
+      intro bits hb
+      refine ⟨hb.1, hb.2.1, ?_⟩
+      intro hg
+      have haccurate := hgood bits hg
+      rcases hb.2.2 with hl | hu
+      · exact (not_lt_of_ge haccurate.1) hl
+      · exact (not_lt_of_ge haccurate.2) hu
+    have hfinite : phaseBad.Finite :=
+      (List.finite_length_eq Bool m).subset (fun _ hb => hb.1)
+    have hcard : bad.ncard ≤ phaseBad.ncard := Set.ncard_le_ncard hsubset hfinite
+    change (bad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤ _
+    calc
+      (bad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
+          (phaseBad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ m := by
+        gcongr
+      _ ≤ (1 / 8 : ENNReal) :=
+        FiniteTapePhaseControl.finite_tape_inaccurate_ratios
+          n r M₁ M₂ o₁ o₂ p hnpos hfull hr h₁ h₂ hpositive
 
 end CountingMatroid.Analysis.FiniteTapeProductAccuracy
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r16 · blocked · the parent elaborates, but the phase-control child remains open after mechanical handoff rejection; this is a checked reduction with retained proof debt, not an outright closure.
+* r16 · decomposed · proved the deterministic ratio-product estimate and the bad-event inclusion; the parent now uses the separate accurate-ratio witness probability obligation in `FiniteTapePhaseControl`.
 * r15 · blocked · direct `exact?` and unfolding `singleRun` followed by `aesop` leave the positive-ground event bound; identified the missing joint rejection-draw value/cursor law and the downstream-only finite-tape counting conversion. No proof debt was moved or closed.
 * r14 · recovery diagnosis · isolated the needed proof-side phase transcript, transition-law identity, conditional phase estimate, and bounded-run/finite-block coupling; no existing declaration supplies the first bridge, so the positive-ground theorem remains open.
 * r13 · blocked · `exact?` and `aesop` leave the positive-ground count inequality; `chainStepLaw` is only a finite-tape PMF, and the project has no paired-state ideal-chain law or conditional phase estimate to connect it to the paper's Markov/MSE argument.
