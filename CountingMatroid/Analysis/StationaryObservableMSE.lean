@@ -1,5 +1,10 @@
 import CountingMatroid.Analysis.ObservablePoincare
 import CountingMatroid.Analysis.PhaseObservationExperiment
+import CountingMatroid.Analysis.FinitePhaseEstimationBound
+import CountingMatroid.Analysis.StationaryCovarianceSum
+import CountingMatroid.Analysis.StationaryPathMoment
+import CountingMatroid.Analysis.ObservableEnergyDual
+import CountingMatroid.Analysis.IdealChainNonnegDefinite
 
 set_option autoImplicit false
 
@@ -9,7 +14,8 @@ bound. Trajectories use the concrete ideal exchange kernel and all original
 operational observables, including diagonal indices and zero-weight states.
 The finite product includes one final unused transition; summing it out gives
 exactly N observations beginning at the stationary starting state.
-The covariance/resolvent estimate is an open same-paper obligation.
+A finite geometric action sum proves the covariance bound without requiring
+a resolvent, full support, or irreducibility on the extended state space.
 -/
 
 namespace CountingMatroid.Analysis.StationaryObservableMSE
@@ -150,31 +156,67 @@ theorem stationary_observation_mse (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
     stationaryObservationMoment n r o₁ o₂ p hn j current hw index ≤
       4000 * (n : ℝ) ^ 6 /
         (CountingMatroid.Interface.Pseudocode.setup n p).observations := by
+  classical
   let s := CountingMatroid.Interface.Pseudocode.setup n p
   have hρ := AnnealingPartitionDrift.schedule_power_lower n p hn
   have hq : 0 < s.ρ ^ j := pow_pos hρ.1 j
   have hqone : s.ρ ^ j ≤ 1 := pow_le_one₀ hρ.1.le hρ.2.1
-  have henergy := fun H => ObservablePoincare.observable_poincare n r M₁ M₂
-    o₁ o₂ (s.ρ ^ j) current.currentWeights hn hfull hr h₁ h₂ hq hqone hw hgood.2 H
-  have hvariance := operational_observable_variance_le_one r o₁ o₂ s.ρ
-    hρ.1.le hρ.2.1 index
-    (operationalLaw r o₁ o₂ (s.ρ ^ j) current.currentWeights hq hw)
-  dsimp only [stationaryObservationMoment, trajectorySquaredMoment]
-  -- Attempt: expand this exact finite product second moment into stationary
-  -- covariances, then apply henergy by the dual/resolvent argument at
-  -- main.tex:982-1013. Existing Var_act_le controls iterated single functions;
-  -- it does not control the squared sum on an entire correlated trajectory.
-  -- A second stdin attempt with exact? exhausted 200000 heartbeats; the
-  -- library Var_act_le needs an absolute spectral bound for all functions,
-  -- whereas henergy controls only the observable projection.
-  -- BLOCKER: the product-path covariance identity and the restricted-energy
-  -- resolvent estimate have no project or Arlib theorem to apply here.
-  sorry
+  let π := operationalLaw r o₁ o₂ (s.ρ ^ j) current.currentWeights hq hw
+  let P := idealChain r o₁ o₂ (s.ρ ^ j) current.currentWeights hn hq hw
+  let G := operationalObservable r o₁ o₂ s.ρ index
+  let K : ℝ := 2000 * (n : ℝ) ^ 6
+  have henergy : ∀ H, Var π (ObservableProjection.observableProjection π H) ≤
+      K * dirichlet π P H H := fun H =>
+    ObservablePoincare.observable_poincare n r M₁ M₂ o₁ o₂ (s.ρ ^ j)
+      current.currentWeights hn hfull hr h₁ h₂ hq hqone hw hgood.2 H
+  have hvariance : Var π G ≤ 1 := operational_observable_variance_le_one
+    r o₁ o₂ s.ρ hρ.1.le hρ.2.1 index π
+  have hfiber : ∃ c : Fin n → Fin n → ℝ,
+      ∀ a b state, (classifyState state).val = .defect a b → G state = c a b := by
+    dsimp only [G]
+    cases index with
+    | inl b =>
+      refine ⟨fun _ _ => 0, ?_⟩
+      intro a k state hk
+      cases b <;> simp [operationalObservable, typeIndicator, numeratorObservable, hk]
+    | inr pair =>
+      rcases pair with ⟨i, k⟩
+      refine ⟨fun a b => if StateKind.defect a b =
+        (if i = k then .transversal else .defect i k) then 1 else 0, ?_⟩
+      intro a b state hk
+      simp only [operationalObservable, typeIndicator, hk]
+  obtain ⟨c, hc⟩ := hfiber
+  let C := K * Var π G
+  have hdual : ∀ H, (ip π (fun x => G x - Ex π G) H) ^ 2 ≤
+      C * dirichlet π P H H :=
+    ObservableEnergyDual.observable_energy_dual r o₁ o₂ (s.ρ ^ j)
+      current.currentWeights hq hw P G c hc K henergy
+  have hK : 0 ≤ K := by dsimp only [K]; positivity
+  have hC : 0 ≤ C := mul_nonneg hK (Var_nonneg π G)
+  have hrev : Reversible π P := metropolis_reversible_zero_weights _ _
+    (exchange_proposal_symmetric n hn)
+  have hpsd : NonnegDefinite π P := IdealChainNonnegDefinite.ideal_chain_nonnegDefinite
+    r o₁ o₂ (s.ρ ^ j) current.currentWeights hn hq hw
+  have hcov := StationaryCovarianceSum.covariance_sum_le hrev hpsd
+    (fun x => G x - Ex π G) C hC hdual
+  have hN : 0 < s.observations :=
+    (FinitePhaseEstimationBound.schedule_estimation_budget n p hn).2.1
+  have hbound := StationaryPathMoment.stationary_average_le_of_covariance
+    π P hrev.stationary G C hcov s.observations hN
+  change trajectorySquaredMoment π P G s.observations ≤ _
+  calc
+    _ ≤ 2 * C / (s.observations : ℝ) := hbound
+    _ ≤ 4000 * (n : ℝ) ^ 6 / (s.observations : ℝ) := by
+      apply div_le_div_of_nonneg_right _ (Nat.cast_nonneg _)
+      have hb := mul_le_mul_of_nonneg_left hvariance (mul_nonneg (by norm_num : (0 : ℝ) ≤ 2) hK)
+      dsimp only [C, K] at *
+      nlinarith
 
 end CountingMatroid.Analysis.StationaryObservableMSE
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r25 · proved · replaced the inverse/infinite-series step by a finite geometric covariance bound; proved weighted projection orthogonality, ideal-chain PSD, and the exact product-path second-moment recurrence in four support modules.
 * r24 · open · extracted the projected energy estimate and bounded each observable's variance by one; exact? exhausted the heartbeat limit, and no correlated product-path covariance estimate was found in Arlib or Mathlib. The first live child handoff was mechanically rejected without further diagnostic.
 -/

@@ -1,4 +1,5 @@
 import CountingMatroid.Analysis.ObservableProjection
+import CountingMatroid.Analysis.ObservableVarianceDecomposition
 
 set_option autoImplicit false
 
@@ -14,6 +15,7 @@ namespace CountingMatroid.Analysis.ObservablePoincare
 open CountingMatroid.Model CountingMatroid.Program
 open CountingMatroid.Analysis.IdealExchangeChain
 open CountingMatroid.Analysis.ObservableProjection
+open CountingMatroid.Analysis.ObservableVarianceDecomposition
 open Arlib.Probability Arlib.Probability.FinDist Arlib.MarkovChains
 
 /-- INTERNAL: Write the ideal Metropolis energy using symmetric proposal
@@ -46,6 +48,36 @@ theorem ideal_dirichlet_min_weights {n : ℕ} (r : ℕ)
   · rw [mhRate_detailed_balance (exchangeProposal n hn) next
       (lt_of_le_of_ne (π.coe_nonneg state) (Ne.symm hzero))]
 
+/-- INTERNAL: The type-mass lower bound converts the two paper constants
+to the stated observable Poincare constant, with the ideal proposal's
+normalization retained explicitly.
+TEXLINE: main.tex:944-951 -/
+theorem observable_poincare_constant_bound (n : ℕ) (hn : 0 < n)
+    (p E : ℝ) (hp : 1 / (5 * (n : ℝ) ^ 2) ≤ p) (hE : 0 ≤ E) :
+    (72 * (n : ℝ) ^ 2 + 73 * (n : ℝ) + 16) *
+        (2 * (n : ℝ) ^ 2 * E / p) ≤ 2000 * (n : ℝ) ^ 6 * E := by
+  have hN : (1 : ℝ) ≤ n := by exact_mod_cast hn
+  have hnpos : (0 : ℝ) < n := by exact_mod_cast hn
+  have hden : 0 < 5 * (n : ℝ) ^ 2 := by positivity
+  have hp0 : 0 < p := (div_pos (by norm_num) hden).trans_le hp
+  have hp' : 1 ≤ p * (5 * (n : ℝ) ^ 2) := (div_le_iff₀ hden).mp hp
+  have hR : 2 * (n : ℝ) ^ 2 * E / p ≤ 10 * (n : ℝ) ^ 4 * E := by
+    apply (div_le_iff₀ hp0).mpr
+    have h := mul_le_mul_of_nonneg_left hp'
+      (by positivity : 0 ≤ 2 * (n : ℝ) ^ 2 * E)
+    nlinarith [h]
+  have hcoef : 72 * (n : ℝ) ^ 2 + 73 * (n : ℝ) + 16 ≤
+      161 * (n : ℝ) ^ 2 := by
+    nlinarith [mul_nonneg (by linarith : 0 ≤ (n : ℝ) - 1) (Nat.cast_nonneg n)]
+  calc
+    _ ≤ (72 * (n : ℝ) ^ 2 + 73 * (n : ℝ) + 16) *
+        (10 * (n : ℝ) ^ 4 * E) :=
+      mul_le_mul_of_nonneg_left hR (by positivity)
+    _ ≤ (161 * (n : ℝ) ^ 2) * (10 * (n : ℝ) ^ 4 * E) :=
+      mul_le_mul_of_nonneg_right hcoef (by positivity)
+    _ = 1610 * (n : ℝ) ^ 6 * E := by ring
+    _ ≤ _ := by nlinarith [mul_nonneg (pow_nonneg (Nat.cast_nonneg n) 6) hE]
+
 /-- PAPER: main.tex:928-951
 The observable Poincare inequality for exact matroid-oracle weights and good
 multipliers. It controls the energy of the original function, preserving
@@ -66,18 +98,104 @@ theorem observable_poincare (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       2000 * (n : ℝ) ^ 6 * dirichlet π (idealChain r o₁ o₂ q w hn hq hw) H H := by
   classical
   intro π
-  rw [Var_eq_pair, ideal_dirichlet_min_weights r o₁ o₂ q w hn hq hw H]
-  -- CONCRETE ROUTE: the pair variance and symmetric-conductance identities
-  -- reduce the estimate to weighted transport between transversal values
-  -- and defect conditional means. A cellwise comparison is unavailable:
-  -- exchangeProposal vanishes on non-neighboring states, whereas their
-  -- projected-variance cells can be positive. The paper supplies transport
-  -- through paths instead. Its two precise prerequisites are
-  -- main.tex:784-857 (binary conditioning-tree transversal variance) and
-  -- main.tex:866-911 (defect-to-transversal conditional-mean transport).
-  -- Those require the conditional coefficient inequalities and transport
-  -- construction from the earlier paper sections, not stationarity.
-  -- SAME-PAPER OBLIGATION: no borrowed assumption is proposed.
+  let p₀ := classMass π .transversal
+  let m₀ := classMean π H .transversal
+  let V := transversalVariance π H
+  let E := (1 / 2 : ℝ) * ∑ state : PairedSet n, ∑ next : PairedSet n,
+    exchangeProposal n hn state next * min (π state) (π next) *
+      (H state - H next) ^ 2
+  have hEeq : E = dirichlet π (idealChain r o₁ o₂ q w hn hq hw) H H :=
+    (ideal_dirichlet_min_weights r o₁ o₂ q w hn hq hw H).symm
+  have hE : 0 ≤ E := by
+    rw [hEeq]
+    exact dirichlet_self_nonneg (ideal_chain_stationary r o₁ o₂ q w hn hq hw) H
+  have hp : 1 / (5 * (n : ℝ) ^ 2) ≤ p₀ := by
+    dsimp only [p₀, π]
+    rw [operational_class_mass]
+    exact_mod_cast (TypeMassLowerBounds.good_type_mass_bounds
+      r o₁ o₂ q w hn hq hgood).2.1
+  have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
+  have hp₀ : 0 < p₀ := (div_pos (by norm_num) (by positivity)).trans_le hp
+  let R := 2 * (n : ℝ) ^ 2 * E / p₀
+  -- The remaining conjunction is precisely the two quantitative paper
+  -- steps in the normalization D(H)/c₀ = 2n² E(H)/π(Ω₀).
+  -- No auxiliary declaration is assumed, and the original theorem remains
+  -- open until both transport estimates are proved.
+  suffices hpaper :
+      V ≤ (n : ℝ) * (1 + 8 * (n : ℝ)) * R ∧
+      ∀ i k : Fin n, i ≠ k →
+        (classMean π H (.defect i k) - m₀) ^ 2 ≤
+          2 * (8 + 32 * (n : ℝ)) * R + 8 * V by
+    obtain ⟨htrans, hdef⟩ := hpaper
+    have hV : 0 ≤ V := transversal_variance_nonneg π H
+    have hR : 0 ≤ R := by dsimp [R]; positivity
+    let B := 2 * (8 + 32 * (n : ℝ)) * R + 8 * V
+    have hB : 0 ≤ B := by dsimp [B]; positivity
+    have hmass : (∑ i : Fin n, ∑ k : Fin n, classMass π (.defect i k)) ≤ 1 := by
+      have hpart := class_mass_partition π
+      have hinvalid : classMass π .invalid = 0 :=
+        operational_invalid_mass_zero r o₁ o₂ q w hq hw
+      rw [hinvalid] at hpart
+      have hpos := class_mass_nonneg π .transversal
+      linarith
+    have hdefsum : (∑ i : Fin n, ∑ k : Fin n,
+        classMass π (.defect i k) * (classMean π H (.defect i k) - m₀) ^ 2) ≤ B := by
+      calc
+        _ ≤ ∑ i : Fin n, ∑ k : Fin n, classMass π (.defect i k) * B := by
+          apply Finset.sum_le_sum
+          intro i _
+          apply Finset.sum_le_sum
+          intro k _
+          by_cases hik : i = k
+          · subst k
+            have hz : classMass π (.defect i i) = 0 :=
+              diagonal_class_mass_zero r o₁ o₂ q w hq hw i
+            simp [hz]
+          · exact mul_le_mul_of_nonneg_left (hdef i k hik)
+              (class_mass_nonneg π (.defect i k))
+        _ = (∑ i : Fin n, ∑ k : Fin n, classMass π (.defect i k)) * B := by
+          simp only [Finset.sum_mul]
+        _ ≤ B := by
+          simpa only [one_mul] using mul_le_mul_of_nonneg_right hmass hB
+    have hmoment : (∑ state : PairedSet n,
+        if (classifyState state).val = .transversal then
+          π state * (H state - m₀) ^ 2 else 0) = p₀ * V := by
+      change _ = p₀ * ((∑ state : PairedSet n,
+        if (classifyState state).val = .transversal then
+          π state * (H state - m₀) ^ 2 else 0) / p₀)
+      field_simp [hp₀.ne']
+    have hvar := observable_variance_decomposition r o₁ o₂ q w hq hw H m₀
+    rw [hmoment] at hvar
+    have hweighted : p₀ * V ≤ V := by
+      simpa only [one_mul] using
+        mul_le_mul_of_nonneg_right (class_mass_le_one π .transversal) hV
+    calc
+      Var π (observableProjection π H) ≤ p₀ * V +
+          ∑ i : Fin n, ∑ k : Fin n,
+            classMass π (.defect i k) * (classMean π H (.defect i k) - m₀) ^ 2 := hvar
+      _ ≤ V + B := add_le_add hweighted hdefsum
+      _ = 9 * V + 2 * (8 + 32 * (n : ℝ)) * R := by dsimp [B]; ring
+      _ ≤ 9 * ((n : ℝ) * (1 + 8 * (n : ℝ)) * R) +
+          2 * (8 + 32 * (n : ℝ)) * R :=
+        add_le_add_right (mul_le_mul_of_nonneg_left htrans (by norm_num)) _
+      _ = (72 * (n : ℝ) ^ 2 + 73 * (n : ℝ) + 16) * R := by ring
+      _ ≤ 2000 * (n : ℝ) ^ 6 * E := observable_poincare_constant_bound n hn p₀ E hp hE
+      _ = _ := by rw [hEeq]
+  -- STILL OPEN: main.tex:777-839 requires the binary conditioning tree,
+  -- the conditional defect-coefficient inequalities (397-449), and the
+  -- signed transport construction (493-709). main.tex:851-911 requires
+  -- the same transport applied to a four-way transversal event.
+  -- Library entrywise Dirichlet comparison cannot supply this: it asks for
+  -- pointwise domination on non-neighbors, where exchangeProposal is zero.
+  -- The pinned sources have no Lorentzian/rank-weight quadratic-signature
+  -- theorem with which to discharge the conditional coefficient bounds.
+  -- These are same-paper proof obligations, not assumptions in Prior.
   sorry
 
 end CountingMatroid.Analysis.ObservablePoincare
+
+/-! ### Run record
+Newest first. History, not instruction — what this file claims is above.
+
+* current · partial · proved the projection variance decomposition and mass bookkeeping in ObservableVarianceDecomposition, and reduced the original open goal to the paper's transversal variance and defect-mean transport estimates; the normalization and final constants are proved.
+-/
