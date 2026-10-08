@@ -1,5 +1,8 @@
 import CountingMatroid.Model.Run
 import CountingMatroid.Analysis.LeastHalvingsCost
+import CountingMatroid.Analysis.ScheduleOpeningCost
+import CountingMatroid.Analysis.ScheduleThermalSetupCost
+import CountingMatroid.Analysis.ScheduleThermalRestCost
 
 set_option autoImplicit false
 
@@ -396,6 +399,37 @@ theorem leastDrawTrials_otherSteps_le (M : ℕ) :
         else pure none) (M.log2 + 8) (1, 2))) ≤ 3 * (M.log2 + 8) + 2
   omega
 
+/-- INTERNAL: A fixed polynomial absorbs the six opening-charge bounds. -/
+private theorem openingPolynomial_arith (S : ℕ) (hS : 1 ≤ S) :
+    (S + 7) ^ 2 + (100 * (S + 15) * (2 * S + 30) ^ 2 + 1) +
+      1 + (2 * S + 1) + (2 * S + 8) ^ 2 + (2 * S + 12) ^ 2 ≤
+      2000000 * S ^ 4 := by
+  have h1 : S ≤ S ^ 4 := by simpa only [pow_one] using
+    (pow_le_pow_right₀ hS (by decide : 1 ≤ 4))
+  have h2 : S ^ 2 ≤ S ^ 4 := pow_le_pow_right₀ hS (by decide)
+  have h3 : S ^ 3 ≤ S ^ 4 := pow_le_pow_right₀ hS (by decide)
+  have h4 : 1 ≤ S ^ 4 := by
+    simpa only [pow_zero] using (pow_le_pow_right₀ hS (by decide : 0 ≤ 4))
+  calc
+    _ = 400 * S ^ 3 + 18009 * S ^ 2 + 270096 * S + 1350260 := by ring
+    _ ≤ 2000000 * S ^ 4 := by omega
+
+/-- INTERNAL: The thermal setup's rational division fits a quartic size bound. -/
+private theorem thermalPolynomial_arith (S : ℕ) (hS : 1 ≤ S) :
+    5 + 1120 * S ^ 2 + (S + 1120 * S ^ 2 + 4) ^ 2 ≤
+      2000000 * S ^ 4 := by
+  have h1 : S ≤ S ^ 2 := by simpa only [pow_one] using
+    (pow_le_pow_right₀ hS (by decide : 1 ≤ 2))
+  have h2 : S ^ 2 ≤ S ^ 4 := pow_le_pow_right₀ hS (by decide)
+  have h4 : 1 ≤ S ^ 4 := by
+    simpa only [pow_zero] using (pow_le_pow_right₀ hS (by decide : 0 ≤ 4))
+  have hinner : S + 1120 * S ^ 2 + 4 ≤ 1125 * S ^ 2 := by omega
+  have hsq := Nat.pow_le_pow_left hinner 2
+  calc
+    _ ≤ 5 + 1120 * S ^ 2 + (1125 * S ^ 2) ^ 2 := by omega
+    _ = 5 + 1120 * S ^ 2 + 1265625 * S ^ 4 := by ring
+    _ ≤ 2000000 * S ^ 4 := by omega
+
 /-- INTERNAL: The nonoracle charges of the concrete schedule have a common
 polynomial bound in the encoded input size.
 TEXLINE: main.tex:1348-1358 -/
@@ -505,22 +539,95 @@ theorem schedule_otherSteps_envelope :
         ((A : ℚ) / ((p.ε / (D : ℚ)) * (p.ε / (D : ℚ))))).val).log2 ≤
         350000000000 * S ^ 16 + 2 * S + 2240 * S ^ 2 + 12 := by
     omega
-  unfold CountingMatroid.Program.schedule
-  simp only [otherSteps_bind, natPower_otherSteps_eq]
-  -- BLOCKER: `hObsLogPoly` bounds the ceiling operand's logarithm, and
-  -- `hεcost` and `hδcost` bound the two capped searches. The expanded sum
-  -- still needs the values of its nested primitive calls rewritten to the
-  -- local `L`, `D`, and `A` expressions, then each remaining rational and
-  -- natural primitive charge collected under the claimed polynomial.
-  -- A whole-expression `simp` of these nested calls exhausted practical
-  -- elaboration time; the rewrite needs to be staged by schedule phase.
-  sorry
+  rw [schedule_split n p, otherSteps_bind, scheduleOpening_value]
+  have hopen := scheduleOpening_otherSteps_le n p
+  have hTwoNLog : (2 * n).log2 ≤ 2 * S := by
+    calc
+      (2 * n).log2 ≤ 2 * n := by
+        simpa only [Nat.log2_eq_log_two] using Nat.log_le_self 2 (2 * n)
+      _ ≤ 2 * S := by omega
+  have hTwoNLength : binaryRatLength (2 * n : ℚ) ≤ 2 * S + 4 := by
+    have h := binaryRatLength_natCast (2 * n)
+    simp only [Nat.cast_mul, Nat.cast_ofNat] at h
+    omega
+  have hInvLength : binaryRatLength (1 / (2 * n : ℚ)) ≤ 2 * S + 8 := by
+    have h := binaryRatLength_div_le (1 : ℚ) (2 * n : ℚ)
+    have hOne : binaryRatLength (1 : ℚ) = 4 := by decide
+    omega
+  have hopenPoly : otherSteps (scheduleOpening n p) ≤ 2000000 * S ^ 4 := by
+    have h1 : (binaryRatLength p.ε + 7) ^ 2 ≤ (S + 7) ^ 2 := by
+      exact Nat.pow_le_pow_left (by omega) 2
+    have h2 : (4 + binaryRatLength (2 * n : ℚ)) ^ 2 ≤
+        (2 * S + 8) ^ 2 := by
+      exact Nat.pow_le_pow_left (by omega) 2
+    have h3 : (4 + binaryRatLength (1 / (2 * n : ℚ))) ^ 2 ≤
+        (2 * S + 12) ^ 2 := by
+      exact Nat.pow_le_pow_left (by omega) 2
+    have hbound : otherSteps (scheduleOpening n p) ≤
+        (S + 7) ^ 2 + (100 * (S + 15) * (2 * S + 30) ^ 2 + 1) +
+        1 + (2 * S + 1) + (2 * S + 8) ^ 2 + (2 * S + 12) ^ 2 := by
+      omega
+    exact hbound.trans (openingPolynomial_arith S (by omega))
+  suffices hremaining :
+      otherSteps (scheduleRemaining n p
+        ⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩) ≤ 10 ^ 200 * S ^ 45 by
+    change otherSteps (scheduleOpening n p) +
+      otherSteps (scheduleRemaining n p
+        ⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩) ≤ 10 ^ 500 * S ^ 50
+    have h4 : S ^ 4 ≤ S ^ 50 := pow_le_pow_right₀ (by omega) (by decide)
+    have h45 : S ^ 45 ≤ S ^ 50 := pow_le_pow_right₀ (by omega) (by decide)
+    have h50 : 1 ≤ S ^ 50 := by
+      simpa only [pow_zero] using (pow_le_pow_right₀ (by omega : 1 ≤ S)
+        (by decide : 0 ≤ 50))
+    have hcost : otherSteps (scheduleOpening n p) +
+        otherSteps (scheduleRemaining n p
+          ⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩) ≤
+        2000000 * S ^ 4 + 10 ^ 200 * S ^ 45 :=
+      Nat.add_le_add hopenPoly hremaining
+    omega
+  rw [scheduleRemaining_split, otherSteps_bind, thermalSetup_value]
+  change otherSteps (thermalSetup n p ⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩) +
+    otherSteps (thermalRest n p
+      ⟨⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩, L, L + 1, D, p.ε / (D : ℚ)⟩) ≤
+      10 ^ 200 * S ^ 45
+  have hthermal := thermalSetup_otherSteps_le n p
+    (⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩ : ScheduleOpeningResult)
+  change otherSteps (thermalSetup n p
+    ⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩) ≤
+      5 + D.log2 + (binaryRatLength p.ε + binaryRatLength (D : ℚ)) ^ 2 at hthermal
+  have hDLength : binaryRatLength (D : ℚ) ≤ 1120 * S ^ 2 + 4 := by
+    rw [binaryRatLength_natCast]
+    omega
+  have hinner : binaryRatLength p.ε + binaryRatLength (D : ℚ) ≤
+      S + 1120 * S ^ 2 + 4 := by omega
+  have hthermalPoly : otherSteps (thermalSetup n p
+      ⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩) ≤ 2000000 * S ^ 4 := by
+    have hsq := Nat.pow_le_pow_left hinner 2
+    have hbound : otherSteps (thermalSetup n p
+        ⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩) ≤
+        5 + 1120 * S ^ 2 + (S + 1120 * S ^ 2 + 4) ^ 2 := by omega
+    exact hbound.trans (thermalPolynomial_arith S (by omega))
+  suffices htail : otherSteps (thermalRest n p
+      ⟨⟨b, 1 - 1 / (2 * n : ℚ), 2 * n⟩, L, L + 1, D, p.ε / (D : ℚ)⟩) ≤
+        10 ^ 150 * S ^ 40 by
+    have h4 : S ^ 4 ≤ S ^ 45 := pow_le_pow_right₀ (by omega) (by decide)
+    have h40 : S ^ 40 ≤ S ^ 45 := pow_le_pow_right₀ (by omega) (by decide)
+    have h45 : 1 ≤ S ^ 45 := by
+      simpa only [pow_zero] using (pow_le_pow_right₀ (by omega : 1 ≤ S)
+        (by decide : 0 ≤ 45))
+    have hcost := Nat.add_le_add hthermalPoly htail
+    omega
+  exact thermalRest_otherSteps_poly n r p
 
 end CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r14b · pending · the parent elaborates through the isolated tail lemma;
+  the live handoff request was refused before capture.
+* r14 · recovery · split the schedule into opening, thermal setup, and tail;
+  proved the first two cost bounds and handed off the isolated tail bound.
 * r13 · partial · proved the observation-quotient length and its ceiling-log
   polynomial bound and input-size bounds for both halving searches;
   schedule-cost normalization remains open.
