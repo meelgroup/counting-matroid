@@ -58,9 +58,10 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
     rw [hcorrect n r M₁ M₂ o₁ o₂ hfull hr h₁ h₂]
     exact Bool.decide_congr
       (commonBaseCount_pos_iff_common_independent n r M₁ M₂ hr).symm
-  -- BLOCKER: no declaration in the pinned Mathlib or Arlib sources supplies
-  -- a deterministic matroid-intersection algorithm on two independence
-  -- oracles. Construct an actual charged implementation of the cited test,
+  -- BLOCKER: a statement search over the pinned Mathlib matroid sources and
+  -- all of Mathlib and Arlib found no deterministic matroid-intersection
+  -- algorithm on two independence oracles, nor a matching cost certificate.
+  -- Construct an actual charged implementation of the cited test,
   -- then prove its size-r independent-set answer and uniform polynomial
   -- bounds for `oracleCalls` and `otherSteps` on that same implementation.
   -- The bridge from that decision to the required common-base answer is
@@ -75,6 +76,7 @@ end CountingMatroid.Analysis.FeasibilitySolver
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r8 · open · rechecked the entire pinned Mathlib and Arlib sources by matroid-intersection, common-independent-set, and augmenting-path statements; no executable two-oracle solver or cost certificate matches `FeasibilityContract`. The Schrijver citation remains the missing borrowed dependency.
 * r7 · open · searched the pinned Mathlib matroid sources and all Arlib Lean sources by matroid-intersection and augmentation statement shape; no two-oracle implementation or polynomial charged certificate exists. The cited Schrijver theorem supplies an external algorithmic result, but the custom charged realization remains a local obligation.
 * r6 · open · rechecked the contract shape and pinned Matroid/Computation sources; Mathlib has single-matroid augmentation but no executable matroid-intersection pretest or polynomial charged cost certificate. The Schrijver result remains a Prior proposal.
 * r5 · open · searched pinned Mathlib and Arlib for matroid-intersection code; none supplies a charged polynomial pretest, while exhaustive candidate enumeration has exponential oracle cost.
