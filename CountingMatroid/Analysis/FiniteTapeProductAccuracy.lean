@@ -80,10 +80,11 @@ theorem finite_tape_product_accuracy (n r : ℕ)
     -- `Program.boundedRun`, which folds phase status into `Option` and returns
     -- only `(estimate, bitCursor)`. A finite-tape event bound for this exact
     -- `singleRun` is needed after that coupling; no theorem in the current
-    -- imports supplies one. In particular, Mathlib's Chebyshev inequality
-    -- cannot apply until the finite-tape observation law and its mean-square
-    -- bound are proved for this program. This is a same-paper proof
-    -- obligation, not Prior.
+    -- imports supplies one. Arlib has generic Markov/Chebyshev inequalities
+    -- and finite-chain Metropolis stationarity, but there is no law equating
+    -- the code's `chainStep` fair-bit execution with such a chain. The phase
+    -- observation MSE bound and its finite-tape transfer must be proved before
+    -- those inequalities apply. These are same-paper proof obligations, not Prior.
     sorry
 
 end CountingMatroid.Analysis.FiniteTapeProductAccuracy
@@ -91,6 +92,7 @@ end CountingMatroid.Analysis.FiniteTapeProductAccuracy
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r12 · blocked · positive-ground `exact?` and `aesop` leave the same event-mass inequality; Arlib has generic Markov/Chebyshev and Metropolis results, but no distributional bridge from `chainStep`, conditional phase law, or uncapped-to-capped coupling.
 * r11 · blocked · `aesop` leaves the positive-ground event-mass inequality and `exact?` finds no matching theorem. Mathlib has Chebyshev, but the program has no finite-tape phase law, mean-square bound, or uncapped-to-capped coupling to which it applies.
 * r10 · blocked · `exact?` cannot close the positive-ground event bound; source search found no finite-chain trace/MSE analysis, good-multiplier invariant, or uncapped-to-`boundedRun` coupling. The paper proves these steps at main.tex:1207-1315, so this is a same-paper dependency, not a Prior proposal.
 * r9 · partial · proved the empty-ground event is empty; positive-ground `aesop` leaves the event-mass inequality, with conditional phase bounds and capped finite-tape coupling absent.
