@@ -17,6 +17,8 @@ import Mathlib.Data.Set.Card.Arithmetic
 import CountingMatroid.Analysis.FinitePhaseEstimationBound
 import CountingMatroid.Analysis.FinitePhaseObservationMSE
 import CountingMatroid.Analysis.FinitePhaseExecutionAbort
+import CountingMatroid.Analysis.SuccessfulPrefixAbortBound
+import CountingMatroid.Analysis.SuccessfulPrefixObservationMSE
 
 set_option autoImplicit false
 
@@ -236,13 +238,13 @@ product lower bound, including aborted runs. Deterministic history replay,
 prefix conditioning, mean-to-certificate containment and the final union bound
 are proved. The conditional raw failure is split into execution aborts and
 completed observation errors. `FinitePhaseEstimationBound` proves the finite
-Markov/observable-union reduction, including the schedule arithmetic and the
-operational stationary-mean lower bound. The two remaining quantitative
-obligations, restart/draw execution-abort mass and masked warm-observation
-MSE, remain local to this theorem. Their child-file handoff was mechanically
-rejected; those files retain only proved normalization equivalences. There
-are no new unproved exported helpers. The target statement and its matroid
-promises are unchanged.
+Markov/observable-union reduction, including schedule arithmetic and the
+operational stationary-mean lower bound. The two quantitative obligations are
+stated in `SuccessfulPrefixAbortBound` and `SuccessfulPrefixObservationMSE`,
+with the actual successful-prefix hypothesis and all original input promises.
+Those estimates remain open; the parent applies them explicitly. Both live
+handoffs were mechanically rejected, so this remains an unfinished proof with
+two exported quantitative obligations, not a completed parallel handoff.
 TEXLINE: main.tex:1253-1315,1392-1421 -/
 theorem finite_tape_lower_tail_bound (n r : ℕ)
     (M₁ M₂ : Matroid (Fin n)) (o₁ o₂ : IndependenceOracle n)
@@ -429,20 +431,9 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
           have habort : (aborted.ncard : ENNReal) *
               (1 / 2 : ENNReal) ^ (m - pref.length) ≤
                 3 / (32 * ((s.L : ENNReal) + 1)) := by
-            apply (FinitePhaseExecutionAbort.conditional_phase_execution_abort_iff
-              n r o₁ o₂ p j pref).mpr
-            -- BLOCKER: for hj : j < s.L and the actual successful hprefix,
-            -- bound restart/capped-draw execution abort mass. Expanding
-            -- phaseObservationData gives the actual restart and observe
-            -- Option outputs; restartPhase_zero eliminates only phase-zero
-            -- restart failure, not its observation draw failures. Positive
-            -- phases need the uncapped restart expectation ≤20*n²*L*τ,
-            -- its Markov tail, capped rejection-draw law and finite-block
-            -- coverage. The concurrent ideal kernel does not yet supply
-            -- a trace/return-time trajectory law or program coupling.
-            -- This is the 3/(32*(L+1)) budget: 1/32 for the restart tail
-            -- plus at most 1/16 for the per-phase draw coupling.
-            sorry
+            exact SuccessfulPrefixAbortBound.conditional_successful_prefix_abort_mass
+              n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive
+              j (Finset.mem_range.mp hj) pref hprefix
           have hmoment : ∀ index : PhaseObservationExperiment.Observable n,
               (∑ suffix : List.Vector Bool (m - pref.length),
                 PhaseObservationExperiment.observationSquaredError r o₁ o₂
@@ -450,21 +441,9 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
                 (2 : ℚ) ^ (m - pref.length) ≤
                   40000 * (n : ℚ) ^ 8 / s.observations := by
             intro index
-            apply (FinitePhaseObservationMSE.conditional_phase_observation_mse_iff
-              n r o₁ o₂ p j pref index).mpr
-            -- BLOCKER: actual masked second moments at a successful hprefix.
-            -- The finite Markov/observable union reduction is proved in
-            -- completed_failure_mass_le, and its operational mean lower
-            -- bounds and schedule arithmetic are proved. What remains is
-            -- the correlated trajectory sum. The concurrent IdealExchangeChain
-            -- now defines an ideal stationary kernel, and ObservablePoincare
-            -- states its projected variance inequality. We still need its
-            -- operational trajectory and trace law, warm endpoint domination
-            -- and the paper's
-            -- time-average MSE (main.tex:952-1087), then couple completed
-            -- capped executions and prove finite-block coverage. Pointwise
-            -- nonnegativity of the square cannot bound this sum by O(1/N).
-            sorry
+            exact SuccessfulPrefixObservationMSE.conditional_successful_prefix_observation_mse
+              n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive
+              j (Finset.mem_range.mp hj) pref hprefix index
           have hestimate := FinitePhaseEstimationBound.completed_failure_mass_le
             n r o₁ o₂ p hn j pref hmoment
           calc
@@ -508,6 +487,25 @@ end CountingMatroid.Analysis.FiniteTapeLowerTail
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r23 · genuine blocker · updated live request
+  `r23-prefix-cursor-completed-moment-2` was also mechanically rejected
+  without compiler diagnostic. Both quantitative children remain owned here
+  and open. The target elaborates, but is not proved outright: it still
+  depends on restart/draw coupling and warm correlated-observation estimates.
+
+* r23 · blocker · live request `r23-successful-prefix-abort-and-mse-1`
+  was mechanically rejected without diagnostic. Retained ownership; proved
+  the reached good cursor and exact truncated-prefix length, and restricted
+  the masked fair-suffix expectation to completed outputs. Two quantitative
+  children still contain the original probability debt; no handoff accepted.
+
+* r23 · parallel boundary · exposed the conditional abort and masked-MSE
+  estimates in separate files with all matroid promises and the actual
+  successful-prefix hypothesis. Proved completion-failure characterization,
+  constructed the real fair suffix law, and identified its exact masked
+  moment. The parent applies both open estimates; this is proof debt pending
+  live handoff, not outright closure.
 
 * r22 · rejected handoff · `r22-conditional-abort-mse-1` was mechanically
   rejected without diagnostic. Retained all proved observation, mean and
