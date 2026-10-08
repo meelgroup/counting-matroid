@@ -4,6 +4,8 @@ import CountingMatroid.Analysis.FirstPhaseFailure
 import CountingMatroid.Analysis.InitialRestartLaw
 import CountingMatroid.Analysis.BoundedRunResourceEnvelope
 import CountingMatroid.Analysis.EmpiricalPhaseCertificate
+import CountingMatroid.Analysis.PhaseMeanCertificate
+import CountingMatroid.Analysis.TransversalClassPartition
 
 set_option autoImplicit false
 
@@ -35,7 +37,14 @@ proved here. `EmpiricalPhaseCertificate` separates the raw restart and
 correlated-observation estimates from deterministic finishing and learned-table
 preservation. Its scalar arithmetic and exact once-per-index finishing
 are proved in `RelativeObservationBounds` and `FinishPhaseEmpiricalUpdate`.
-The remaining local stochastic obligation bounds failure of raw estimates,
+`AnnealingPartitionDrift` proves the concrete schedule's state-weight and
+class-partition bounds and ideal-multiplier drift. `DefectPartitionPositive`
+proves defect-class nonemptiness against the executable classifier.
+`StationaryMeanIdentities` proves the fixed state-weight mean identities using
+`TransversalClassPartition`'s proved classifier reindexing.
+`PhaseMeanCertificate` therefore removes type-mean identities,
+positivity, and multiplier drift from the random event.
+The remaining local stochastic obligation bounds failure of empirical means,
 including capped draws and adaptive finite-tape coverage. `InitialRestartLaw`
 retains the proved phase-zero fresh-prefix/suffix identity.
 `FirstPhaseFailure` supplies the operational certificates and counting cover.
@@ -181,22 +190,26 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
   let rawBad := fun j => {bits : List Bool | bits.length = m ∧
     (∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂
       (fun i => (bits[i]?).getD false) s a) ∧
-    ¬ EmpiricalPhaseCertificate.RawPhaseEstimates r o₁ o₂
+    ¬ PhaseMeanCertificate.RawPhaseMeans r o₁ o₂
       (fun i => (bits[i]?).getD false) s j}
   have hrawlocal (j : ℕ) (hj : j ∈ Finset.range s.L) :
       ((rawBad j).ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
         1 / (8 * ((s.L : ENNReal) + 1)) := by
-    -- RECOVERY BOUNDARY: the event now concerns the actual restart and
-    -- observePhase outputs BEFORE finishPhase, with relative error bounds
-    -- for pZero, u, and each pDefect. The deterministic implication to an
-    -- accurate ratio and good next stored tables is proved separately in
-    -- EmpiricalPhaseCertificate.raw_phase_certified; it no longer forms
-    -- part of this stochastic obligation.
+    -- RECOVERY BOUNDARY: the event concerns the actual restart and
+    -- observePhase outputs BEFORE finishPhase, with relative errors for
+    -- pZero, u, and each pDefect under the normalized operational state weights.
+    -- PhaseMeanCertificate.raw_phase_means_estimates supplies type-mean
+    -- identities via the proved classifier reindexing, as well as positivity
+    -- and ideal-multiplier drift from the proved partition bounds;
+    -- EmpiricalPhaseCertificate.raw_phase_certified then supplies finishing
+    -- and learned-table preservation. None is a stochastic premise now.
     -- NEXT STEP: construct the uncapped fixed-kernel trajectory law for a
-    -- reached good prefix; establish the stationary type identities and
-    -- ideal-multiplier drift appearing in ObservationEstimates; prove the
-    -- restart mean and warm correlated-average MSE, then transfer their
-    -- union bound through capped draws and the remaining finite block.
+    -- reached good prefix; prove its stationarity and the observable Poincare
+    -- estimate, then the restart mean and warm correlated-average MSE. Transfer
+    -- their union bound through capped draws and the remaining finite block.
+    -- Establish good initialization and the normalized type-mass lower bounds
+    -- before invoking the conditional estimates. These do not follow from
+    -- the state-weight identities alone.
     -- For j=0, InitialRestartLaw.restartPhase_zero and its proved fresh-bit
     -- split supply the starting law; no trace-cost estimate is required.
     -- For j>0, also prove the conditional trace restart mean. These are
@@ -210,7 +223,8 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
       refine ⟨hb.1, hb.2.1, ?_⟩
       intro hraw
       exact hb.2.2 (EmpiricalPhaseCertificate.raw_phase_certified
-        r o₁ o₂ _ s j hη hηsmall hraw)
+        r o₁ o₂ _ s j hη hηsmall
+        (PhaseMeanCertificate.raw_phase_means_estimates n r o₁ o₂ p hn _ j hraw))
     have hfiniteRaw : (rawBad j).Finite :=
       (List.finite_length_eq Bool m).subset (fun _ hb => hb.1)
     have hc : ((bad j).ncard : ENNReal) ≤ ((rawBad j).ncard : ENNReal) := by
@@ -239,6 +253,12 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r21 · proved support · mechanical handoff r21-transversal-reindex-1 was rejected without further diagnostic, so the classifier characterization and transversal reindexing were proved locally. All new children are proved; the only proof gap remains the local conditional finite-tape empirical-mean failure bound.
+
+* r21 · decomposed · normalized actual state weights fix every observable mean; the bridge now proves mean and multiplier identities from the independent transversal-class reindexing child. Its sum_bij proof closes injectivity and weight agreement and exposes the executable classifier's forward/reverse scan invariant. Defect-class positivity is proved independently.
+
+* r21 · proved support · proved schedule cooling bounds, operational class-partition bounds, and ideal-multiplier drift. PhaseMeanCertificate removes true-ratio positivity and drift from the sole remaining stochastic mean-failure event; exact type-mean identities, conditional restart/MSE, and finite-tape coupling remain open locally.
 
 * recovery · proved support · closed the exact once-per-index finishing lemma after rejected handoff. The new raw-estimate-to-certified-phase implication has no unproved children; the stochastic raw-estimate bound is the only remaining local gap.
 
