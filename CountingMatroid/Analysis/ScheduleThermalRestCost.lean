@@ -83,7 +83,13 @@ theorem thermalRest_otherSteps_poly (n r : ℕ) (p : InputParams) :
   -- theorem. Extract that file's helper prefix (before openingPolynomial_arith)
   -- into a shared analysis module and import it from both files. The task's
   -- ownership rules prohibit editing the downstream file or duplicating its
-  -- existing proofs. schedule_otherSteps_envelope itself is circular here and
+  -- existing proofs. Rechecked against the current imports: a Lean stdin probe
+  -- reports unknown identifiers for all five public length/search helpers above;
+  -- source search finds their definitions only in the downstream module. Move
+  -- its helper block before openingPolynomial_arith into ScheduleCostPrimitives,
+  -- retaining the namespace and exporting natPower_otherSteps_eq and
+  -- rationalBinary_otherSteps_le (currently private). Both modules can then
+  -- import that shared module. schedule_otherSteps_envelope itself is circular here and
   -- its existential constants do not imply this explicit bound.
   sorry
 
@@ -92,6 +98,9 @@ end CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r16 · blocked · confirmed the downstream helper placement with an import-only
+  Lean probe and source search; requested a shared ScheduleCostPrimitives module
+  with public power and rational-operation cost bounds. No proof debt moved.
 * r15 · partial · proved thermalRest_cost_eq and applied it in the target;
   the existing rational-length and capped-search helpers are downstream of
   the target, requiring extraction to a shared module before reuse.
