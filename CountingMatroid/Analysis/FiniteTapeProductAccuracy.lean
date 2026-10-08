@@ -80,11 +80,14 @@ theorem finite_tape_product_accuracy (n r : ℕ)
     -- `Program.boundedRun`, which folds phase status into `Option` and returns
     -- only `(estimate, bitCursor)`. A finite-tape event bound for this exact
     -- `singleRun` is needed after that coupling; no theorem in the current
-    -- imports supplies one. Arlib has generic Markov/Chebyshev inequalities
-    -- and finite-chain Metropolis stationarity, but there is no law equating
-    -- the code's `chainStep` fair-bit execution with such a chain. The phase
-    -- observation MSE bound and its finite-tape transfer must be proved before
-    -- those inequalities apply. These are same-paper proof obligations, not Prior.
+    -- imports supplies one. `Interface.Pseudocode.chainStepLaw` is defined by
+    -- running `chainStep` on a finite `fairTape`; it does not identify that
+    -- distribution with the paper's ideal Metropolis chain. There is no
+    -- `FinChain` or `FinDist` declaration in the project for the paired-state
+    -- process. Arlib has generic Markov/Chebyshev inequalities and finite-chain
+    -- Metropolis stationarity, but the program-to-chain law, phase observation
+    -- MSE bound, and finite-tape transfer are needed before they apply. These
+    -- are same-paper proof obligations, not Prior.
     sorry
 
 end CountingMatroid.Analysis.FiniteTapeProductAccuracy
@@ -92,6 +95,7 @@ end CountingMatroid.Analysis.FiniteTapeProductAccuracy
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r13 · blocked · `exact?` and `aesop` leave the positive-ground count inequality; `chainStepLaw` is only a finite-tape PMF, and the project has no paired-state ideal-chain law or conditional phase estimate to connect it to the paper's Markov/MSE argument.
 * r12 · blocked · positive-ground `exact?` and `aesop` leave the same event-mass inequality; Arlib has generic Markov/Chebyshev and Metropolis results, but no distributional bridge from `chainStep`, conditional phase law, or uncapped-to-capped coupling.
 * r11 · blocked · `aesop` leaves the positive-ground event-mass inequality and `exact?` finds no matching theorem. Mathlib has Chebyshev, but the program has no finite-tape phase law, mean-square bound, or uncapped-to-capped coupling to which it applies.
 * r10 · blocked · `exact?` cannot close the positive-ground event bound; source search found no finite-chain trace/MSE analysis, good-multiplier invariant, or uncapped-to-`boundedRun` coupling. The paper proves these steps at main.tex:1207-1315, so this is a same-paper dependency, not a Prior proposal.
