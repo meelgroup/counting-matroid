@@ -9,6 +9,10 @@ import CountingMatroid.Analysis.FiniteTapeFirstPhaseBound
 import CountingMatroid.Analysis.FiniteTapePrefixBound
 import CountingMatroid.Analysis.CertifiedPhaseRatioSteps
 import CountingMatroid.Analysis.SuccessfulPhaseReplay
+import CountingMatroid.Analysis.ObservePhaseIntervalReplay
+import CountingMatroid.Analysis.RestartPhaseIntervalReplay
+import CountingMatroid.Analysis.SinglePhaseIntervalReplay
+import CountingMatroid.Analysis.PhaseMeanCertificate
 import Mathlib.Data.Set.Card.Arithmetic
 
 set_option autoImplicit false
@@ -225,19 +229,16 @@ theorem consumed_prefix_tape_agreement (bitsA bitsB : List Bool) (k : ℕ)
   rw [heq, htake]
 
 /-- INTERNAL: A one-sided finite-tape form of the paper's successful-phase
-product lower bound. Unlike the completed-product error event, this event
-includes aborted runs, so it can directly control the zero-output mass.
-The deterministic containment, actual-history bridge, stronger-certificate
-cover and finite union bound are proved. Successful-history replay and
-prefix-freeness now reduce to the separate deterministic single-phase
-interval invariant stated locally as `hsingle`; `SuccessfulPhaseReplay`
-proves the history induction from that invariant. The finite-list agreement
-bridge is proved without additional hypotheses. The remaining
-local obligation is the conditional analytic estimate for each stopping
-prefix. `FiniteTapePrefixBound` supplies the fresh-suffix counting transfer,
-and `FiniteTapeFirstPhaseBound` supplies denominator normalization. Neither
-the local single-phase interval invariant nor the conditional analytic
-estimate is proved yet. No unproved supporting declaration is exported.
+product lower bound, including aborted runs. The deterministic containment,
+actual-history bridge, stronger-certificate cover, and finite union bound are
+proved. Single-phase interval replay and cursor monotonicity are now proved
+through bounded rejection draws, chain transitions, capped trace returns,
+restart stages, and correlated-observation loops. SuccessfulPhaseReplay lifts
+that invariant to histories, giving the prefix-free stopping cylinders used
+here. The sole remaining obligation is the conditional analytic failure bound
+for each stopping prefix, including capped draw failures and finite-block
+coverage. No unproved supporting declaration is exported by the new replay
+modules.
 TEXLINE: main.tex:1253-1315,1392-1421 -/
 theorem finite_tape_lower_tail_bound (n r : ℕ)
     (M₁ M₂ : Matroid (Fin n)) (o₁ o₂ : IndependenceOracle n)
@@ -262,17 +263,8 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
           (∀ i, previous.bitCursor ≤ i → i < next.bitCursor → tape i = otherTape i) →
           (BoundedRunPhase.boundedRunPhase r o₁ o₂ otherTape
             (CountingMatroid.Interface.Pseudocode.setup n p) a (some previous)).val = some next := by
-    intro a tape previous next hrun
-    unfold BoundedRunPhase.boundedRunPhase at hrun ⊢
-    simp only [Arlib.Computation.Charged.val_bind] at hrun ⊢
-    -- BLOCKER (operational, independent of probability): a successful
-    -- single phase advances its cursor and replays from agreement on its
-    -- consumed bit interval. Prove restartPhase and observePhase success-
-    -- path locality by their loop inductions, starting with boundedUniform
-    -- and chainStep; compose the two monotone intervals. finishPhase and
-    -- the final table/product writes are deterministic. The history
-    -- induction from this exact invariant is proved in SuccessfulPhaseReplay.
-    sorry
+    exact SinglePhaseIntervalReplay.single_phase_interval_replay r o₁ o₂
+      (CountingMatroid.Interface.Pseudocode.setup n p)
   apply (lower_tail_mass_le_ratio_failure n r o₁ o₂ p hn).trans
   apply (ratio_failure_mass_le_first_phase_failure n r o₁ o₂ p).trans
   apply (first_ratio_failure_mass_le_certificate_sum n r o₁ o₂ p hn).trans
@@ -369,14 +361,51 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
               suffix.length = m - pref.length ∧ E (pref ++ suffix)} : ENNReal) *
               (1 / 2 : ENNReal) ^ (m - pref.length) ≤
                 1 / (8 * ((s.L : ENNReal) + 1)) := by
-          -- BLOCKER: uniformly over the actual successful stopping prefixes,
-          -- bound the next-phase certificate failure on the fresh suffix.
-          -- Operational history replay is now a separate single-phase
-          -- invariant, used above through the proved history induction.
-          -- The remaining analytic step needs the uncapped restart mean,
-          -- stationary-mean observation MSE, learned-weight preservation,
-          -- and coupling of capped draws within the remaining block. These
-          -- are same-paper obligations at main.tex:1207-1285,1392-1427.
+          intro pref hp
+          let bad : Set (List Bool) := {suffix | suffix.length = m - pref.length ∧
+            E (pref ++ suffix)}
+          let rawBad : Set (List Bool) := {suffix | suffix.length = m - pref.length ∧
+            (∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂
+              (fun i => ((pref ++ suffix)[i]?).getD false) s a) ∧
+            ¬ PhaseMeanCertificate.RawPhaseMeans r o₁ o₂
+              (fun i => ((pref ++ suffix)[i]?).getD false) s j}
+          have hη : 0 ≤ s.η := by
+            change 0 ≤ p.ε / ((32 * (s.L + 1) : ℕ) : ℚ)
+            exact div_nonneg p.ε_pos.le (Nat.cast_nonneg _)
+          have hηsmall : s.η ≤ (1 / 3 : ℚ) := by
+            have hformula : s.η = p.ε / (32 * ((s.L : ℚ) + 1)) := by
+              change p.ε / ((32 * (s.L + 1) : ℕ) : ℚ) = _
+              push_cast
+              rfl
+            rw [hformula]
+            apply (div_le_iff₀ (by positivity : (0 : ℚ) < 32 * ((s.L : ℚ) + 1))).mpr
+            have hL : (0 : ℚ) ≤ s.L := Nat.cast_nonneg _
+            linarith [p.ε_lt_one]
+          have hsubset : bad ⊆ rawBad := by
+            intro suffix hb
+            refine ⟨hb.1, hb.2.1, ?_⟩
+            intro hraw
+            exact hb.2.2 (EmpiricalPhaseCertificate.raw_phase_certified r o₁ o₂ _ s j
+              hη hηsmall (PhaseMeanCertificate.raw_phase_means_estimates
+                n r o₁ o₂ p hn _ j hraw))
+          have hfiniteRaw : rawBad.Finite :=
+            (List.finite_length_eq Bool (m - pref.length)).subset (fun _ hb => hb.1)
+          have hcard : (bad.ncard : ENNReal) ≤ (rawBad.ncard : ENNReal) := by
+            exact_mod_cast Set.ncard_le_ncard hsubset hfiniteRaw
+          apply (mul_le_mul_of_nonneg_right hcard (by positivity :
+            (0 : ENNReal) ≤ (1 / 2 : ENNReal) ^ (m - pref.length))).trans
+          -- BLOCKER: bound rawBad's fair suffix mass by 1/(8*(L+1)),
+          -- uniformly for hp : pref ∈ P. Restart completion and relative
+          -- empirical errors are about the fixed operational typeMean and
+          -- numeratorMean. Their exact identities, ideal-weight drift,
+          -- deterministic finishing, and learned-table preservation are
+          -- supplied by the proved PhaseMeanCertificate/EmpiricalPhaseCertificate
+          -- bridges used in hsubset; operational history replay is proved.
+          -- What remains is the conditional uncapped restart mean and warm
+          -- correlated-observation MSE, plus their capped-draw and finite-block
+          -- coupling. No program-specific trajectory law or such stochastic
+          -- bound is supplied by the current imports. Same-paper obligations:
+          -- main.tex:1207-1266,1392-1427.
           sorry
         have hmass := FiniteTapePrefixBound.finite_prefix_failure_bound
           m P E (1 / (8 * ((s.L : ENNReal) + 1)))
@@ -401,6 +430,14 @@ end CountingMatroid.Analysis.FiniteTapeLowerTail
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r21 · partial · proved and used rejection-draw, chain-step, capped-return,
+  observation, restart, and full-phase interval replay, including monotone
+  cursors. The operational hsingle gap is closed; only the conditional
+  fresh-suffix raw-mean failure estimate remains; the mean-to-certificate
+  containment uses the newly proved stationary-mean and learned-weight bridges.
+  The restart handoff was rejected
+  without diagnostic, so its proof was completed locally.
 
 * r20 · rejected handoff · `r20-successful-phase-replay-1` was mechanically rejected without diagnostic. Retained ownership and replaced the open replay child by a proved history-induction implication; single-phase operational replay and the conditional suffix estimate remain explicit local obligations of the unchanged target.
 
