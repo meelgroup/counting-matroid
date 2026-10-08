@@ -1,13 +1,15 @@
 import CountingMatroid.Analysis.FinitePhaseObservationMSE
 import Arlib.Probability.FinDistFunctional
+import CountingMatroid.Analysis.SuccessfulPrefixTrajectoryDomination
 
 set_option autoImplicit false
 
 /-!
 A real finite probability law for the actual unused Boolean suffix, and its
-exact masked-error expectation. The conditional quantitative bound is open;
-it must identify the operational trajectory with the uncapped warm chain
-on completed executions and prove the paper's correlated-average estimate.
+exact masked-error expectation. The conditional quantitative bound reduces
+to the stationary correlated-average estimate and completed finite-tape
+trajectory domination in the two imported support files. Those quantitative
+obligations remain open in those support files.
 -/
 
 namespace CountingMatroid.Analysis.SuccessfulPrefixObservationMSE
@@ -114,21 +116,33 @@ theorem conditional_successful_prefix_observation_mse (n r : ℕ)
   dsimp only
   apply (Rat.cast_le (K := ℝ)).mp
   rw [masked_moment_eq_expectation, masked_expectation_eq_completed_sum]
-  -- Concrete route: the left side is now expectation under fairSuffixLaw.
-  -- Couple these actual completed executions to the fixed uncapped chain.
-  -- The restart endpoint must be ≤10*n² times the stationary operationalLaw,
-  -- and the trajectory law inherits this domination. Then the stationary
-  -- resolvent/covariance estimate gives ≤4000*n⁶/N, and warm domination
-  -- gives ≤40000*n⁸/N. Zero masking discards aborted paths.
-  -- BLOCKER: there is no proved operational trajectory law or warm restart
-  -- endpoint law yet, nor the restricted-Poincare time-average theorem.
-  -- Finite cursor/denominator coverage is also needed for the suffix coupling.
-  sorry
+  obtain ⟨current, hw, hgood, hdom⟩ :=
+    SuccessfulPrefixTrajectoryDomination.successful_prefix_trajectory_domination
+      n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive j hj pref hprefix index
+  have hstat := StationaryObservableMSE.stationary_observation_mse
+    n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ j current hgood hw index
+  calc
+    _ ≤ (10 * (n : ℝ) ^ 2) *
+        StationaryObservableMSE.stationaryObservationMoment
+          n r o₁ o₂ p hn j current hw index := hdom
+    _ ≤ (10 * (n : ℝ) ^ 2) * (4000 * (n : ℝ) ^ 6 /
+        (CountingMatroid.Interface.Pseudocode.setup n p).observations) :=
+      mul_le_mul_of_nonneg_left hstat (by positivity)
+    _ = ((40000 * (n : ℚ) ^ 8 /
+        (CountingMatroid.Interface.Pseudocode.setup n p).observations : ℚ) : ℝ) := by
+      push_cast
+      ring
 
 end CountingMatroid.Analysis.SuccessfulPrefixObservationMSE
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r24 · blocked · second live handoff `r24-stationary-mse-and-prefix-domination-2` was mechanically rejected without further diagnostic after all three modules built; retained the quantitative children with explicit covariance/resolvent and operational trajectory-domination blockers. The parent reduction moves proof debt and is not a completed quantitative proof.
+
+* r24 · retained · live handoff `r24-stationary-mse-and-prefix-domination-1` was mechanically rejected without further diagnostic; the two quantitative child obligations remain owned here, and the checked parent reduction does not close their proof debt.
+
+* r24 · decomposed · reduced the conditional MSE to stationary correlated-average MSE and completed finite-suffix trajectory domination; proved strict positivity and the real/rational observable-mean bridge in the stationary support file.
 
 * r23 · reduced · proved masking vanishes on incomplete outputs and the exact sum over completed suffixes; neither identity supplies warm trajectory domination or covariance decay.
 

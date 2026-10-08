@@ -1,5 +1,6 @@
 import CountingMatroid.Analysis.FinitePhaseExecutionAbort
 import CountingMatroid.Analysis.InitialMultipliersGood
+import CountingMatroid.Analysis.FinitePhaseEstimationBound
 
 set_option autoImplicit false
 
@@ -34,6 +35,36 @@ theorem observation_not_completed_iff {n : ℕ} (r : ℕ)
       rcases pair with ⟨current, observed⟩
       simp [ObservationCompleted, hdata]
 
+/-- INTERNAL: Earlier actual phase certificates supply a reached good cursor
+on the same tape, without any replay or tape-coverage assumption.
+TEXLINE: main.tex:1207-1212 -/
+theorem certified_history_has_good_cursor {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (p : InputParams) (tape : ℕ → Bool)
+    (j : ℕ) (hj : j < (CountingMatroid.Interface.Pseudocode.setup n p).L)
+    (hprevious : ∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂ tape
+      (CountingMatroid.Interface.Pseudocode.setup n p) a) :
+    let s := CountingMatroid.Interface.Pseudocode.setup n p
+    ∃ current : AnnealingCursor n,
+      BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s j = some current ∧
+      FirstPhaseFailure.GoodStoredMultipliers r o₁ o₂ s j current := by
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  cases j with
+  | zero =>
+      refine ⟨BoundedRunPhaseHistory.initialCursor n s, rfl, ?_⟩
+      simp [FirstPhaseFailure.GoodStoredMultipliers,
+        BoundedRunPhaseHistory.initialCursor,
+        CountingMatroid.Model.Operations.initialWeights,
+        CountingMatroid.Model.Operations.allocateLearnedWeights,
+        InitialMultipliersGood.initial_ideal_multiplier]
+  | succ a =>
+      obtain ⟨ratio, _, _, previous, next, hpreviousCursor, hnext, _, _, hgood⟩ :=
+        hprevious a (Nat.lt_succ_self a)
+      refine ⟨next, ?_, hgood hj⟩
+      rw [BoundedRunPhaseHistory.phaseHistory_succ,
+        show BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s a =
+          some previous from hpreviousCursor]
+      exact hnext
+
 /-- INTERNAL: A successful consumed prefix comes from an actual reached
 cursor with good stored multipliers. The prefix length is the minimum of the
 cursor and the block length; this deliberately does not assume tape coverage.
@@ -55,26 +86,8 @@ theorem successful_prefix_has_good_cursor (n r : ℕ)
       pref.length = min current.bitCursor m := by
   let s := CountingMatroid.Interface.Pseudocode.setup n p
   obtain ⟨bits, hlen, hprevious, hpref⟩ := hprefix
-  have hcurrent : ∃ current : AnnealingCursor n,
-      BoundedRunPhaseHistory.phaseHistory r o₁ o₂
-        (fun i => (bits[i]?).getD false) s j = some current ∧
-      FirstPhaseFailure.GoodStoredMultipliers r o₁ o₂ s j current := by
-    cases j with
-    | zero =>
-        refine ⟨BoundedRunPhaseHistory.initialCursor n s, rfl, ?_⟩
-        simp [FirstPhaseFailure.GoodStoredMultipliers,
-          BoundedRunPhaseHistory.initialCursor,
-          CountingMatroid.Model.Operations.initialWeights,
-          CountingMatroid.Model.Operations.allocateLearnedWeights,
-          InitialMultipliersGood.initial_ideal_multiplier]
-    | succ a =>
-        obtain ⟨ratio, _, _, previous, next, hpreviousCursor, hnext, _, _, hgood⟩ :=
-          hprevious a (Nat.lt_succ_self a)
-        refine ⟨next, ?_, hgood hj⟩
-        rw [BoundedRunPhaseHistory.phaseHistory_succ,
-          show BoundedRunPhaseHistory.phaseHistory r o₁ o₂
-            (fun i => (bits[i]?).getD false) s a = some previous from hpreviousCursor]
-        exact hnext
+  have hcurrent := certified_history_has_good_cursor r o₁ o₂ p
+    (fun i => (bits[i]?).getD false) j hj hprevious
   obtain ⟨current, hhistory, hstored⟩ := hcurrent
   change pref = bits.take (match BoundedRunPhaseHistory.phaseHistory r o₁ o₂
     (fun i => (bits[i]?).getD false) s j with
@@ -83,6 +96,42 @@ theorem successful_prefix_has_good_cursor (n r : ℕ)
   rw [hhistory] at hpref
   refine ⟨bits, current, hlen, hprevious, hhistory, hstored, hpref, ?_⟩
   rw [hpref, List.length_take, hlen]
+
+/-- INTERNAL: With certified earlier phases, incomplete observation data
+means an actual restart abort or an actual observation abort after restart.
+The good-table and nonempty-sample checks cannot contribute another event.
+TEXLINE: main.tex:1207-1239,1392-1421 -/
+theorem observation_failure_cases {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (p : InputParams) (hn : 0 < n)
+    (tape : ℕ → Bool) (j : ℕ)
+    (hj : j < (CountingMatroid.Interface.Pseudocode.setup n p).L)
+    (hprevious : ∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂ tape
+      (CountingMatroid.Interface.Pseudocode.setup n p) a)
+    (hbad : ¬ ObservationCompleted r o₁ o₂ tape
+      (CountingMatroid.Interface.Pseudocode.setup n p) j) :
+    let s := CountingMatroid.Interface.Pseudocode.setup n p
+    ∃ current : AnnealingCursor n,
+      BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s j = some current ∧
+      ((restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val = none ∨
+        ∃ start, (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val =
+          some start ∧ (observePhase r o₁ o₂ tape s (s.ρ ^ j)
+            current.currentWeights start).val = none) := by
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  obtain ⟨current, hh, hg⟩ := certified_history_has_good_cursor r o₁ o₂ p tape j hj hprevious
+  refine ⟨current, hh, ?_⟩
+  cases hs : (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val with
+  | none => exact Or.inl rfl
+  | some start =>
+      refine Or.inr ⟨start, rfl, ?_⟩
+      cases ho : (observePhase r o₁ o₂ tape s (s.ρ ^ j)
+          current.currentWeights start).val with
+      | none => rfl
+      | some observed =>
+          exfalso
+          apply hbad
+          exact ⟨current, observed,
+            (observation_data_iff r o₁ o₂ tape s j current observed).mpr ⟨hh, start, hs, ho⟩,
+            hg, (FinitePhaseEstimationBound.schedule_estimation_budget n p hn).2.1⟩
 
 /-- INTERNAL: Bound the abort mass after fixing a consumed prefix of a
 successful history. This includes restart-cap exhaustion and all capped
