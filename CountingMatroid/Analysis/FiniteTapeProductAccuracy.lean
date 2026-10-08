@@ -90,6 +90,18 @@ theorem finite_tape_product_accuracy (n r : ℕ)
     -- `Interface.Pseudocode.chainStepLaw` is a PMF built from a finite
     -- `fairTape`; it is not the required uncapped transition identity.
     --
+    -- The missing primitive below this identity is the joint value/cursor
+    -- law of `Program.boundedUniform`, not just uniformity of its value.
+    -- For v > 1, put w = (v - 1).log2 + 1. With fresh fair bits and enough
+    -- tape, acceptance of k < v on trial t < trials, counted from zero,
+    -- has mass (1 - v / 2^w)^t / 2^w and ends at cursor + (t+1)*w.
+    -- A composition proof must also retain independence of the unused suffix;
+    -- a marginal result at cursor zero cannot justify the adaptive calls in
+    -- `chainStep`. Source search finds only an oracle-cost theorem for this
+    -- sampler, not this probability law. Arlib's `metropolis_stationary`
+    -- takes an already constructed `FinDist` and symmetric `FinChain`; it
+    -- supplies neither this sampler law nor the exchange proposal bridge.
+    --
     -- From that identity, prove the paper's conditional claim: for *each*
     -- prior successful transcript, a fresh phase has restart-cap or relative
     -- observation error probability at most 1/(16*(s.L+1)), and an accurate
@@ -102,7 +114,16 @@ theorem finite_tape_product_accuracy (n r : ℕ)
     -- this `Set.ncard` finite-tape mass. None of those three bridge facts is
     -- present in the imports, and a child stated merely as this final count
     -- inequality would only rename the current `sorry`. They are same-paper
-    -- obligations, not a Prior citation.
+    -- obligations, not a Prior citation. The paper includes proofs of both
+    -- its time-average MSE and trace estimates at main.tex:975-1087, despite
+    -- also citing earlier work there; those claims cannot be borrowed whole.
+    --
+    -- The purely finite counting conversion is already proved as
+    -- `SingleRunAccuracy.fairTape_event_card`, using `fairTape_apply` and
+    -- `fairTape_support_iff_length`. It is downstream of this file through
+    -- `InaccurateNonzeroTapeBound`, so importing it here creates a cycle.
+    -- Moving those three existing declarations to an upstream module would
+    -- expose that conversion, but would not supply the missing phase law.
     sorry
 
 end CountingMatroid.Analysis.FiniteTapeProductAccuracy
@@ -110,6 +131,7 @@ end CountingMatroid.Analysis.FiniteTapeProductAccuracy
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r15 · blocked · direct `exact?` and unfolding `singleRun` followed by `aesop` leave the positive-ground event bound; identified the missing joint rejection-draw value/cursor law and the downstream-only finite-tape counting conversion. No proof debt was moved or closed.
 * r14 · recovery diagnosis · isolated the needed proof-side phase transcript, transition-law identity, conditional phase estimate, and bounded-run/finite-block coupling; no existing declaration supplies the first bridge, so the positive-ground theorem remains open.
 * r13 · blocked · `exact?` and `aesop` leave the positive-ground count inequality; `chainStepLaw` is only a finite-tape PMF, and the project has no paired-state ideal-chain law or conditional phase estimate to connect it to the paper's Markov/MSE argument.
 * r12 · blocked · positive-ground `exact?` and `aesop` leave the same event-mass inequality; Arlib has generic Markov/Chebyshev and Metropolis results, but no distributional bridge from `chainStep`, conditional phase law, or uncapped-to-capped coupling.
