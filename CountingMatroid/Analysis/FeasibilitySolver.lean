@@ -58,19 +58,22 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
     rw [hcorrect n r M₁ M₂ o₁ o₂ hfull hr h₁ h₂]
     exact Bool.decide_congr
       (commonBaseCount_pos_iff_common_independent n r M₁ M₂ hr).symm
-  -- BLOCKER: a statement search over the pinned Mathlib matroid sources and
-  -- all of Mathlib and Arlib found no deterministic matroid-intersection
-  -- algorithm on two independence oracles, nor a matching cost certificate.
-  -- Construct an actual charged implementation of the cited test,
-  -- then prove its size-r independent-set answer and uniform polynomial
-  -- bounds for `oracleCalls` and `otherSteps` on that same implementation.
-  -- Mathlib's `Matroid.Indep.augment` is for one matroid and supplies
-  -- neither a two-oracle algorithm nor a charged complexity bound.
-  -- The bridge from that decision to the required common-base answer is
-  -- proved above; no executable polynomial solver is installed here.
-  -- Enumerating candidate `Finset (Fin n)`s gives a decision procedure,
-  -- but has exponentially many oracle queries and cannot establish
-  -- `FeasibilityBounded`.
+  -- BLOCKER: the remaining witness is an *executable* two-oracle
+  -- matroid-intersection decision routine in `Charged Op Cell`.  The precise
+  -- next step is to implement an augmenting-path intersection routine whose
+  -- independence tests all go through `Operations.oracleQuery`, then prove
+  -- (1) its Boolean result is the size-r predicate above and (2) bounds for
+  -- `oracleCalls` and `otherSteps` on that same routine.  The mathematical
+  -- bridge from this predicate to `commonBaseCount` is already closed.
+  -- Schrijver's cited theorem supplies the algorithmic result in the paper,
+  -- but neither pinned Mathlib nor Arlib supplies charged code or its cost
+  -- certificate.  Mathlib's `Matroid.Indep.augment` concerns one matroid.
+  -- Finite enumeration yields a correct decider but has exponential query
+  -- count; packaging it as this solver would make `FeasibilityBounded` false.
+  -- Using `Charged.pure` on direct applications of the bare oracle functions
+  -- would undercount queries and would not implement the paper's oracle model.
+  -- No weaker proof-side statement supplies a `FeasibilityContract` without
+  -- this concrete implementation, so the contract itself is left unchanged.
   sorry
 
 end CountingMatroid.Analysis.FeasibilitySolver
@@ -78,6 +81,7 @@ end CountingMatroid.Analysis.FeasibilitySolver
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r10 · recovery · isolated the missing charged augmenting-path implementation and its two cost proofs; a mathematical decider or a prior theorem alone cannot instantiate this contract without charged code.
 * r9 · open · searched pinned Mathlib and Arlib for a two-oracle intersection algorithm or submodular minimization route; only single-matroid augmentation is present. The remaining goal is the cited solver's charged implementation and both uniform polynomial bounds.
 * r8 · open · rechecked the entire pinned Mathlib and Arlib sources by matroid-intersection, common-independent-set, and augmenting-path statements; no executable two-oracle solver or cost certificate matches `FeasibilityContract`. The Schrijver citation remains the missing borrowed dependency.
 * r7 · open · searched the pinned Mathlib matroid sources and all Arlib Lean sources by matroid-intersection and augmentation statement shape; no two-oracle implementation or polynomial charged certificate exists. The cited Schrijver theorem supplies an external algorithmic result, but the custom charged realization remains a local obligation.
