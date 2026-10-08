@@ -1,12 +1,14 @@
 import CountingMatroid.Analysis.PhaseObservationExperiment
+import CountingMatroid.Analysis.ObservationRoundDrawCover
 
 set_option autoImplicit false
 
 /-!
 The deterministic observation-loop failure characterization and the finite
-union-bound reduction are proved below. The quantitative theorem remains
-open only at its reached-round mass estimate: reachable-state validity and
-the adaptive rejection-cap law for the actual finite suffix are required.
+union-bound reduction are proved below. The quantitative theorem uses two
+separate open child obligations: the covered finite-suffix rejection law and
+the operational construction of three draw-site prefix families. The
+generic transfer to adaptive denominators is proved in the sampling child.
 The original theorem statement and its zero-padded tape are unchanged.
 -/
 
@@ -93,6 +95,18 @@ def observationStep {n : ℕ} (r : ℕ) (o₁ o₂ : IndependenceOracle n)
         | some (state, bitCursor) =>
             recordObservation r o₁ o₂ s.ρ
               ⟨state, bitCursor, current.counts, current.numeratorSum⟩
+
+/-- INTERNAL: Truncating the actual observation loop changes only its loop
+bound. Stating this for an arbitrary schedule avoids reducing the entire
+charged setup computation when using a concrete setup schedule.
+TEXLINE: main.tex:1177-1187 -/
+theorem observePhase_prefix_value {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool) (s : AnnealingSchedule)
+    (q : ℚ) (w : Multipliers n) (k : ℕ) (start : PairedSet n × ℕ) :
+    (observePhase r o₁ o₂ tape {s with observations := k} q w start).val =
+      (Arlib.Computation.Charged.repeatFor (observationStep r o₁ o₂ tape s q w) k
+        (some ⟨start.1, start.2, (Model.Operations.allocateCounts n).val, 0⟩)).val := by
+  rfl
 
 /-- INTERNAL: Recording aborts exactly at an invalid classifier output;
 zero empirical type frequencies are checked later by finishPhase.
@@ -223,16 +237,54 @@ theorem conditional_observation_abort_mass (n r : ℕ)
   have hround (k : Fin s.observations) :
       (Set.ncard (E k) : ENNReal) * (1 / 2 : ENNReal) ^ t ≤
         ENNReal.ofReal ((3 * (1 / 2 : ℚ) ^ s.drawTrials : ℚ) : ℝ) := by
-    dsimp only [E]
-    simp_rw [observationStep_none_iff]
-    -- BLOCKER: bound the finite-suffix mass of this reached round, retaining
-    -- the actual adaptive restart/observation cursor and weights. Recording
-    -- failure is exactly invalid classification. After excluding that and
-    -- chainStep's selection/weight failures on reachable valid states, the
-    -- three positive-denominator boundedUniform calls need a conditional
-    -- rejection-cap law on this same zero-padded finite suffix. The interval
-    -- replay theorems alone do not supply that probability law.
-    sorry
+    obtain ⟨covers, hcover⟩ := ObservationRoundDrawCover.observation_round_draw_cover
+      n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive j hj pref hprefix k.val k.isLt
+    let D : Fin 3 → Set (List Bool) := fun site =>
+      {suffix | suffix.length = t ∧
+        ∃ head ∈ (covers site).prefixes, head <+: suffix ∧
+          (boundedUniform (fun i => ((pref ++ suffix)[i]?).getD false)
+            s.drawTrials ((covers site).denominator head)
+            (pref.length + head.length)).val.1 = none}
+    have hsubset : E k ⊆ ⋃ site, D site := by
+      rintro suffix ⟨hlen, hprev, current, hh, start, hs, reached, hrch, hfail⟩
+      have hshort :
+          (observePhase r o₁ o₂ (fun i => ((pref ++ suffix)[i]?).getD false)
+            {s with observations := k.val} (s.ρ ^ j)
+            current.currentWeights start).val = some reached := by
+        rw [observePhase_prefix_value]
+        exact hrch
+      have hlong :
+          (observePhase r o₁ o₂ (fun i => ((pref ++ suffix)[i]?).getD false)
+            {s with observations := k.val + 1} (s.ρ ^ j)
+            current.currentWeights start).val = none := by
+        rw [observePhase_prefix_value, repeatFor_value_succ, hrch]
+        exact hfail
+      obtain ⟨site, head, hhead, hpref, hdraw⟩ := hcover suffix hlen
+        ⟨hprev, current, hh, start, hs, reached, hshort, hlong⟩
+      exact Set.mem_iUnion.mpr ⟨site, hlen, head, hhead, hpref, hdraw⟩
+    have hfinite : (⋃ site, D site).Finite :=
+      (List.finite_length_eq Bool t).subset (by
+        intro suffix hsuffix
+        obtain ⟨site, hsite⟩ := Set.mem_iUnion.mp hsuffix
+        exact hsite.1)
+    have hcount : Set.ncard (E k) ≤ ∑ site, Set.ncard (D site) :=
+      (Set.ncard_le_ncard hsubset hfinite).trans (Set.ncard_iUnion_le_of_fintype D)
+    calc
+      _ ≤ ∑ site, (Set.ncard (D site) : ENNReal) * (1 / 2 : ENNReal) ^ t := by
+        rw [← Finset.sum_mul, ← Nat.cast_sum]
+        exact mul_le_mul_left (Nat.cast_le.mpr hcount) _
+      _ ≤ ∑ _site : Fin 3,
+          ENNReal.ofReal (((1 / 2 : ℚ) ^ s.drawTrials : ℚ) : ℝ) := by
+        apply Finset.sum_le_sum
+        intro site _
+        exact FiniteSuffixDrawAbortMass.adaptive_draw_abort_mass pref s.drawTrials t
+          (covers site)
+      _ = ENNReal.ofReal ((3 * (1 / 2 : ℚ) ^ s.drawTrials : ℚ) : ℝ) := by
+        simp only [Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul]
+        rw [← ENNReal.ofReal_natCast, ← ENNReal.ofReal_mul (Nat.cast_nonneg _)]
+        congr 1
+        push_cast
+        ring
   change (Set.ncard _ : ENNReal) * (1 / 2 : ENNReal) ^ t ≤ _
   rw [hevent]
   calc
@@ -255,6 +307,8 @@ end CountingMatroid.Analysis.ConditionalObservationAbortMass
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r26 · decomposed · reduced each reached-round estimate to a covered finite-suffix rejection law and an operational three-draw prefix-cover construction; the adaptive prefix-cylinder transfer is proved.
 
 * r25 · reduced · proved first reached observation-failure witnesses and exact recording/iteration abort characterizations; the original mass bound reduces by a finite union bound to one adaptive reached-round capped-draw estimate, still open inside the parent.
 
