@@ -35,6 +35,46 @@ theorem commonBaseCount_pos_iff_common_independent (n r : ℕ)
     apply Finset.card_pos.mpr
     exact ⟨I, by simpa [commonBases] using And.intro hB₁ hB₂⟩
 
+/-- INTERNAL: The empty set settles the feasibility pretest at rank zero.
+TEXLINE: main.tex:283-289 -/
+theorem commonBaseCount_pos_of_rank_zero (n : ℕ)
+    (M₁ M₂ : Matroid (Fin n)) (hr : CommonRank 0 M₁ M₂) :
+    0 < commonBaseCount M₁ M₂ := by
+  apply (commonBaseCount_pos_iff_common_independent n 0 M₁ M₂ hr).2
+  exact ⟨∅, Finset.card_empty, by simp, by simp⟩
+
+/-- INTERNAL: A charged rank test handles the empty common independent set
+before invoking a solver for positive rank.
+TEXLINE: main.tex:283-289 -/
+def rankZeroGuard (solver : FeasibilityImplementation) : FeasibilityImplementation where
+  run n r o₁ o₂ := do
+    let zero ← Operations.natEqual r 0
+    if zero then pure true else solver.run n r o₁ o₂
+
+/-- INTERNAL: Value equation for the charged rank-zero branch. -/
+theorem rankZeroGuard_val (solver : FeasibilityImplementation) (n r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) :
+    ((rankZeroGuard solver).run n r o₁ o₂).val =
+      if r = 0 then true else (solver.run n r o₁ o₂).val := by
+  by_cases hr : r = 0 <;> simp [rankZeroGuard, Operations.natEqual, hr]
+
+/-- INTERNAL: The rank-zero guard makes no additional oracle queries. -/
+theorem rankZeroGuard_oracleCalls (solver : FeasibilityImplementation) (n r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) :
+    oracleCalls ((rankZeroGuard solver).run n r o₁ o₂) =
+      if r = 0 then 0 else oracleCalls (solver.run n r o₁ o₂) := by
+  by_cases hr : r = 0 <;>
+    simp [rankZeroGuard, Operations.natEqual, oracleCalls, hr]
+
+/-- INTERNAL: The charged rank-zero guard adds exactly one comparison. -/
+theorem rankZeroGuard_otherSteps (solver : FeasibilityImplementation) (n r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) :
+    otherSteps ((rankZeroGuard solver).run n r o₁ o₂) =
+      1 + if r = 0 then 0 else otherSteps (solver.run n r o₁ o₂) := by
+  by_cases hr : r = 0 <;>
+    simp [rankZeroGuard, Operations.natEqual, otherSteps, hr,
+      Arlib.Computation.Op.all, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm]
+
 /-- PAPER: main.tex:283-289
 BORROWED: Schrijver2003, Section 41.2, Theorem 41.4.
 The cited polynomial matroid-intersection pretest must be implemented on the
@@ -45,7 +85,7 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
       (callConstant callDegree bitConstant bitDegree : ℕ),
       (∀ (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
         (o₁ o₂ : IndependenceOracle n),
-        FullGround M₁ M₂ → CommonRank r M₁ M₂ →
+        0 < r → FullGround M₁ M₂ → CommonRank r M₁ M₂ →
         ExactOracle M₁ o₁ → ExactOracle M₂ o₂ →
         (solver.run n r o₁ o₂).val = decide
           (∃ I : Finset (Fin n), I.card = r ∧
@@ -53,14 +93,33 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
       FeasibilityBounded solver callConstant callDegree bitConstant bitDegree by
     obtain ⟨solver, callConstant, callDegree, bitConstant, bitDegree,
       hcorrect, hbounded⟩ := h
-    refine ⟨⟨solver, callConstant, callDegree, bitConstant, bitDegree, ?_, hbounded⟩⟩
-    intro n r M₁ M₂ o₁ o₂ hfull hr h₁ h₂
-    rw [hcorrect n r M₁ M₂ o₁ o₂ hfull hr h₁ h₂]
-    exact Bool.decide_congr
-      (commonBaseCount_pos_iff_common_independent n r M₁ M₂ hr).symm
+    refine ⟨⟨rankZeroGuard solver, callConstant, callDegree,
+      bitConstant + 1, bitDegree, ?_, ?_⟩⟩
+    · intro n r M₁ M₂ o₁ o₂ hfull hr h₁ h₂
+      rw [rankZeroGuard_val]
+      by_cases hr0 : r = 0
+      · subst r
+        simp [commonBaseCount_pos_of_rank_zero n M₁ M₂ hr]
+      · rw [if_neg hr0,
+          hcorrect n r M₁ M₂ o₁ o₂ (Nat.pos_of_ne_zero hr0) hfull hr h₁ h₂]
+        exact Bool.decide_congr
+          (commonBaseCount_pos_iff_common_independent n r M₁ M₂ hr).symm
+    · intro n r o₁ o₂
+      rw [rankZeroGuard_oracleCalls, rankZeroGuard_otherSteps]
+      have hpow : 1 ≤ (n + r + 1) ^ bitDegree := one_le_pow₀ (by omega)
+      obtain ⟨hc, hb⟩ := hbounded n r o₁ o₂
+      by_cases hr0 : r = 0
+      · simp only [if_pos hr0, Nat.add_zero]
+        constructor
+        · exact Nat.zero_le _
+        · nlinarith
+      · simp only [if_neg hr0]
+        exact ⟨hc, by nlinarith⟩
   -- BLOCKER: the remaining witness is an *executable* two-oracle
-  -- matroid-intersection decision routine in `Charged Op Cell`.  The precise
-  -- next step is to implement an augmenting-path intersection routine whose
+  -- positive-rank matroid-intersection decision routine in `Charged Op Cell`.
+  -- The rank-zero branch is now implemented, correct, and charged: it needs
+  -- no oracle queries and one comparison, absorbed by bitConstant + 1 above.
+  -- The next step is to implement an augmenting-path intersection routine whose
   -- independence tests all go through `Operations.oracleQuery`, then prove
   -- (1) its Boolean result is the size-r predicate above and (2) bounds for
   -- `oracleCalls` and `otherSteps` on that same routine.  The mathematical
@@ -89,6 +148,7 @@ end CountingMatroid.Analysis.FeasibilitySolver
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r13 · partial · implemented the charged rank-zero guard; proved its value, zero additional oracle cost, and one-comparison overhead. The parent now handles rank zero and absorbs the guard cost into its polynomial coefficient. The positive-rank intersection implementation and its uniform bounds remain open; no new unproved declarations.
 * r12 · open · library-first search again found no deterministic two-oracle intersection solver with polynomial charged bounds; checked augmentation and direct-sum independence statements. Preserved the existing bridge and target, and proposed the explicitly cited Schrijver dependency for Prior review; no new proof debt introduced.
 * r11 · open · searched pinned Mathlib and Arlib for common independent sets, intersection algorithms, augmenting paths, and submodular minimization; no matching solver was found. Checked the single-matroid augmentation signatures and the unconditional cost quantifiers; the existing charged implementation dependency remains unresolved.
 * r10 · recovery · isolated the missing charged augmenting-path implementation and its two cost proofs; a mathematical decider or a prior theorem alone cannot instantiate this contract without charged code.
