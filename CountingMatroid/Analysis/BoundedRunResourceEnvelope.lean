@@ -1,4 +1,5 @@
 import CountingMatroid.Model.Program
+import CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
 
 set_option autoImplicit false
 
@@ -322,6 +323,37 @@ private theorem binaryRatLength_two_pow (n : ℕ) :
   simp [h]
   omega
 
+/-- INTERNAL: The phase power has binary length linear in its exponent and
+the encoding length of the base. TEXLINE: main.tex:1384-1390 -/
+theorem ratPower_binary_length_le (q : ℚ) (j : ℕ) :
+    binaryRatLength (CountingMatroid.Program.ratPower q j).val ≤
+      binaryRatLength 1 + j * binaryRatLength q := by
+  rw [ratPower_value]
+  induction j with
+  | zero => simp
+  | succ j ih =>
+      rw [pow_succ]
+      have hmul :=
+        CountingMatroid.Analysis.ScheduleOtherStepsEnvelope.binaryRatLength_mul_le
+          (q ^ j) q
+      calc
+        binaryRatLength (q ^ j * q) ≤ binaryRatLength (q ^ j) + binaryRatLength q := hmul
+        _ ≤ binaryRatLength 1 + j * binaryRatLength q + binaryRatLength q :=
+          Nat.add_le_add_right ih _
+        _ = binaryRatLength 1 + (j + 1) * binaryRatLength q := by ring
+
+/-- INTERNAL: The charged rational product costs at most the square of the
+operand encoding lengths. TEXLINE: main.tex:1384-1390 -/
+theorem otherSteps_ratMul_le (a b : ℚ) :
+    otherSteps (ratMul a b) ≤ (binaryRatLength a + binaryRatLength b) ^ 2 := by
+  simp only [otherSteps, ratMul, Arlib.Computation.Charged.cost_opMany,
+    Arlib.Computation.CostVec.many]
+  simp [Arlib.Computation.Op.all, binaryRatLength, binaryNatLength]
+  change ((a.num.natAbs.log2 + a.den.log2 + 3) +
+    (b.num.natAbs.log2 + b.den.log2 + 3)) ^ 2 ≤ _
+  apply Nat.pow_le_pow_left
+  omega
+
 /-- INTERNAL: The capped run has a resource bound expressed only in the
 schedule fields that its code reads. This separates the phase-state invariant
 from the arithmetic used to construct the schedule and amplify the answer.
@@ -369,6 +401,13 @@ theorem boundedRun_resource_envelope :
     -- otherSteps (ratMul (2 ^ K : ℚ) 1) is at least K for every K.
     -- The invariant must then bound restartPhase, observePhase, and finishPhase
     -- costs, including acceptance denominators in capped uniform draws.
+    have hphasePower (j : ℕ) :
+        binaryRatLength (CountingMatroid.Program.ratPower s.ρ j).val ≤
+          binaryRatLength 1 + j * binaryRatLength s.ρ :=
+      ratPower_binary_length_le s.ρ j
+    have hproductCost (a b : ℚ) :
+        otherSteps (ratMul a b) ≤ (binaryRatLength a + binaryRatLength b) ^ 2 :=
+      otherSteps_ratMul_le a b
     refine ⟨boundedRun_value_nonneg n r o₁ o₂ tape s hρ, ?_⟩
     sorry
 
@@ -377,6 +416,7 @@ end CountingMatroid.Analysis.BoundedRunResourceEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r13 · partial recovery · proved phase-power binary length and a quadratic charge bound for rational multiplication; the reachable phase-state and abort-path cost invariant is still missing.
 * r12 · open · verified that rational multiplication has unbounded charge on arbitrary input (`otherSteps (ratMul (2 ^ K : ℚ) 1) ≥ K`); a reachable-state invariant must also bound observation counts by the loop length.
 * r11 · open · direct simplification exposed the entire positive-phase fold; the generic charged loop bound requires a price for arbitrary cursors, while rational-operation costs are unbounded without a reachable-state length invariant.
 * r10 · open · audited arbitrary schedule fields and expanded the positive-phase goal; Arlib's fold cost bound needs a state-length invariant for the stored multiplier tables and phase accumulators, which is still absent.

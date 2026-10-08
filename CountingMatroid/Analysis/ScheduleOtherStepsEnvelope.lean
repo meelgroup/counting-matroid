@@ -234,6 +234,24 @@ theorem binaryRatLength_div_le (q s : ℚ) :
   rw [div_eq_mul_inv]
   simpa only [binaryRatLength_inv_eq] using binaryRatLength_mul_le q s⁻¹
 
+/-- INTERNAL: A charged rational binary operation is bounded by its input encodings. -/
+private theorem rationalBinary_otherSteps_le (instr : Arlib.Computation.Op)
+    (a b result : ℚ) :
+    otherSteps (Arlib.Computation.Charged.opMany
+      (CountingMatroid.Model.Operations.Op.word instr)
+      ((a.num.natAbs.log2 + a.den.log2 + 3 +
+        (b.num.natAbs.log2 + b.den.log2 + 3)) ^ 2) result) ≤
+      (binaryRatLength a + binaryRatLength b) ^ 2 := by
+  have hcost (z : ℕ) : otherSteps
+      (Arlib.Computation.Charged.opMany
+        (CountingMatroid.Model.Operations.Op.word instr) z result) = z := by
+    cases instr <;> simp [otherSteps, Arlib.Computation.Op.all,
+      Arlib.Computation.CostVec.many]
+  rw [hcost]
+  unfold binaryRatLength binaryNatLength
+  apply Nat.pow_le_pow_left
+  omega
+
 /-- INTERNAL: The nonnegative ceiling of a reduced rational is at most the
 absolute value of its numerator. -/
 theorem rationalCeil_value_le_num (q : ℚ) :
