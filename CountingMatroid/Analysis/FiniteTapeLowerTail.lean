@@ -28,6 +28,10 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
   -- BLOCKER (missing local estimate): `finite_tape_product_accuracy` bounds
   -- only the event `y ≠ 0 ∧ (y < lower ∨ upper < y)`. Applying it here fails
   -- with a type mismatch; even event monotonicity cannot include zero outputs.
+  -- The execution-packet dependency `FeasibilityContract.bounded` is only a
+  -- pretest resource bound (`FeasibilityBounded`), not a probability estimate.
+  -- Also, `c` occurs only in the threshold: there is no partition-sum factor
+  -- multiplying the finite-tape mass, contrary to the attack-plan prose.
   -- `AbortTapeBound.abort_tape_mass_bound` imports and uses this theorem, so
   -- importing it back would be circular. Separate 1/8 bounds on aborts and
   -- completed-product errors would in any case give only 1/4 by a union bound.
@@ -53,6 +57,7 @@ end CountingMatroid.Analysis.FiniteTapeLowerTail
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r16 · blocked · a fresh direct application of `finite_tape_product_accuracy` fails on the nonzero-output guard; `FeasibilityContract.bounded` is a cost certificate, and source inspection still finds no joint phase-failure and finite-tape coupling estimate. No new declarations or proof debt introduced.
 * r15 · blocked · `exact?` found no proof and applying `finite_tape_product_accuracy` failed on its nonzero-output guard; checked the paper's joint 3/32 failure route, whose conditional phase law and bounded finite-tape coupling are absent from the project.
 * r14 · open · isolated the positive-ground lower-tail event including aborts; `aesop` and `exact?` cannot supply the conditional phase law or finite-tape coupling.
 -/
