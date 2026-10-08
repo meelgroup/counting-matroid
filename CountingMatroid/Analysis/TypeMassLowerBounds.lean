@@ -137,4 +137,40 @@ theorem good_type_mass_bounds {n : ℕ} (r : ℕ)
       (by positivity : (0 : ℚ) ≤ 20 * (n : ℚ) ^ 2)
     nlinarith
 
+/-- PAPER: main.tex:1248-1249
+The annealing numerator's stationary mean also has the polynomial lower
+bound used to turn absolute empirical error into relative error. -/
+theorem good_numerator_mean_lower_bound (n r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (p : InputParams) (j : ℕ)
+    (w : Multipliers n) (hn : 0 < n)
+    (hgood : ∀ index,
+      (TransversalPartition.partitionSum r o₁ o₂
+        ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j) /
+        FirstPhaseFailure.defectPartition r o₁ o₂
+          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j) index) / 4 ≤ w index ∧
+      w index ≤ 4 * (TransversalPartition.partitionSum r o₁ o₂
+        ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j) /
+        FirstPhaseFailure.defectPartition r o₁ o₂
+          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j) index)) :
+    let s := CountingMatroid.Interface.Pseudocode.setup n p
+    1 / (20 * (n : ℚ) ^ 2) ≤ numeratorMean r o₁ o₂ (s.ρ ^ j) s.ρ w := by
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  have hq : 0 < s.ρ ^ j :=
+    pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j
+  obtain ⟨hC, hstep, _⟩ := AnnealingPartitionDrift.partition_step_bounds n r o₁ o₂ p hn j
+  have hw (index : DefectIndex n) : 0 < w index :=
+    (div_pos (div_pos hC
+      (DefectPartitionPositive.defect_partition_pos r o₁ o₂ (s.ρ ^ j) hq index))
+      (by norm_num : (0 : ℚ) < 4)).trans_le (hgood index).1
+  obtain ⟨hZ, _, hU, _⟩ := stationary_mean_identities r o₁ o₂ (s.ρ ^ j) s.ρ w hq hw
+  have hbound := (good_type_mass_bounds r o₁ o₂ (s.ρ ^ j) w hn hq hgood).1
+  have hnq : (0 : ℚ) < n := by exact_mod_cast hn
+  change 1 / (20 * (n : ℚ) ^ 2) ≤ numeratorMean r o₁ o₂ (s.ρ ^ j) s.ρ w
+  rw [hU, ← pow_succ]
+  apply (div_le_div_iff₀ (by positivity) hZ).mpr
+  simp only [one_mul]
+  have hscaled := mul_le_mul_of_nonneg_left hstep
+    (by positivity : (0 : ℚ) ≤ 20 * (n : ℚ) ^ 2)
+  nlinarith [mul_nonneg (sq_nonneg (n : ℚ)) hC.le]
+
 end CountingMatroid.Analysis.TypeMassLowerBounds

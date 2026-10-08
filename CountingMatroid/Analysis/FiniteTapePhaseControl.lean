@@ -9,7 +9,7 @@ import CountingMatroid.Analysis.TransversalClassPartition
 import CountingMatroid.Analysis.TypeMassLowerBounds
 import CountingMatroid.Analysis.InitialMultipliersGood
 import CountingMatroid.Analysis.IdealExchangeChain
-import CountingMatroid.Analysis.ObservablePoincare
+import CountingMatroid.Analysis.ObservableProjection
 
 set_option autoImplicit false
 
@@ -47,7 +47,13 @@ proves defect-class nonemptiness against the executable classifier.
 `StationaryMeanIdentities` proves the fixed state-weight mean identities using
 `TransversalClassPartition`'s proved classifier reindexing.
 `PhaseMeanCertificate` therefore removes type-mean identities,
-positivity, and multiplier drift from the random event.
+positivity, and multiplier drift from the random event. `InitialMultipliersGood`
+proves the executable defect-fiber count and ideal initialization.
+`TypeMassLowerBounds` proves lower bounds for all type and numerator means.
+`IdealExchangeChain` constructs the normalized law and symmetric exchange
+proposal and proves its Metropolis kernel stationary, extending the target by
+zero on invalid states. `ObservableProjection` proves the type indicators and
+annealing numerator satisfy the required projection range conditions.
 The remaining local stochastic obligation bounds failure of empirical means,
 including capped draws and adaptive finite-tape coverage. `InitialRestartLaw`
 retains the proved phase-zero fresh-prefix/suffix identity.
@@ -233,22 +239,29 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
           current.currentWeights (hq j) hw)
         (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
           current.currentWeights hn (hq j) hw) ∧
-      (∀ H : PairedSet n → ℝ,
-        Arlib.Probability.FinDist.Var
-          (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
-            current.currentWeights (hq j) hw)
-          (ObservablePoincare.observableProjection
+      (∀ kind state,
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights (hq j) hw) state *
+          ObservableProjection.observableProjection
             (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
-              current.currentWeights (hq j) hw) H) ≤
-        2000 * (n : ℝ) ^ 6 * Arlib.MarkovChains.dirichlet
-          (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
-            current.currentWeights (hq j) hw)
-          (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
-            current.currentWeights hn (hq j) hw) H H) ∧
+              current.currentWeights (hq j) hw)
+            (IdealExchangeChain.typeIndicator kind) state =
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights (hq j) hw) state *
+          IdealExchangeChain.typeIndicator kind state) ∧
+      (ObservableProjection.observableProjection
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights (hq j) hw)
+        (IdealExchangeChain.numeratorObservable r o₁ o₂ s.ρ) =
+        IdealExchangeChain.numeratorObservable r o₁ o₂ s.ρ) ∧
       (1 / (5 * (n : ℝ) ^ 2) ≤ Arlib.Probability.FinDist.Ex
         (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
           current.currentWeights (hq j) hw)
         (IdealExchangeChain.typeIndicator .transversal)) ∧
+      (1 / (20 * (n : ℝ) ^ 2) ≤ Arlib.Probability.FinDist.Ex
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights (hq j) hw)
+        (IdealExchangeChain.numeratorObservable r o₁ o₂ s.ρ)) ∧
       (∀ index : DefectIndex n, 1 / (20 * (n : ℝ) ^ 2) ≤ Arlib.Probability.FinDist.Ex
         (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
           current.currentWeights (hq j) hw)
@@ -276,13 +289,18 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
       refine ⟨hb.1, hb.2.1, current, hcurrent, hgood, hw,
         IdealExchangeChain.ideal_chain_stationary r o₁ o₂ (s.ρ ^ j)
           current.currentWeights hn (hq j) hw,
-        ObservablePoincare.observable_poincare n r M₁ M₂ o₁ o₂ (s.ρ ^ j)
-          current.currentWeights hn hfull hr h₁ h₂ (hq j)
-          (pow_le_one₀ (AnnealingPartitionDrift.schedule_power_lower n p hn).1.le
-            (AnnealingPartitionDrift.schedule_power_lower n p hn).2.1) hw hgood.2,
-        ?_, ?_, hb.2.2⟩
+        (fun kind state => ObservableProjection.type_indicator_projected
+          r o₁ o₂ (s.ρ ^ j) current.currentWeights (hq j) hw kind state),
+        ObservableProjection.numerator_observable_projected r o₁ o₂ s.ρ _,
+        ?_, ?_, ?_, hb.2.2⟩
       · rw [IdealExchangeChain.operational_type_mean]
         have hr := (Rat.cast_le (K := ℝ)).mpr hzero
+        push_cast at hr
+        exact hr
+      · rw [IdealExchangeChain.operational_numerator_mean]
+        have hu := TypeMassLowerBounds.good_numerator_mean_lower_bound
+          n r o₁ o₂ p j current.currentWeights hn hgood.2
+        have hr := (Rat.cast_le (K := ℝ)).mpr hu
         push_cast at hr
         exact hr
       · intro index
@@ -298,12 +316,21 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
       -- deterministic finishing, and learned-weight preservation are proved.
       -- IdealExchangeChain now constructs a symmetric exchange proposal,
       -- normalized law, and a stationary Metropolis kernel, extended by zero
-      -- weights to invalid states. The type means are its real expectations.
+      -- weights to invalid states. All means are its real expectations,
+      -- with polynomial lower bounds; the observables are fixed by the
+      -- projection on positive-mass states. No Poincare premise is assumed.
       -- NEXT STEP: prove this proposal realizes the program's lazy occupied/
       -- unoccupied exchange law on reached n-element states; construct its
-      -- positive-time trace on transversals and prove the observable Poincare
-      -- estimate, conditional
-      -- restart expectation, and warm correlated-average MSE. Couple this law
+      -- positive-time trace on transversals. The precise missing bound is
+      -- Var π (ObservableProjection.observableProjection π H) ≤
+      --   2000 * (n : ℝ)^6 * Arlib.MarkovChains.dirichlet π P H H,
+      -- for π = operationalLaw, P = idealChain, exact matroid oracles, and
+      -- good current multipliers (paper main.tex:928-951). This controls the
+      -- projected variance using the energy of H; the full SpectralGapAtLeast
+      -- API is stronger and stationary zero-gap bounds are insufficient.
+      -- Then prove trace mixing/return-cost (main.tex:1029-1087), conditional
+      -- restart expectation ≤ 20*n^2*L*τ, and correlated-observation MSE
+      -- ≤ 40000*n^8/N_av under a 10*n^2-warm start. Couple this law
       -- to the capped draws and prove coverage by the remaining finite block.
       -- These are same-paper obligations, main.tex:1207-1285,1392-1427.
       sorry
@@ -350,6 +377,8 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r22 · proved support · proved exact initial defect partition counts and ideal multipliers, reached-good-history cover, all observable mean lower bounds, a concrete symmetric exchange proposal and stationary Metropolis law, and observable projection range conditions. Both live handoffs were mechanically rejected without specific diagnostics; initialization was proved locally and the provisional Poincare obligation was removed. The sole remaining proof gap is the local conditional first-failure probability bound, with no new exported proof debt.
 
 * r21 · proved support · mechanical handoff r21-transversal-reindex-1 was rejected without further diagnostic, so the classifier characterization and transversal reindexing were proved locally. All new children are proved; the only proof gap remains the local conditional finite-tape empirical-mean failure bound.
 
