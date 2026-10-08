@@ -1,4 +1,6 @@
 import CountingMatroid.Analysis.IntersectionSearch
+import CountingMatroid.Analysis.FindPathCertificate
+import CountingMatroid.Analysis.ShortestExchangeAugmentation
 
 set_option autoImplicit false
 
@@ -6,8 +8,10 @@ set_option autoImplicit false
 The successful branch of the concrete exchange search. Correctness requires
 both the algorithmic fact that the selected reverse path is shortest and the
 matroid fact that toggling a shortest exchange path augments independence.
-The cap must be shown harmless on this path; arbitrary directed paths do not
-satisfy the conclusion. This remains an internal implementation obligation.
+The explicit ShortestCertificate separates these obligations. The parent now
+composes the two child statements; both children remain open proof obligations.
+The checked value bridge removes operation charges and the certified length
+bound removes the cap. Arbitrary directed paths do not satisfy the conclusion.
 -/
 
 namespace CountingMatroid.Analysis.FoundPathAugmentation
@@ -63,34 +67,22 @@ theorem found_path_augmentation {n : ℕ} (M₁ M₂ : Matroid (Fin n))
           And.intro hfirst.2 (And.intro hsecond.2 (Finset.card_insert_of_notMem hfirst.1))
       · contradiction
     | succ n =>
-      -- Route 1 exposes the frozen BFS/sink table. Shortestness must rule
-      -- out shortcuts between nonconsecutive alternating vertices, and a
-      -- fundamental-circuit argument must justify the simultaneous toggle.
-      simp only [findPath, Arlib.Computation.Charged.val_bind] at hp
-      refine ⟨?_, ?_, ?_⟩
-      · -- Route 2: characterize independence by avoiding the closure of
-        -- every one-element deletion. FullGround proves the ground clause,
-        -- but the closure clause needs the absent shortest-path invariant.
-        apply Matroid.indep_iff_forall_notMem_closure_sdiff'.mpr
-        refine ⟨?_, ?_⟩
-        · rw [hfull.1]
-          exact Set.subset_univ _
-        · intro e he
-          sorry
-      · apply Matroid.indep_iff_forall_notMem_closure_sdiff'.mpr
-        refine ⟨?_, ?_⟩
-        · rw [hfull.2]
-          exact Set.subset_univ _
-        · intro e he
-          sorry
-      · -- Cardinality needs simplicity and outside/inside alternation of
-        -- the returned reverse path. Those facts are not yet established.
-        sorry
+      classical
+      have hc := CountingMatroid.Analysis.FindPathCertificate.findPath_certificate
+        (buildGraph o₁ o₂ I).val p hp
+      have haug := CountingMatroid.Analysis.ShortestExchangeAugmentation.shortest_exchange_augmentation
+        M₁ M₂ o₁ o₂ hfull h₁ h₂ I hI₁ hI₂ p hc
+      dsimp only
+      rw [List.take_of_length_le hc.length_le,
+        CountingMatroid.Analysis.ExchangePathCertificate.toggle_fold_value]
+      exact haug
 
 end CountingMatroid.Analysis.FoundPathAugmentation
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* recovery · decomposed · preserved the n=0 and n=1 proofs; n≥2 now composes a graph-only shortest-path certificate and an implementation-independent matroid augmentation lemma. Both child obligations remain open.
 
 * r19 · partial · proved successful augmentation for n=0 and n=1. For n≥2, unfolding frozen BFS and the closure characterization of independence leave shortestness, alternating simple-path cardinality, and closure avoidance unproved.
 
