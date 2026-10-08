@@ -10,6 +10,8 @@ import CountingMatroid.Analysis.TypeMassLowerBounds
 import CountingMatroid.Analysis.InitialMultipliersGood
 import CountingMatroid.Analysis.IdealExchangeChain
 import CountingMatroid.Analysis.ObservableProjection
+import CountingMatroid.Analysis.ExchangeProposalGeometry
+import CountingMatroid.Analysis.ObservablePoincare
 
 set_option autoImplicit false
 
@@ -54,6 +56,11 @@ proves the executable defect-fiber count and ideal initialization.
 proposal and proves its Metropolis kernel stationary, extending the target by
 zero on invalid states. `ObservableProjection` proves the type indicators and
 annealing numerator satisfy the required projection range conditions.
+`ExchangeProposalGeometry` proves that, on n-element states, the ideal
+uniform-label proposal is the paper's half-lazy occupied/unoccupied proposal,
+and proves that rejection preserves half-laziness. `ObservablePoincare`
+proves the symmetric-conductance energy identity and states the independent
+same-paper observable variance estimate; its weighted transport proof is open.
 The remaining local stochastic obligation bounds failure of empirical means,
 including capped draws and adaptive finite-tape coverage. `InitialRestartLaw`
 retains the proved phase-zero fresh-prefix/suffix identity.
@@ -239,6 +246,14 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
           current.currentWeights (hq j) hw)
         (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
           current.currentWeights hn (hq j) hw) ∧
+      (∀ state : PairedSet n, state.card = n →
+        (1 / 2 : ℝ) ≤ IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights hn (hq j) hw state state) ∧
+      (∀ state : PairedSet n, state.card = n → ∀ F : PairedSet n → ℝ,
+        (∑ next : PairedSet n,
+          IdealExchangeChain.exchangeProposal n hn state next * F next) =
+          (1 / 2 : ℝ) * F state + (1 / (2 * (n : ℝ) ^ 2)) *
+            ∑ a ∈ state, ∑ b ∈ stateᶜ, F (insert b (state.erase a))) ∧
       (∀ kind state,
         (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
           current.currentWeights (hq j) hw) state *
@@ -266,6 +281,18 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
         (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
           current.currentWeights (hq j) hw)
         (IdealExchangeChain.typeIndicator (.defect index.emptyPair index.fullPair))) ∧
+      (∀ H : PairedSet n → ℝ,
+        Arlib.Probability.FinDist.Var
+          (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+            current.currentWeights (hq j) hw)
+          (ObservableProjection.observableProjection
+            (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+              current.currentWeights (hq j) hw) H) ≤
+          2000 * (n : ℝ) ^ 6 * Arlib.MarkovChains.dirichlet
+            (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+              current.currentWeights (hq j) hw)
+            (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
+              current.currentWeights hn (hq j) hw) H H) ∧
       ¬ PhaseMeanCertificate.RawPhaseMeans r o₁ o₂
         (fun i => (bits[i]?).getD false) s j}
   have hrawlocal (j : ℕ) (hj : j ∈ Finset.range s.L) :
@@ -289,10 +316,14 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
       refine ⟨hb.1, hb.2.1, current, hcurrent, hgood, hw,
         IdealExchangeChain.ideal_chain_stationary r o₁ o₂ (s.ρ ^ j)
           current.currentWeights hn (hq j) hw,
+        (fun state hcard => ExchangeProposalGeometry.ideal_chain_lazy r o₁ o₂
+          (s.ρ ^ j) current.currentWeights hn (hq j) hw state hcard),
+        (fun state hcard F => ExchangeProposalGeometry.exchange_proposal_average
+          n hn state hcard F),
         (fun kind state => ObservableProjection.type_indicator_projected
           r o₁ o₂ (s.ρ ^ j) current.currentWeights (hq j) hw kind state),
         ObservableProjection.numerator_observable_projected r o₁ o₂ s.ρ _,
-        ?_, ?_, ?_, hb.2.2⟩
+        ?_, ?_, ?_, ?_, hb.2.2⟩
       · rw [IdealExchangeChain.operational_type_mean]
         have hr := (Rat.cast_le (K := ℝ)).mpr hzero
         push_cast at hr
@@ -308,6 +339,16 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
         have hr := (Rat.cast_le (K := ℝ)).mpr (hdefects index)
         push_cast at hr
         exact hr
+      · intro H
+        have hqone : s.ρ ^ j ≤ 1 := by
+          calc
+            s.ρ ^ j ≤ (1 : ℚ) ^ j := pow_le_pow_left₀
+              (AnnealingPartitionDrift.schedule_power_lower n p hn).1.le
+              (AnnealingPartitionDrift.schedule_power_lower n p hn).2.1 j
+            _ = 1 := by simp
+        exact ObservablePoincare.observable_poincare n r M₁ M₂ o₁ o₂
+          (s.ρ ^ j) current.currentWeights hn hfull hr h₁ h₂
+          (hq j) hqone hw hgood.2 H
     have hcontrolled : ((controlledBad j).ncard : ENNReal) *
         (1 / 2 : ENNReal) ^ m ≤ 1 / (8 * ((s.L : ENNReal) + 1)) := by
       -- RECOVERY BOUNDARY: good initialization and every normalized type-mass
@@ -318,16 +359,15 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
       -- normalized law, and a stationary Metropolis kernel, extended by zero
       -- weights to invalid states. All means are its real expectations,
       -- with polynomial lower bounds; the observables are fixed by the
-      -- projection on positive-mass states. No Poincare premise is assumed.
-      -- NEXT STEP: prove this proposal realizes the program's lazy occupied/
-      -- unoccupied exchange law on reached n-element states; construct its
-      -- positive-time trace on transversals. The precise missing bound is
-      -- Var π (ObservableProjection.observableProjection π H) ≤
-      --   2000 * (n : ℝ)^6 * Arlib.MarkovChains.dirichlet π P H H,
-      -- for π = operationalLaw, P = idealChain, exact matroid oracles, and
-      -- good current multipliers (paper main.tex:928-951). This controls the
-      -- projected variance using the energy of H; the full SpectralGapAtLeast
-      -- API is stronger and stationary zero-gap bounds are insufficient.
+      -- projection on positive-mass states. The ideal proposal is now proved
+      -- to be half holding plus a uniform occupied/unoccupied exchange on
+      -- every n-element state, and its Metropolis kernel is half-lazy there.
+      -- ObservablePoincare.observable_poincare supplies the precisely stated
+      -- same-paper projected-variance estimate, whose independent weighted
+      -- transport proof is still open in that child. The energy identity in
+      -- that child is proved, including invalid states with zero target mass.
+      -- NEXT STEP: identify selectPaired and boundedUniform with ideal draws
+      -- on reached n-element states and construct the positive-time trace.
       -- Then prove trace mixing/return-cost (main.tex:1029-1087), conditional
       -- restart expectation ≤ 20*n^2*L*τ, and correlated-observation MSE
       -- ≤ 40000*n^8/N_av under a 10*n^2-warm start. Couple this law
@@ -377,6 +417,8 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r23 · decomposed · proved the exact n-element proposal average, half-laziness, and the zero-weight-safe Metropolis energy identity. The parent semantically uses proposal averaging and laziness and the separately stated same-paper observable Poincare estimate. Its weighted transport proof and the parent's conditional finite-tape failure bound remain open; a live handoff is being requested.
 
 * r22 · proved support · proved exact initial defect partition counts and ideal multipliers, reached-good-history cover, all observable mean lower bounds, a concrete symmetric exchange proposal and stationary Metropolis law, and observable projection range conditions. Both live handoffs were mechanically rejected without specific diagnostics; initialization was proved locally and the provisional Poincare obligation was removed. The sole remaining proof gap is the local conditional first-failure probability bound, with no new exported proof debt.
 
