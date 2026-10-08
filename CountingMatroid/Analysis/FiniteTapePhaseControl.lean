@@ -3,6 +3,7 @@ import Mathlib.Data.Set.Finite.List
 import CountingMatroid.Analysis.FirstPhaseFailure
 import CountingMatroid.Analysis.InitialRestartLaw
 import CountingMatroid.Analysis.BoundedRunResourceEnvelope
+import CountingMatroid.Analysis.EmpiricalPhaseCertificate
 
 set_option autoImplicit false
 
@@ -30,9 +31,13 @@ def AccurateRatioProduct (n r : ℕ) (o₁ o₂ : IndependenceOracle n)
 empirical ratios with probability at most one eighth. The intended witness
 is the sequence of `finishPhase` ratios in `Program.boundedRun`.
 The deterministic certificate extraction and first-failure union bound are
-proved here. The initial restart law and its fresh-prefix/suffix probability
-identity are proved in `InitialRestartLaw`; observation concentration and the
-positive-phase conditional restart budget remain open.
+proved here. `EmpiricalPhaseCertificate` separates the raw restart and
+correlated-observation estimates from deterministic finishing and learned-table
+preservation. Its scalar arithmetic is proved; exact once-per-index finishing
+is the independent operational obligation in `FinishPhaseEmpiricalUpdate`.
+The remaining local stochastic obligation bounds failure of raw estimates,
+including capped draws and adaptive finite-tape coverage. `InitialRestartLaw`
+retains the proved phase-zero fresh-prefix/suffix identity.
 `FirstPhaseFailure` supplies the operational certificates and counting cover.
 TEXLINE: main.tex:1207-1296,1392-1427 -/
 theorem finite_tape_inaccurate_ratios (n r : ℕ)
@@ -161,49 +166,56 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
   have hcast : (inaccurate.ncard : ENNReal) ≤
       ∑ j ∈ Finset.range s.L, ((bad j).ncard : ENNReal) := by
     exact_mod_cast hcard
+  have hη : 0 ≤ s.η := by
+    change 0 ≤ p.ε / ((32 * (s.L + 1) : ℕ) : ℚ)
+    exact div_nonneg p.ε_pos.le (Nat.cast_nonneg _)
+  have hηsmall : s.η ≤ (1 / 3 : ℚ) := by
+    have hformula : s.η = p.ε / (32 * ((s.L : ℚ) + 1)) := by
+      change p.ε / ((32 * (s.L + 1) : ℕ) : ℚ) = _
+      push_cast
+      rfl
+    rw [hformula]
+    apply (div_le_iff₀ (by positivity : (0 : ℚ) < 32 * ((s.L : ℚ) + 1))).mpr
+    have hL : (0 : ℚ) ≤ s.L := Nat.cast_nonneg _
+    linarith [p.ε_lt_one]
+  let rawBad := fun j => {bits : List Bool | bits.length = m ∧
+    (∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂
+      (fun i => (bits[i]?).getD false) s a) ∧
+    ¬ EmpiricalPhaseCertificate.RawPhaseEstimates r o₁ o₂
+      (fun i => (bits[i]?).getD false) s j}
+  have hrawlocal (j : ℕ) (hj : j ∈ Finset.range s.L) :
+      ((rawBad j).ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
+        1 / (8 * ((s.L : ENNReal) + 1)) := by
+    -- RECOVERY BOUNDARY: the event now concerns the actual restart and
+    -- observePhase outputs BEFORE finishPhase, with relative error bounds
+    -- for pZero, u, and each pDefect. The deterministic implication to an
+    -- accurate ratio and good next stored tables is proved separately in
+    -- EmpiricalPhaseCertificate.raw_phase_certified; it no longer forms
+    -- part of this stochastic obligation.
+    -- NEXT STEP: construct the uncapped fixed-kernel trajectory law for a
+    -- reached good prefix; establish the stationary type identities and
+    -- ideal-multiplier drift appearing in ObservationEstimates; prove the
+    -- restart mean and warm correlated-average MSE, then transfer their
+    -- union bound through capped draws and the remaining finite block.
+    -- For j=0, InitialRestartLaw.restartPhase_zero and its proved fresh-bit
+    -- split supply the starting law; no trace-cost estimate is required.
+    -- For j>0, also prove the conditional trace restart mean. These are
+    -- same-paper obligations, main.tex:1207-1285,1392-1427, not IID bounds.
+    sorry
   have hlocal (j : ℕ) (hj : j ∈ Finset.range s.L) :
       ((bad j).ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
         1 / (8 * ((s.L : ENNReal) + 1)) := by
-    by_cases hjzero : j = 0
-    · subst j
-      have hL : 1 ≤ s.L := by
-        change 1 ≤ 2 * n *
-          (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val)
-        exact Nat.one_le_iff_ne_zero.mpr
-          (Nat.ne_of_gt (Nat.mul_pos (Nat.mul_pos (by norm_num) hn)
-            (by omega)))
-      have hnL : n ≤ n * s.L := by
-        simpa only [Nat.mul_one] using Nat.mul_le_mul_left n hL
-      have hnm : n ≤ m := by
-        change n ≤ n * s.L + s.drawCalls * (1 + s.drawTrials * _) + 10
-        omega
-      have hsplit : n + (m - n) = m := Nat.add_sub_of_le hnm
-      change (Set.ncard {bits : List Bool | bits.length = m ∧
-        FirstPhaseFailure.FirstFailure r o₁ o₂
-          (fun i => (bits[i]?).getD false) s 0} : ENNReal) *
-        (1 / 2 : ENNReal) ^ m ≤ _
-      rw [← hsplit, InitialRestartLaw.initial_failure_mass_split]
-      -- BLOCKER (base phase): the goal is now the exact uniform average
-      -- over n fresh bits and (m-n)-bit observation suffixes. The restart
-      -- has no trace transitions and cannot exhaust its attempt cap.
-      -- `initialPhaseResult` runs observePhase at q=1 and weights=4, then
-      -- the actual finishPhase and table update. To bound its certificate
-      -- failure requires the stationary-mean observable MSE estimate and
-      -- the capped-draw coupling, as well as ideal initialization and the
-      -- learned-weight update implication. There is no independence claim
-      -- about consecutive observation states in the proved tape split.
-      -- Generic IID empirical-frequency concentration does not apply.
-      sorry
-    · -- BLOCKER (positive phase): condition on the reached complete prefix
-      -- and good stored tables. Prove the uncapped restart expectation
-      -- ≤ 20*n^2*s.L*s.τ and every observable MSE around its stationary
-      -- mean ≤ 40000*n^8/s.observations; couple the capped rejection draws
-      -- and adaptive cursor to the remaining length-blockLength tape.
-      -- Accurate observations must preserve GoodStoredMultipliers through
-      -- the actual finishPhase. The fresh-bit restart scan is now proved,
-      -- but the trace kernel and observable Poincare/MSE proof are absent.
-      -- These are same-paper obligations, main.tex:1207-1285,1392-1427.
-      sorry
+    have hsubsetRaw : bad j ⊆ rawBad j := by
+      intro bits hb
+      refine ⟨hb.1, hb.2.1, ?_⟩
+      intro hraw
+      exact hb.2.2 (EmpiricalPhaseCertificate.raw_phase_certified
+        r o₁ o₂ _ s j hη hηsmall hraw)
+    have hfiniteRaw : (rawBad j).Finite :=
+      (List.finite_length_eq Bool m).subset (fun _ hb => hb.1)
+    have hc : ((bad j).ncard : ENNReal) ≤ ((rawBad j).ncard : ENNReal) := by
+      exact_mod_cast Set.ncard_le_ncard hsubsetRaw hfiniteRaw
+    exact (mul_le_mul_of_nonneg_right hc bot_le).trans (hrawlocal j hj)
   change (inaccurate.ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤ _
   calc
     (inaccurate.ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
@@ -227,6 +239,8 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* recovery · decomposed · replaced final-output certificate failure by raw empirical mean/restart failure; proved scalar ratio and learned-weight bounds and deterministic table preservation. Exact once-per-index finishing is isolated in FinishPhaseEmpiricalUpdate; the stochastic raw-estimate bound remains local. The assigned theorem statement and all existing imports are preserved.
 
 * r19 · partial · proved and used the exact fresh-prefix/observation-suffix law for phase zero; the base observation concentration and positive-phase conditional restart/MSE estimates remain local to this theorem. All new support declarations are proved.
 

@@ -8,6 +8,7 @@ import CountingMatroid.Analysis.FirstPhaseFailure
 import CountingMatroid.Analysis.FiniteTapeFirstPhaseBound
 import CountingMatroid.Analysis.FiniteTapePrefixBound
 import CountingMatroid.Analysis.CertifiedPhaseRatioSteps
+import CountingMatroid.Analysis.SuccessfulPhaseReplay
 import Mathlib.Data.Set.Card.Arithmetic
 
 set_option autoImplicit false
@@ -207,16 +208,36 @@ theorem first_ratio_failure_mass_le_certificate_sum (n r : ℕ)
       gcongr
     _ = _ := by simp only [Nat.cast_sum, Finset.sum_mul]
 
+/-- INTERNAL: Matching the consumed prefix of a finite tape gives agreement
+at every bit below the consumed cursor, provided that cursor is within the
+tape. This uses defaulted list indexing, exactly as in singleRun.
+TEXLINE: main.tex:1207-1212,1392-1421 -/
+theorem consumed_prefix_tape_agreement (bitsA bitsB : List Bool) (k : ℕ)
+    (hk : k ≤ bitsA.length) (hp : bitsA.take k <+: bitsB) :
+    ∀ i < k, (bitsA[i]?).getD false = (bitsB[i]?).getD false := by
+  intro i hi
+  have hlength : i < (bitsA.take k).length := by
+    simp only [List.length_take]
+    omega
+  have heq := List.prefix_iff_getElem?.mp hp i hlength
+  have htake := List.getElem?_eq_getElem hlength
+  rw [List.getElem?_take_of_lt hi] at htake
+  rw [heq, htake]
+
 /-- INTERNAL: A one-sided finite-tape form of the paper's successful-phase
 product lower bound. Unlike the completed-product error event, this event
 includes aborted runs, so it can directly control the zero-output mass.
 The deterministic containment, actual-history bridge, stronger-certificate
-cover and finite union bound are proved. The remaining per-phase probability
-estimate remains open inside this theorem. `FiniteTapePrefixBound` proves
-the fixed-prefix fresh-suffix law and the prefix-free conditional counting
-reduction. The actual stopping-prefix property and conditional analytic
-estimate still need proofs; `FiniteTapeFirstPhaseBound` supplies the
-denominator-clearing equivalence.
+cover and finite union bound are proved. Successful-history replay and
+prefix-freeness now reduce to the separate deterministic single-phase
+interval invariant stated locally as `hsingle`; `SuccessfulPhaseReplay`
+proves the history induction from that invariant. The finite-list agreement
+bridge is proved without additional hypotheses. The remaining
+local obligation is the conditional analytic estimate for each stopping
+prefix. `FiniteTapePrefixBound` supplies the fresh-suffix counting transfer,
+and `FiniteTapeFirstPhaseBound` supplies denominator normalization. Neither
+the local single-phase interval invariant nor the conditional analytic
+estimate is proved yet. No unproved supporting declaration is exported.
 TEXLINE: main.tex:1253-1315,1392-1421 -/
 theorem finite_tape_lower_tail_bound (n r : ℕ)
     (M₁ M₂ : Matroid (Fin n)) (o₁ o₂ : IndependenceOracle n)
@@ -232,6 +253,26 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
       CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
         (fun i => (bits[i]?).getD false) s < (1 - p.ε / 4) * c} : ENNReal) *
       (1 / 2 : ENNReal) ^ m ≤ (1 / 8 : ENNReal) := by
+  have hsingle : ∀ a (tape : ℕ → Bool)
+      (previous next : CountingMatroid.Program.AnnealingCursor n),
+      (BoundedRunPhase.boundedRunPhase r o₁ o₂ tape
+        (CountingMatroid.Interface.Pseudocode.setup n p) a (some previous)).val = some next →
+      previous.bitCursor ≤ next.bitCursor ∧
+        ∀ otherTape : ℕ → Bool,
+          (∀ i, previous.bitCursor ≤ i → i < next.bitCursor → tape i = otherTape i) →
+          (BoundedRunPhase.boundedRunPhase r o₁ o₂ otherTape
+            (CountingMatroid.Interface.Pseudocode.setup n p) a (some previous)).val = some next := by
+    intro a tape previous next hrun
+    unfold BoundedRunPhase.boundedRunPhase at hrun ⊢
+    simp only [Arlib.Computation.Charged.val_bind] at hrun ⊢
+    -- BLOCKER (operational, independent of probability): a successful
+    -- single phase advances its cursor and replays from agreement on its
+    -- consumed bit interval. Prove restartPhase and observePhase success-
+    -- path locality by their loop inductions, starting with boundedUniform
+    -- and chainStep; compose the two monotone intervals. finishPhase and
+    -- the final table/product writes are deterministic. The history
+    -- induction from this exact invariant is proved in SuccessfulPhaseReplay.
+    sorry
   apply (lower_tail_mass_le_ratio_failure n r o₁ o₂ p hn).trans
   apply (ratio_failure_mass_le_first_phase_failure n r o₁ o₂ p).trans
   apply (first_ratio_failure_mass_le_certificate_sum n r o₁ o₂ p hn).trans
@@ -283,35 +324,36 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
             Arlib.Computation.Charged.repeatFor, List.range_zero,
             Arlib.Computation.Charged.val_foldl_nil,
             BoundedRunPhaseHistory.initialCursor, List.take_zero]
-        have hphase :
-            (0 < j → ∀ bitsA ∈ good, ∀ bitsB ∈ good, cursor bitsA ≤ m →
-              bitsA.take (cursor bitsA) <+: bitsB → cursor bitsB = cursor bitsA) ∧
-            (∀ pref ∈ P,
-              (Set.ncard {suffix : List Bool |
-                suffix.length = m - pref.length ∧ E (pref ++ suffix)} : ENNReal) *
-                (1 / 2 : ENNReal) ^ (m - pref.length) ≤
-                  1 / (8 * ((s.L : ENNReal) + 1))) := by
-          -- BLOCKER: the fresh-suffix counting identity and transfer of a
-          -- uniform suffix bound are now proved in FiniteTapePrefixBound.
-          -- What remains is specific to the actual bounded-run program:
-          -- (1) a positive successful phase history must replay to the same
-          -- reached cursor when its consumed prefix is unchanged. Induction
-          -- with phaseHistory_succ closes j=0, but at j+1 needs successful
-          -- boundedRunPhase replay plus monotonicity of the prior bitCursor.
-          -- Unfolding that phase requires the corresponding restartPhase
-          -- and observePhase replay facts. No such operational invariant
-          -- is in the present API. The generic stopping_prefixes_free lemma
-          -- handles cursors beyond m by the whole-tape case, so blockLength
-          -- coverage is not a separate premise of prefix-freeness.
-          -- (2) uniformly for every such successful prefix, its fresh suffix
-          -- has first-certificate-failure mass at most 1/(8*(L+1)). This
-          -- needs the uncapped restart mean 20*n^2*L*tau, stationary-mean
-          -- observation MSE 40000*n^8/observations, preservation of learned
-          -- tables, and capped-draw/finite-block coupling. These are
-          -- same-paper obligations at main.tex:1207-1285,1392-1427.
-          -- The generic counting law does not establish these analytic or
-          -- operational hypotheses, and no new unproved child is exported.
-          sorry
+        have hreplay : ∀ bitsA ∈ good, ∀ bitsB ∈ good, cursor bitsA ≤ m →
+            bitsA.take (cursor bitsA) <+: bitsB → cursor bitsB = cursor bitsA := by
+          intro bitsA ha bitsB _ hwithin hprefix
+          have hagree := consumed_prefix_tape_agreement bitsA bitsB (cursor bitsA)
+            (by simpa only [ha.1] using hwithin) hprefix
+          cases hh : BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+              (fun i => (bitsA[i]?).getD false) s j with
+          | none =>
+              -- Earlier certificates prevent an aborted prefix at positive j.
+              cases j with
+              | zero =>
+                  change some (BoundedRunPhaseHistory.initialCursor n s) = none at hh
+                  contradiction
+              | succ a =>
+                  obtain ⟨_, _, _, previous, next, hprevious, hstep, _⟩ := ha.2 a (by omega)
+                  have hnext : BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+                      (fun i => (bitsA[i]?).getD false) s (a + 1) = some next := by
+                    rw [BoundedRunPhaseHistory.phaseHistory_succ]
+                    change BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+                      (fun i => (bitsA[i]?).getD false) s a = some previous at hprevious
+                    rw [hprevious]
+                    exact hstep
+                  rw [hh] at hnext
+                  contradiction
+          | some current =>
+              have hb := SuccessfulPhaseReplay.successful_history_replay_of_phase_replay
+                r o₁ o₂ s hsingle
+                (fun i => (bitsA[i]?).getD false) j current hh
+                (fun i => (bitsB[i]?).getD false) (by simpa only [cursor, hh] using hagree)
+              simp only [cursor, hh, hb]
         have hfree : ∀ a ∈ P, ∀ b ∈ P, a <+: b → a = b := by
           by_cases hjzero : j = 0
           · exact hfree_zero hjzero
@@ -320,12 +362,25 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
             · intro bits hb
               exact (hfinite.mem_toFinset.mp hb).1
             · intro bitsA ha bitsB hb
-              exact hphase.1 (Nat.pos_of_ne_zero hjzero)
-                bitsA (hfinite.mem_toFinset.mp ha)
+              exact hreplay bitsA (hfinite.mem_toFinset.mp ha)
                 bitsB (hfinite.mem_toFinset.mp hb)
+        have hconditional : ∀ pref ∈ P,
+            (Set.ncard {suffix : List Bool |
+              suffix.length = m - pref.length ∧ E (pref ++ suffix)} : ENNReal) *
+              (1 / 2 : ENNReal) ^ (m - pref.length) ≤
+                1 / (8 * ((s.L : ENNReal) + 1)) := by
+          -- BLOCKER: uniformly over the actual successful stopping prefixes,
+          -- bound the next-phase certificate failure on the fresh suffix.
+          -- Operational history replay is now a separate single-phase
+          -- invariant, used above through the proved history induction.
+          -- The remaining analytic step needs the uncapped restart mean,
+          -- stationary-mean observation MSE, learned-weight preservation,
+          -- and coupling of capped draws within the remaining block. These
+          -- are same-paper obligations at main.tex:1207-1285,1392-1427.
+          sorry
         have hmass := FiniteTapePrefixBound.finite_prefix_failure_bound
           m P E (1 / (8 * ((s.L : ENNReal) + 1)))
-          hlen hfree hcover hphase.2
+          hlen hfree hcover hconditional
         exact (FiniteTapeFirstPhaseBound.finite_tape_first_phase_failure_iff
           n r o₁ o₂ p j).mp hmass
     _ ≤ (1 / 8 : ENNReal) := by
@@ -346,6 +401,10 @@ end CountingMatroid.Analysis.FiniteTapeLowerTail
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r20 · rejected handoff · `r20-successful-phase-replay-1` was mechanically rejected without diagnostic. Retained ownership and replaced the open replay child by a proved history-induction implication; single-phase operational replay and the conditional suffix estimate remain explicit local obligations of the unchanged target.
+
+* r20 · recovery decomposition · replaced the coupled history-replay/analytic gap with a checked history induction from single-phase interval locality and monotonicity in `SuccessfulPhaseReplay`, plus the unchanged conditional suffix-failure estimate. Proved finite-list consumed-prefix agreement; no target statement or existing import changed.
 
 * r19 · partial · proved fixed-prefix fresh-suffix mass, variable-length prefix-free mass and conditional counting transfer in `FiniteTapePrefixBound`; the parent now uses these facts with the actual successful-history prefix set. Covered length and event containment and the phase-zero prefix case check. The single open obligation is positive-history cursor replay together with the uniform conditional phase estimate; no unproved child exported.
 
