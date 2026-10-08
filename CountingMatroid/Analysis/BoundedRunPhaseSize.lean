@@ -1,14 +1,14 @@
+import CountingMatroid.Analysis.PhaseResourcePrimitives
 import CountingMatroid.Analysis.BoundedRunPhase
 import CountingMatroid.Analysis.RationalHeight
 import CountingMatroid.Analysis.FinishPhaseWeightsSize
 
 /-!
-The phase-size proof handles all abort branches and proves preservation of
-current weights, stored tables, and the product from the successful observation
-count and ratio-size contracts. The nested multiplier scan is proved in
-`FinishPhaseWeightsSize`. The remaining obligation is blocked by the placement
-of existing observation and ratio contracts in `BoundedRunResourceEnvelope`,
-which depends on this module; those proofs need upstream extraction.
+One bounded phase preserves the rational-size invariant for current weights,
+stored tables, and the accumulated product. Abort branches satisfy the invariant
+vacuously. Successful phases use the observation count and accumulator-height
+bounds from `PhaseResourcePrimitives` and the multiplier scan bound from
+`FinishPhaseWeightsSize`; the resulting ratio fits one phase increment.
 -/
 
 set_option autoImplicit false
@@ -105,20 +105,44 @@ theorem phase_preserves_size {n : ℕ} (r : ℕ) (o₁ o₂ : IndependenceOracle
                       have := ht phase index
                       dsimp [S] at *
                       nlinarith
-                  -- BLOCKER (import cycle): the count, accumulator-height, and
-                  -- ratio contracts are already proved in BoundedRunResourceEnvelope,
-                  -- which imports BoundedRunOtherSteps, which imports this file.
-                  -- Extract that support upstream rather than duplicating its proofs:
-                  -- observePhase_counts_le, observePhase_height_le, and
-                  -- finishPhase_ratio_length_le (the last two currently private).
-                  -- Their dependency closure also includes chargedFold_count_growth,
-                  -- recordObservation_counts_le, recordObservation_height_le,
-                  -- ratPower_binary_length_le, and ratPower_value.
-                  sorry
+                  have hc := BoundedRunResourceEnvelope.observePhase_counts_le
+                    r o₁ o₂ tape s (ratPower s.ρ j).val
+                    current.currentWeights started observed hobserved
+                  refine ⟨hc, ?_⟩
+                  have hh := BoundedRunResourceEnvelope.observePhase_height_le
+                    r o₁ o₂ tape s (ratPower s.ρ j).val
+                    current.currentWeights started observed hobserved
+                  have hl := RationalHeight.binaryRatLength_le_height observed.numeratorSum
+                  have hr := BoundedRunResourceEnvelope.finishPhase_ratio_length_le
+                    s j current.currentWeights observed (hc .transversal)
+                    finished.1 finished.2 hfinished
+                  have hρlen : binaryRatLength s.ρ ≤ S := by
+                    dsimp [S, runSize]; omega
+                  have hone : binaryRatLength 1 = 4 := by
+                    norm_num [binaryRatLength, binaryNatLength, Nat.log2_eq_log_two]
+                  rw [hone] at hh
+                  have hnr : n * binaryRatLength s.ρ ≤ S * S :=
+                    Nat.mul_le_mul hn hρlen
+                  have hob : s.observations * (5 + n * binaryRatLength s.ρ) ≤
+                      S * (5 + S * S) :=
+                    Nat.mul_le_mul ho (Nat.add_le_add_left hnr 5)
+                  have hratio : binaryRatLength finished.1 ≤ 16 + 13 * S + 2 * S ^ 3 := by
+                    nlinarith
+                  have hcube : S ≤ S ^ 3 := le_self_pow (by omega) (by decide)
+                  have hlarge : 31 ≤ S ^ 7 := by
+                    have hpower := Nat.pow_le_pow_left hS 7
+                    norm_num at hpower
+                    omega
+                  calc
+                    binaryRatLength finished.1 ≤ 16 + 13 * S + 2 * S ^ 3 := hratio
+                    _ ≤ S ^ 3 * 31 := by nlinarith
+                    _ ≤ S ^ 3 * S ^ 7 := Nat.mul_le_mul_left _ hlarge
+                    _ = S ^ 10 := by rw [← pow_add]
 end CountingMatroid.Analysis.BoundedRunPhase
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* this round · proved · closed `phase_preserves_size` using the upstream observation contracts in `PhaseResourcePrimitives`; retained the statement and all existing imports.
 * this round · blocked · proved and built `FinishPhaseWeightsSize.finishPhase_weights_length_le`; reduced the original gap to count and ratio contracts already proved downstream, requiring upstream extraction to avoid an import cycle.
 -/
