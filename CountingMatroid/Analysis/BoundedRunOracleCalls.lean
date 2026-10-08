@@ -1,3 +1,4 @@
+import CountingMatroid.Analysis.PrimitiveOracleCalls
 import CountingMatroid.Model.Program
 
 set_option autoImplicit false
