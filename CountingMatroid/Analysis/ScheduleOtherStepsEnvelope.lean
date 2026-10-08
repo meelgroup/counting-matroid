@@ -252,48 +252,6 @@ private theorem rationalBinary_otherSteps_le (instr : Arlib.Computation.Op)
   apply Nat.pow_le_pow_left
   omega
 
-/-- INTERNAL: One charged word operation contributes one nonoracle step. -/
-private theorem otherSteps_word_op (instr : Arlib.Computation.Op) {α : Type}
-    (value : α) :
-    otherSteps (Arlib.Computation.Charged.op
-      (CountingMatroid.Model.Operations.Op.word instr) value) = 1 := by
-  cases instr <;> simp [otherSteps, Arlib.Computation.Op.all,
-    Arlib.Computation.CostVec.one]
-
-/-- INTERNAL: A repeated charged word operation contributes its repeat count. -/
-private theorem otherSteps_word_opMany (instr : Arlib.Computation.Op) {α : Type}
-    (count : ℕ) (value : α) :
-    otherSteps (Arlib.Computation.Charged.opMany
-      (CountingMatroid.Model.Operations.Op.word instr) count value) = count := by
-  cases instr <;> simp [otherSteps, Arlib.Computation.Op.all,
-    Arlib.Computation.CostVec.many]
-
-/-- INTERNAL: The schedule's natural arithmetic wrappers preserve their values. -/
-private theorem natMul_val (a b : ℕ) :
-    (CountingMatroid.Model.Operations.natMul a b).val = a * b := rfl
-/-- INTERNAL: The charged natural addition returns the arithmetic sum. -/
-private theorem natAdd_val (a b : ℕ) :
-    (CountingMatroid.Model.Operations.natAdd a b).val = a + b := rfl
-/-- INTERNAL: The charged successor returns the next natural number. -/
-private theorem successor_val (a : ℕ) :
-    (CountingMatroid.Model.Operations.successor a).val = a + 1 := rfl
-
-/-- INTERNAL: The schedule's rational arithmetic wrappers preserve their values. -/
-private theorem ratDiv_val (a b : ℚ) :
-    (CountingMatroid.Model.Operations.ratDiv a b).val = a / b := rfl
-/-- INTERNAL: The charged rational subtraction returns the difference. -/
-private theorem ratSub_val (a b : ℚ) :
-    (CountingMatroid.Model.Operations.ratSub a b).val = a - b := rfl
-/-- INTERNAL: The charged rational multiplication returns the product. -/
-private theorem ratMul_val (a b : ℚ) :
-    (CountingMatroid.Model.Operations.ratMul a b).val = a * b := rfl
-/-- INTERNAL: The charged natural cast returns the rational cast. -/
-private theorem ratOfNat_val (a : ℕ) :
-    (CountingMatroid.Model.Operations.ratOfNat a).val = (a : ℚ) := rfl
-/-- INTERNAL: The charged rational ceiling returns the nonnegative ceiling. -/
-private theorem rationalCeil_val (a : ℚ) :
-    (CountingMatroid.Model.Operations.rationalCeil a).val = Int.toNat a.ceil := rfl
-
 /-- INTERNAL: The nonnegative ceiling of a reduced rational is at most the
 absolute value of its numerator. -/
 theorem rationalCeil_value_le_num (q : ℚ) :
@@ -370,22 +328,6 @@ private theorem natPower_otherSteps_eq (base exponent : ℕ) :
         rw [hone, ih]
         simp only [List.length_cons]
         omega
-  unfold CountingMatroid.Program.natPower Arlib.Computation.Charged.repeatFor
-  simpa using hfold (List.range exponent) 1
-
-/-- INTERNAL: The charged natural-power loop computes the stated power. -/
-private theorem natPower_value (base exponent : ℕ) :
-    (CountingMatroid.Program.natPower base exponent).val = base ^ exponent := by
-  have hfold (l : List ℕ) (acc : ℕ) :
-      (Arlib.Computation.Charged.foldl
-        (fun acc _ => CountingMatroid.Model.Operations.natMul acc base) l acc).val =
-        acc * base ^ l.length := by
-    induction l generalizing acc with
-    | nil => simp
-    | cons _ xs ih =>
-        rw [Arlib.Computation.Charged.val_foldl_cons, ih]
-        simp [CountingMatroid.Model.Operations.natMul, pow_succ]
-        ring
   unfold CountingMatroid.Program.natPower Arlib.Computation.Charged.repeatFor
   simpa using hfold (List.range exponent) 1
 
@@ -565,9 +507,6 @@ theorem schedule_otherSteps_envelope :
     omega
   unfold CountingMatroid.Program.schedule
   simp only [otherSteps_bind, natPower_otherSteps_eq]
-  simp only [natMul_val, natAdd_val, successor_val, ratDiv_val,
-    ratSub_val, ratMul_val, ratOfNat_val, rationalCeil_val,
-    natPower_value]
   -- BLOCKER: `hObsLogPoly` bounds the ceiling operand's logarithm, and
   -- `hεcost` and `hδcost` bound the two capped searches. The expanded sum
   -- still needs the values of its nested primitive calls rewritten to the
@@ -583,8 +522,8 @@ end CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
 Newest first. History, not instruction — what this file claims is above.
 
 * r13 · partial · proved the observation-quotient length and its ceiling-log
-  polynomial bound, plus primitive word costs and input-size bounds for the
-  two halving searches; schedule-cost normalization remains open.
+  polynomial bound and input-size bounds for both halving searches;
+  schedule-cost normalization remains open.
 * r12 · partial · proved capped-loop, rational-length, and ceiling-logarithm
   helpers; the full schedule sum still needs intermediate-value bookkeeping.
 * r11 · partial · proved charged sequencing and natural-power costs; isolated the
