@@ -94,6 +94,7 @@ end CountingMatroid.Analysis.AbortTapeBound
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r12 · blocked · `SingleRunAccuracy.fairTape_event_card` supplies the finite-tape counting identity only downstream of this module; Mathlib's Markov and Chebyshev bounds exist, but there is still no law or mean-square estimate for this capped program's abort statuses to which they apply.
 * r11 · blocked · checked the only nearby finite-tape error bound; it excludes zero outputs, while the needed abort-status law, bit-cursor coverage, and uncapped-to-capped coupling are absent.
 * r10 · blocked · checked the positive-ground branch against `Program.boundedRun`, `traceReturn`, `observePhase`, and the project analysis: no finite-tape abort-event law or uncapped-to-capped coupling is available; the paper's Markov and MSE bounds have no Lean counterparts here.
 * r9 · blocked · `aesop` and `simp_all` leave the exact positive-ground abort-tape mass inequality; source search found no uncapped phase-failure law, abort-status cover, or finite-tape coupling for `boundedRun`.
