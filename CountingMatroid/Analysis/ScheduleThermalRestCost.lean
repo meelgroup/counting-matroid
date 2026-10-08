@@ -1,4 +1,5 @@
 import CountingMatroid.Analysis.ScheduleThermalSetupCost
+import CountingMatroid.Analysis.ScheduleCostPrimitives
 
 /-!
 # Cost of the schedule tail
