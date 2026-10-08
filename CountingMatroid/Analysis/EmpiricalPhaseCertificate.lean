@@ -150,7 +150,6 @@ theorem raw_phase_certified {n : ℕ} (r : ℕ) (o₁ o₂ : IndependenceOracle 
     have hw := hnextGood hj
     constructor
     · intro a ha index
-      change _ ≤ next.tables a index ∧ next.tables a index ≤ _
       dsimp [next]
       rw [if_pos hj]
       simp only [learnedWeightWrite, Arlib.Computation.Charged.val_opMany]
@@ -162,3 +161,11 @@ theorem raw_phase_certified {n : ℕ} (r : ℕ) (o₁ o₂ : IndependenceOracle 
     · exact hw
 
 end CountingMatroid.Analysis.EmpiricalPhaseCertificate
+
+/-! ### Run record
+Newest first. History, not instruction — what this file claims is above.
+
+* recovery · proved · raw empirical mean estimates imply the actual phase
+  certificate through exact finishing, ratio arithmetic, and learned-table
+  preservation. Concentration and finite-tape coupling remain in the parent.
+-/

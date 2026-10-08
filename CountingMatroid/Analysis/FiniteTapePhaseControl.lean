@@ -33,8 +33,8 @@ is the sequence of `finishPhase` ratios in `Program.boundedRun`.
 The deterministic certificate extraction and first-failure union bound are
 proved here. `EmpiricalPhaseCertificate` separates the raw restart and
 correlated-observation estimates from deterministic finishing and learned-table
-preservation. Its scalar arithmetic is proved; exact once-per-index finishing
-is the independent operational obligation in `FinishPhaseEmpiricalUpdate`.
+preservation. Its scalar arithmetic and exact once-per-index finishing
+are proved in `RelativeObservationBounds` and `FinishPhaseEmpiricalUpdate`.
 The remaining local stochastic obligation bounds failure of raw estimates,
 including capped draws and adaptive finite-tape coverage. `InitialRestartLaw`
 retains the proved phase-zero fresh-prefix/suffix identity.
@@ -239,6 +239,8 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* recovery · proved support · closed the exact once-per-index finishing lemma after rejected handoff. The new raw-estimate-to-certified-phase implication has no unproved children; the stochastic raw-estimate bound is the only remaining local gap.
 
 * recovery · decomposed · replaced final-output certificate failure by raw empirical mean/restart failure; proved scalar ratio and learned-weight bounds and deterministic table preservation. Exact once-per-index finishing is isolated in FinishPhaseEmpiricalUpdate; the stochastic raw-estimate bound remains local. The assigned theorem statement and all existing imports are preserved.
 

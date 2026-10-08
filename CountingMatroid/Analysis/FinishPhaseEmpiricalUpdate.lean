@@ -6,6 +6,34 @@ namespace CountingMatroid.Analysis.FinishPhaseEmpiricalUpdate
 
 open CountingMatroid.Model CountingMatroid.Model.Operations CountingMatroid.Program
 
+/-- INTERNAL: Exactly-once coordinate updates in a duplicate-free scan. -/
+private theorem fold_coordinate_once {α β : Type} [DecidableEq α]
+    (key : β → α) (factor : β → ℚ) (l : List α) (hnodup : l.Nodup)
+    (weights : β → ℚ) (index : β) :
+    (l.foldl (fun w a b => if key b = a then w b * factor b else w b) weights) index =
+      if key index ∈ l then weights index * factor index else weights index := by
+  induction l generalizing weights with
+  | nil => simp
+  | cons a l ih =>
+      rw [List.nodup_cons] at hnodup
+      rw [List.foldl_cons, ih hnodup.2]
+      by_cases he : key index = a
+      · simp [he, hnodup.1]
+      · simp [he]
+
+/-- INTERNAL: A scan of successful optional computations is its pure value
+fold; this keeps the actual Charged scan rather than asserting a new program. -/
+private theorem fold_some_value {α β : Type}
+    (f : Option β → α → Arlib.Computation.Charged Op Cell (Option β))
+    (g : β → α → β) (hf : ∀ b a, (f (some b) a).val = some (g b a))
+    (l : List α) (initial : β) :
+    (Arlib.Computation.Charged.foldl f l (some initial)).val =
+      some (l.foldl g initial) := by
+  induction l generalizing initial with
+  | nil => rfl
+  | cons a l ih =>
+      rw [Arlib.Computation.Charged.val_foldl_cons, hf, ih, List.foldl_cons]
+
 /-- INTERNAL: Exact empirical update computed by the successful finish scan.
 The formula uses the original multiplier once for each off-diagonal index;
 normalizing both counts by the observation count cancels.
@@ -29,14 +57,144 @@ theorem finishPhase_empirical_update {n : ℕ} (s : AnnealingSchedule) (j : ℕ)
     (finishPhase s j weights observed).val =
       some (observed.numeratorSum / (observed.counts .transversal : ℚ),
         empiricalWeights s j weights observed) := by
-  -- Concrete route: unfold the charged operations to obtain two finite
-  -- folds over List.finRange n. Positive counts eliminate every abort.
-  -- The remaining invariant must record which off-diagonal indices have
-  -- been visited: their entry has its empirical update, and every unvisited
-  -- entry still has its ORIGINAL weight. Positivity alone does not prove
-  -- the formula, since applying a scalar update twice changes its value.
-  -- List.nodup_finRange provides exactly-once visitation in each scan.
-  -- Normalization cancellation then needs hN and hzero, both supplied here.
-  sorry
+  classical
+  let factor : DefectIndex n → ℚ := fun index => if j + 1 < s.L then
+    ((observed.counts .transversal : ℚ) / (s.observations : ℚ)) /
+      ((observed.counts (.defect index.emptyPair index.fullPair) : ℚ) /
+        (s.observations : ℚ)) else 1
+  let key : DefectIndex n → Fin n × Fin n :=
+    fun index => (index.emptyPair, index.fullPair)
+  let action : Multipliers n → Fin n × Fin n → Multipliers n :=
+    fun w pair index => if key index = pair then w index * factor index else w index
+  let step : Fin n → Option (Multipliers n) → Fin n →
+      Arlib.Computation.Charged Op Cell (Option (Multipliers n)) :=
+    fun i current k => do
+      match current with
+      | none => pure none
+      | some current =>
+          let diagonal ← indexEqual i k
+          if diagonal then pure (some current)
+          else
+            if h : i ≠ k then
+              let count ← countRead observed.counts (.defect i k)
+              let zero ← natEqual count 0
+              if zero then pure none
+              else if (lessThan (successor j).val s.L).val then
+                let pCount ← ratOfNat count
+                let pDefect ← ratDiv pCount (s.observations : ℚ)
+                let old ← multiplierRead current ⟨i, k, h⟩
+                let numerator ← ratMul old
+                  ((observed.counts .transversal : ℚ) / (s.observations : ℚ))
+                let value ← ratDiv numerator pDefect
+                let newer ← multiplierWrite current ⟨i, k, h⟩ value
+                pure (some newer)
+              else pure (some current)
+            else pure none
+  have hstep : ∀ i w k, (step i (some w) k).val = some (action w (i, k)) := by
+    intro i w k
+    by_cases hik : i = k
+    · subst k
+      have hid : action w (i, i) = w := by
+        funext index
+        have hnot : key index ≠ (i, i) := by
+          intro he
+          have he₁ := congrArg Prod.fst he
+          have he₂ := congrArg Prod.snd he
+          exact index.distinct (he₁.trans he₂.symm)
+        simp [action, hnot]
+      simp [step, indexEqual, hid]
+    · have hcount : observed.counts (.defect i k) ≠ 0 :=
+        Nat.ne_of_gt (hdefect ⟨i, k, hik⟩)
+      simp only [step, Arlib.Computation.Charged.val_bind]
+      simp only [indexEqual, Arlib.Computation.Charged.val_op, beq_iff_eq,
+        hik, if_false, dif_pos hik]
+      simp only [Arlib.Computation.Charged.val_bind, countRead,
+        Arlib.Computation.Charged.val_opMany, natEqual,
+        Arlib.Computation.Charged.val_op, beq_iff_eq, hcount, if_false,
+        successor, lessThan]
+      by_cases hj : j + 1 < s.L
+      · simp only [hj, decide_true, if_true, Arlib.Computation.Charged.val_bind,
+          ratOfNat, ratDiv, ratMul, multiplierRead, multiplierWrite,
+          Arlib.Computation.Charged.val_opMany, Arlib.Computation.Charged.val_pure,
+          Option.some.injEq]
+        funext index
+        have he : index = (⟨i, k, hik⟩ : DefectIndex n) ↔ key index = (i, k) := by
+          constructor
+          · rintro rfl
+            rfl
+          · intro he
+            cases index with
+            | mk empty full distinct =>
+                obtain ⟨rfl, rfl⟩ := Prod.mk.inj he
+                rfl
+        simp only [action, factor, hj, if_true]
+        by_cases heq : key index = (i, k)
+        · have heidx := he.mpr heq
+          subst index
+          simp [key, mul_div_assoc]
+        · simp [heq, not_congr he |>.mpr heq]
+      · simp [hj, action, factor]
+
+  have hinner : ∀ w i,
+      (Arlib.Computation.Charged.foldl (step i) (List.finRange n) (some w)).val =
+        some ((List.finRange n).foldl (fun w k => action w (i, k)) w) := by
+    intro w i
+    exact fold_some_value (step i) (fun w k => action w (i, k)) (hstep i)
+      (List.finRange n) w
+  have hscan : (Arlib.Computation.Charged.foldl
+      (fun acc i => Arlib.Computation.Charged.foldl (step i) (List.finRange n) acc)
+      (List.finRange n) (some weights)).val =
+      some (empiricalWeights s j weights observed) := by
+    rw [fold_some_value _ _ hinner]
+    congr 1
+    have hpure : (List.finRange n).foldl
+        (fun w i => (List.finRange n).foldl (fun w k => action w (i, k)) w) weights =
+        ((List.finRange n).product (List.finRange n)).foldl action weights := by
+      simp only [List.product, List.foldl_flatMap, List.foldl_map]
+    rw [hpure]
+    funext index
+    have hcoord : (((List.finRange n).product (List.finRange n)).foldl action weights) index =
+        weights index * factor index := by
+      have hc := fold_coordinate_once key factor _
+        ((List.nodup_finRange n).product (List.nodup_finRange n)) weights index
+      have hm : key index ∈ List.finRange n ×ˢ List.finRange n := by simp [key]
+      rw [if_pos hm] at hc
+      simpa only [action, SProd.sprod] using hc
+    rw [hcoord]
+    dsimp [factor, empiricalWeights]
+    by_cases hj : j + 1 < s.L
+    · rw [if_pos hj, if_pos hj]
+      have hNq : (s.observations : ℚ) ≠ 0 := by exact_mod_cast Nat.ne_of_gt hN
+      field_simp
+    · simp [hj]
+  simp only [finishPhase, Arlib.Computation.Charged.val_bind]
+  have hnonzero : (natEqual (countRead observed.counts .transversal).val 0).val = false := by
+    simp [natEqual, countRead, Nat.ne_of_gt hzero]
+  rw [hnonzero]
+  simp only [Bool.false_eq_true, if_false, Arlib.Computation.Charged.val_bind,
+    ratOfNat, ratDiv, countRead, Arlib.Computation.Charged.val_opMany]
+  change (match (Arlib.Computation.Charged.foldl
+      (fun acc i => Arlib.Computation.Charged.foldl (step i) (List.finRange n) acc)
+      (List.finRange n) (some weights)).val with
+    | none => pure none
+    | some updated => pure (some
+        ((observed.numeratorSum / (s.observations : ℚ)) /
+          ((observed.counts .transversal : ℚ) / (s.observations : ℚ)), updated)) :
+    Arlib.Computation.Charged Op Cell (Option (ℚ × Multipliers n))).val = _
+  rw [hscan]
+  simp only [Arlib.Computation.Charged.val_pure, Option.some.injEq, Prod.mk.injEq,
+    and_true]
+  have hNq : (s.observations : ℚ) ≠ 0 := by exact_mod_cast Nat.ne_of_gt hN
+  field_simp
 
 end CountingMatroid.Analysis.FinishPhaseEmpiricalUpdate
+
+/-! ### Run record
+Newest first. History, not instruction — what this file claims is above.
+
+* recovery · proved · evaluated the optional nested scan via a duplicate-free
+  product of index lists; each off-diagonal multiplier is updated exactly once.
+  Positive counts remove aborts and common observation normalization cancels.
+* recovery · rejected handoff · scheduler mechanically rejected the finishing
+  lemma without a further diagnostic; retained ownership and proved it locally.
+-/
