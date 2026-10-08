@@ -1,5 +1,7 @@
 import CountingMatroid.Model.Subroutines
 import CountingMatroid.Analysis.RankOneFeasibility
+import CountingMatroid.Analysis.IntersectionAugmentation
+import CountingMatroid.Analysis.IntersectionSearchCost
 
 set_option autoImplicit false
 
@@ -7,14 +9,17 @@ set_option autoImplicit false
 The common-base predicate is connected to the paper's feasibility pretest.
 Ranks zero and one are implemented and verified using the charged interface;
 the rank-one implementation is the first augmentation from the empty set.
-The existence of a uniformly polynomial solver for ranks greater than one is
-still unresolved. The parent theorem retains precisely that open witness.
+An explicit capped exchange-graph implementation handles arbitrary rank.
+Its uniform cost certificate is proved. The parent now reduces correctness to
+the augmentation-progress obligation in a separate child file, which remains
+open. The parent proof has no open tactic goals but depends on that obligation.
 -/
 
 namespace CountingMatroid.Analysis.FeasibilitySolver
 
 open CountingMatroid.Model.Subroutines
 open CountingMatroid.Model
+open scoped Classical
 
 /-- INTERNAL: Bridge the counted common-base predicate to the size-`r`
 common-independent-set predicate used by the cited intersection algorithm.
@@ -162,10 +167,88 @@ theorem rankOneGuard_bounded (solver : FeasibilityImplementation)
   · simp only [if_neg hr]
     constructor <;> nlinarith
 
+/-- INTERNAL: Iterating the concrete augmentation at most `r` times reaches
+size `r` exactly when a size-`r` common independent set exists. The loop invariant
+compares its cardinality with every common independent competitor.
+TEXLINE: main.tex:283-289 -/
+theorem intersectionSolver_correct (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
+    (o₁ o₂ : IndependenceOracle n) (hfull : FullGround M₁ M₂)
+    (h₁ : ExactOracle M₁ o₁) (h₂ : ExactOracle M₂ o₂) :
+    (IntersectionSearch.intersectionSolver.run n r o₁ o₂).val = decide
+      (∃ I : Finset (Fin n), I.card = r ∧
+        M₁.Indep (I : Set (Fin n)) ∧ M₂.Indep (I : Set (Fin n))) := by
+  classical
+  have hloop (l : List ℕ) (I : Finset (Fin n))
+      (hI₁ : M₁.Indep (I : Set (Fin n))) (hI₂ : M₂.Indep (I : Set (Fin n))) :
+      let result := (Arlib.Computation.Charged.foldl
+        (fun I _ => IntersectionSearch.augmentOnce o₁ o₂ I) l I).val
+      M₁.Indep (result : Set (Fin n)) ∧ M₂.Indep (result : Set (Fin n)) ∧
+        I.card ≤ result.card ∧ result.card ≤ I.card + l.length ∧
+        ∀ J : Finset (Fin n), M₁.Indep (J : Set (Fin n)) →
+          M₂.Indep (J : Set (Fin n)) → min (I.card + l.length) J.card ≤ result.card := by
+    induction l generalizing I with
+    | nil =>
+      simp only [Arlib.Computation.Charged.val_foldl_nil, List.length_nil, Nat.add_zero]
+      exact ⟨hI₁, hI₂, le_rfl, le_rfl, fun J _ _ => min_le_left _ _⟩
+    | cons j l ih =>
+      simp only [Arlib.Computation.Charged.val_foldl_cons, List.length_cons]
+      let next := (IntersectionSearch.augmentOnce o₁ o₂ I).val
+      have hp := IntersectionAugmentation.augmentation_progress M₁ M₂ o₁ o₂
+        hfull h₁ h₂ I hI₁ hI₂
+      obtain ⟨hout₁, hout₂, hlower, hupper, hcompare⟩ := ih next hp.1 hp.2.1
+      have hstep : I.card ≤ next.card ∧ next.card ≤ I.card + 1 := by
+        rcases hp.2.2 with hincrease | ⟨hfixed, _⟩
+        · change next.card = I.card + 1 at hincrease
+          omega
+        · change next = I at hfixed
+          rw [hfixed]
+          omega
+      refine ⟨hout₁, hout₂, hstep.1.trans hlower, ?_, ?_⟩
+      · calc
+          _ ≤ next.card + l.length := hupper
+          _ ≤ I.card + (l.length + 1) := by omega
+      intro J hJ₁ hJ₂
+      rcases hp.2.2 with hincrease | ⟨hfixed, hmax⟩
+      · have hcomp := hcompare J hJ₁ hJ₂
+        change next.card = I.card + 1 at hincrease
+        have heq : I.card + (l.length + 1) = next.card + l.length := by omega
+        simpa only [heq] using hcomp
+      · change next = I at hfixed
+        have hJ := hmax J hJ₁ hJ₂
+        have hJnext : J.card ≤ next.card := by
+          rw [hfixed]
+          exact hJ
+        exact (min_le_right _ _).trans (hJnext.trans hlower)
+  let result := (Arlib.Computation.Charged.foldl
+    (fun I _ => IntersectionSearch.augmentOnce o₁ o₂ I) (List.range r)
+      (∅ : Finset (Fin n))).val
+  have hresult := hloop (List.range r) ∅ (by simp) (by simp)
+  change M₁.Indep (result : Set (Fin n)) ∧ M₂.Indep (result : Set (Fin n)) ∧
+    0 ≤ result.card ∧ result.card ≤ 0 + (List.range r).length ∧
+    (∀ J : Finset (Fin n), M₁.Indep (J : Set (Fin n)) →
+      M₂.Indep (J : Set (Fin n)) → min (0 + (List.range r).length) J.card ≤ result.card)
+    at hresult
+  simp only [List.length_range, Nat.zero_add] at hresult
+  have hiff : result.card = r ↔ ∃ I : Finset (Fin n), I.card = r ∧
+      M₁.Indep (I : Set (Fin n)) ∧ M₂.Indep (I : Set (Fin n)) := by
+    constructor
+    · intro hcard
+      exact ⟨result, hcard, hresult.1, hresult.2.1⟩
+    · rintro ⟨J, hcard, hJ₁, hJ₂⟩
+      have hlower := hresult.2.2.2.2 J hJ₁ hJ₂
+      rw [hcard, min_self] at hlower
+      exact Nat.le_antisymm hresult.2.2.2.1 hlower
+  change (result.card == r) = _
+  have hbool : (result.card == r) = true ↔
+      ∃ I : Finset (Fin n), I.card = r ∧
+        M₁.Indep (I : Set (Fin n)) ∧ M₂.Indep (I : Set (Fin n)) := by
+    simpa only [beq_iff_eq] using hiff
+  cases hvalue : (result.card == r) <;> simp_all
+
 /-- PAPER: main.tex:283-289
 BORROWED: Schrijver2003, Section 41.2, Theorem 41.4.
-The cited polynomial matroid-intersection pretest must be implemented on the
-project's charged oracle interface, with correctness and uniform cost bounds. -/
+The concrete charged implementation and its uniform cost bounds are supplied.
+Correctness still depends on the shortest-path augmentation-progress obligation. -/
 theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
   classical
   suffices h : ∃ (solver : FeasibilityImplementation)
@@ -210,38 +293,21 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
         · nlinarith
       · simp only [if_neg hr0]
         exact ⟨hc, by nlinarith⟩
-  -- BLOCKER: the remaining witness is an executable two-oracle
-  -- matroid-intersection decision routine for 1 < r in `Charged Op Cell`,
-  -- with correctness on promised inputs and polynomial bounds on all inputs.
-  -- Rank zero and rank one are now proved branches of this parent. The
-  -- first augmentation uses `RankOneFeasibility.singletonScan`: its invariant
-  -- records whether any tested singleton is independent in both matroids.
-  -- The scan makes exactly 2*n queries and n*(n*(n+1)+3) other charged steps;
-  -- both guards and that scan are absorbed into the coefficients above.
-  -- Extending this scan by greedy common-independent insertions is insufficient:
-  -- a maximal common independent set need not be maximum. Subsequent
-  -- augmentations require exchanging elements along an intersection path,
-  -- preserving both independence predicates while increasing cardinality.
-  -- No declaration implementing or certifying that path construction was found
-  -- in the project, pinned Mathlib, or Arlib, including searches by predicates
-  -- involving two matroids, common independence, and bounded oracle algorithms.
-  -- The borrowed paper result is main.tex:283-289, Schrijver2003,
-  -- Section 41.2, Theorem 41.4; the citation alone supplies no Lean witness.
-  -- `Matroid.Indep.augment` handles one matroid; `Matroid.sum_indep_iff`
-  -- handles separate projections, so neither provides the required solver.
-  -- `FeasibilityBounded` is unconditional in both oracle functions and r:
-  -- a proposed path search must be capped even on nonmatroid answers.
-  -- Enumerating all subsets can decide the predicate but uses exponentially
-  -- many queries. Evaluating bare oracle functions inside `Charged.pure`
-  -- would omit those queries from the trace and violate the charged interface.
-  -- No new open helper is introduced: the missing executable witness remains
-  -- here, while the proved singleton child is imported and used by the parent.
-  sorry
+  refine ⟨IntersectionSearch.intersectionSolver, 100000, 8, 100000, 8, ?_,
+    IntersectionSearchCost.intersectionSolver_bounded⟩
+  intro n r M₁ M₂ o₁ o₂ _ hfull _ h₁ h₂
+  exact intersectionSolver_correct n r M₁ M₂ o₁ o₂ hfull h₁ h₂
 
 end CountingMatroid.Analysis.FeasibilitySolver
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r17 · partial · proved the complementary-basis cardinality separator used by augmentation_progress; isolated the remaining no-path obligations as basis certificates for the computed reachable set. The single-child handoff was also mechanically rejected; all new files remain owned locally.
+
+* r16 · partial · proved the explicit solver's unconditional polynomial resource certificate after the two-child handoff was mechanically rejected. Only augmentation_progress remains open; parent cardinality induction and contract assembly elaborate against that obligation.
+
+* r15 · decomposed · constructed a charged capped exchange-graph/BFS implementation and reduced the parent to its independent augmentation-progress and uniform-cost certificates. Proved exact query/table specifications and the parent cardinality induction; the two child certificates remain open pending live handoff.
 
 * r14 · partial · implemented and verified the first augmentation from the empty set as a charged singleton scan; proved exact correctness and unconditional costs, and wired its rank-one guard and polynomial bounds into the parent. The remaining witness requires correctness only for 1 < r; no new open helper or transferred proof debt.
 * r13 · partial · implemented the charged rank-zero guard; proved its value, zero additional oracle cost, and one-comparison overhead. The parent now handles rank zero and absorbs the guard cost into its polynomial coefficient. The positive-rank intersection implementation and its uniform bounds remain open; no new unproved declarations.
