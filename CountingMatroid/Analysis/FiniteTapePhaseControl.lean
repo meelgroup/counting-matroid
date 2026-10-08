@@ -6,6 +6,10 @@ import CountingMatroid.Analysis.BoundedRunResourceEnvelope
 import CountingMatroid.Analysis.EmpiricalPhaseCertificate
 import CountingMatroid.Analysis.PhaseMeanCertificate
 import CountingMatroid.Analysis.TransversalClassPartition
+import CountingMatroid.Analysis.TypeMassLowerBounds
+import CountingMatroid.Analysis.InitialMultipliersGood
+import CountingMatroid.Analysis.IdealExchangeChain
+import CountingMatroid.Analysis.ObservablePoincare
 
 set_option autoImplicit false
 
@@ -192,29 +196,122 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
       (fun i => (bits[i]?).getD false) s a) ∧
     ¬ PhaseMeanCertificate.RawPhaseMeans r o₁ o₂
       (fun i => (bits[i]?).getD false) s j}
+  have initial_good : FirstPhaseFailure.GoodStoredMultipliers r o₁ o₂ s 0
+      (BoundedRunPhaseHistory.initialCursor n s) := by
+    simp [FirstPhaseFailure.GoodStoredMultipliers,
+      BoundedRunPhaseHistory.initialCursor,
+      CountingMatroid.Model.Operations.initialWeights,
+      CountingMatroid.Model.Operations.allocateLearnedWeights,
+      InitialMultipliersGood.initial_ideal_multiplier]
+  have history_good (tape : ℕ → Bool) (j : ℕ) (hj : j < s.L)
+      (hprevious : ∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂ tape s a) :
+      ∃ current : CountingMatroid.Program.AnnealingCursor n,
+        BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s j = some current ∧
+        FirstPhaseFailure.GoodStoredMultipliers r o₁ o₂ s j current := by
+    cases j with
+    | zero => exact ⟨BoundedRunPhaseHistory.initialCursor n s, rfl, initial_good⟩
+    | succ j =>
+      obtain ⟨ratio, _, _, current, next, hcurrent, hnext, _, _, hgood⟩ :=
+        hprevious j (Nat.lt_succ_self j)
+      refine ⟨next, ?_, hgood hj⟩
+      rw [BoundedRunPhaseHistory.phaseHistory_succ,
+        show BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s j = some current
+          from hcurrent]
+      exact hnext
+  have hq (j : ℕ) : 0 < s.ρ ^ j :=
+    pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j
+  let controlledBad := fun j => {bits : List Bool | bits.length = m ∧
+    (∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂
+      (fun i => (bits[i]?).getD false) s a) ∧
+    ∃ current : CountingMatroid.Program.AnnealingCursor n,
+      BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+        (fun i => (bits[i]?).getD false) s j = some current ∧
+      FirstPhaseFailure.GoodStoredMultipliers r o₁ o₂ s j current ∧
+      ∃ hw : ∀ index, 0 < current.currentWeights index,
+      Arlib.Probability.Stationary
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights (hq j) hw)
+        (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights hn (hq j) hw) ∧
+      (∀ H : PairedSet n → ℝ,
+        Arlib.Probability.FinDist.Var
+          (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+            current.currentWeights (hq j) hw)
+          (ObservablePoincare.observableProjection
+            (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+              current.currentWeights (hq j) hw) H) ≤
+        2000 * (n : ℝ) ^ 6 * Arlib.MarkovChains.dirichlet
+          (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+            current.currentWeights (hq j) hw)
+          (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
+            current.currentWeights hn (hq j) hw) H H) ∧
+      (1 / (5 * (n : ℝ) ^ 2) ≤ Arlib.Probability.FinDist.Ex
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights (hq j) hw)
+        (IdealExchangeChain.typeIndicator .transversal)) ∧
+      (∀ index : DefectIndex n, 1 / (20 * (n : ℝ) ^ 2) ≤ Arlib.Probability.FinDist.Ex
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights (hq j) hw)
+        (IdealExchangeChain.typeIndicator (.defect index.emptyPair index.fullPair))) ∧
+      ¬ PhaseMeanCertificate.RawPhaseMeans r o₁ o₂
+        (fun i => (bits[i]?).getD false) s j}
   have hrawlocal (j : ℕ) (hj : j ∈ Finset.range s.L) :
       ((rawBad j).ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
         1 / (8 * ((s.L : ENNReal) + 1)) := by
-    -- RECOVERY BOUNDARY: the event concerns the actual restart and
-    -- observePhase outputs BEFORE finishPhase, with relative errors for
-    -- pZero, u, and each pDefect under the normalized operational state weights.
-    -- PhaseMeanCertificate.raw_phase_means_estimates supplies type-mean
-    -- identities via the proved classifier reindexing, as well as positivity
-    -- and ideal-multiplier drift from the proved partition bounds;
-    -- EmpiricalPhaseCertificate.raw_phase_certified then supplies finishing
-    -- and learned-table preservation. None is a stochastic premise now.
-    -- NEXT STEP: construct the uncapped fixed-kernel trajectory law for a
-    -- reached good prefix; prove its stationarity and the observable Poincare
-    -- estimate, then the restart mean and warm correlated-average MSE. Transfer
-    -- their union bound through capped draws and the remaining finite block.
-    -- Establish good initialization and the normalized type-mass lower bounds
-    -- before invoking the conditional estimates. These do not follow from
-    -- the state-weight identities alone.
-    -- For j=0, InitialRestartLaw.restartPhase_zero and its proved fresh-bit
-    -- split supply the starting law; no trace-cost estimate is required.
-    -- For j>0, also prove the conditional trace restart mean. These are
-    -- same-paper obligations, main.tex:1207-1285,1392-1427, not IID bounds.
-    sorry
+    have hsubsetControlled : rawBad j ⊆ controlledBad j := by
+      intro bits hb
+      obtain ⟨current, hcurrent, hgood⟩ :=
+        history_good _ j (Finset.mem_range.mp hj) hb.2.1
+      obtain ⟨_, hzero, hdefects⟩ := TypeMassLowerBounds.good_type_mass_bounds
+        r o₁ o₂ (s.ρ ^ j) current.currentWeights hn
+        (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
+        hgood.2
+      have hC : 0 < TransversalPartition.partitionSum r o₁ o₂ (s.ρ ^ j) :=
+        (AnnealingPartitionDrift.partition_step_bounds n r o₁ o₂ p hn j).1
+      have hw (index : DefectIndex n) : 0 < current.currentWeights index :=
+        (div_pos (div_pos hC
+          (DefectPartitionPositive.defect_partition_pos r o₁ o₂ (s.ρ ^ j)
+            (hq j) index)) (by norm_num : (0 : ℚ) < 4)).trans_le
+          (hgood.2 index).1
+      refine ⟨hb.1, hb.2.1, current, hcurrent, hgood, hw,
+        IdealExchangeChain.ideal_chain_stationary r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights hn (hq j) hw,
+        ObservablePoincare.observable_poincare n r M₁ M₂ o₁ o₂ (s.ρ ^ j)
+          current.currentWeights hn hfull hr h₁ h₂ (hq j)
+          (pow_le_one₀ (AnnealingPartitionDrift.schedule_power_lower n p hn).1.le
+            (AnnealingPartitionDrift.schedule_power_lower n p hn).2.1) hw hgood.2,
+        ?_, ?_, hb.2.2⟩
+      · rw [IdealExchangeChain.operational_type_mean]
+        have hr := (Rat.cast_le (K := ℝ)).mpr hzero
+        push_cast at hr
+        exact hr
+      · intro index
+        rw [IdealExchangeChain.operational_type_mean]
+        have hr := (Rat.cast_le (K := ℝ)).mpr (hdefects index)
+        push_cast at hr
+        exact hr
+    have hcontrolled : ((controlledBad j).ncard : ENNReal) *
+        (1 / 2 : ENNReal) ^ m ≤ 1 / (8 * ((s.L : ENNReal) + 1)) := by
+      -- RECOVERY BOUNDARY: good initialization and every normalized type-mass
+      -- lower bound are now proved, and the event retains the actual reached
+      -- good cursor and complete successful history. Fixed operational means,
+      -- deterministic finishing, and learned-weight preservation are proved.
+      -- IdealExchangeChain now constructs a symmetric exchange proposal,
+      -- normalized law, and a stationary Metropolis kernel, extended by zero
+      -- weights to invalid states. The type means are its real expectations.
+      -- NEXT STEP: prove this proposal realizes the program's lazy occupied/
+      -- unoccupied exchange law on reached n-element states; construct its
+      -- positive-time trace on transversals and prove the observable Poincare
+      -- estimate, conditional
+      -- restart expectation, and warm correlated-average MSE. Couple this law
+      -- to the capped draws and prove coverage by the remaining finite block.
+      -- These are same-paper obligations, main.tex:1207-1285,1392-1427.
+      sorry
+    have hfiniteControlled : (controlledBad j).Finite :=
+      (List.finite_length_eq Bool m).subset (fun _ hb => hb.1)
+    have hc : ((rawBad j).ncard : ENNReal) ≤ ((controlledBad j).ncard : ENNReal) := by
+      exact_mod_cast Set.ncard_le_ncard hsubsetControlled hfiniteControlled
+    exact (mul_le_mul_of_nonneg_right hc bot_le).trans hcontrolled
   have hlocal (j : ℕ) (hj : j ∈ Finset.range s.L) :
       ((bad j).ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
         1 / (8 * ((s.L : ENNReal) + 1)) := by

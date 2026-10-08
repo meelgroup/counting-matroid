@@ -14,6 +14,9 @@ import CountingMatroid.Analysis.RestartPhaseIntervalReplay
 import CountingMatroid.Analysis.SinglePhaseIntervalReplay
 import CountingMatroid.Analysis.PhaseMeanCertificate
 import Mathlib.Data.Set.Card.Arithmetic
+import CountingMatroid.Analysis.FinitePhaseEstimationBound
+import CountingMatroid.Analysis.FinitePhaseObservationMSE
+import CountingMatroid.Analysis.FinitePhaseExecutionAbort
 
 set_option autoImplicit false
 
@@ -229,16 +232,17 @@ theorem consumed_prefix_tape_agreement (bitsA bitsB : List Bool) (k : ℕ)
   rw [heq, htake]
 
 /-- INTERNAL: A one-sided finite-tape form of the paper's successful-phase
-product lower bound, including aborted runs. The deterministic containment,
-actual-history bridge, stronger-certificate cover, and finite union bound are
-proved. Single-phase interval replay and cursor monotonicity are now proved
-through bounded rejection draws, chain transitions, capped trace returns,
-restart stages, and correlated-observation loops. SuccessfulPhaseReplay lifts
-that invariant to histories, giving the prefix-free stopping cylinders used
-here. The sole remaining obligation is the conditional analytic failure bound
-for each stopping prefix, including capped draw failures and finite-block
-coverage. No unproved supporting declaration is exported by the new replay
-modules.
+product lower bound, including aborted runs. Deterministic history replay,
+prefix conditioning, mean-to-certificate containment and the final union bound
+are proved. The conditional raw failure is split into execution aborts and
+completed observation errors. `FinitePhaseEstimationBound` proves the finite
+Markov/observable-union reduction, including the schedule arithmetic and the
+operational stationary-mean lower bound. The two remaining quantitative
+obligations, restart/draw execution-abort mass and masked warm-observation
+MSE, remain local to this theorem. Their child-file handoff was mechanically
+rejected; those files retain only proved normalization equivalences. There
+are no new unproved exported helpers. The target statement and its matroid
+promises are unchanged.
 TEXLINE: main.tex:1253-1315,1392-1421 -/
 theorem finite_tape_lower_tail_bound (n r : ℕ)
     (M₁ M₂ : Matroid (Fin n)) (o₁ o₂ : IndependenceOracle n)
@@ -394,19 +398,93 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
             exact_mod_cast Set.ncard_le_ncard hsubset hfiniteRaw
           apply (mul_le_mul_of_nonneg_right hcard (by positivity :
             (0 : ENNReal) ≤ (1 / 2 : ENNReal) ^ (m - pref.length))).trans
-          -- BLOCKER: bound rawBad's fair suffix mass by 1/(8*(L+1)),
-          -- uniformly for hp : pref ∈ P. Restart completion and relative
-          -- empirical errors are about the fixed operational typeMean and
-          -- numeratorMean. Their exact identities, ideal-weight drift,
-          -- deterministic finishing, and learned-table preservation are
-          -- supplied by the proved PhaseMeanCertificate/EmpiricalPhaseCertificate
-          -- bridges used in hsubset; operational history replay is proved.
-          -- What remains is the conditional uncapped restart mean and warm
-          -- correlated-observation MSE, plus their capped-draw and finite-block
-          -- coupling. No program-specific trajectory law or such stochastic
-          -- bound is supplied by the current imports. Same-paper obligations:
-          -- main.tex:1207-1266,1392-1427.
-          sorry
+          have hprefix : PhaseObservationExperiment.SuccessfulPhasePrefix
+              n r o₁ o₂ p j pref := by
+            obtain ⟨bits, hb, hpref⟩ := Finset.mem_image.mp hp
+            have hgood := hfinite.mem_toFinset.mp hb
+            exact ⟨bits, hgood.1, hgood.2, hpref.symm⟩
+          let aborted : Set (List Bool) := {suffix | suffix.length = m - pref.length ∧
+            (∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂
+              (fun i => ((pref ++ suffix)[i]?).getD false) s a) ∧
+            ¬ PhaseObservationExperiment.ObservationCompleted r o₁ o₂
+              (fun i => ((pref ++ suffix)[i]?).getD false) s j}
+          let inaccurate : Set (List Bool) := {suffix | suffix.length = m - pref.length ∧
+            PhaseObservationExperiment.ObservationCompleted r o₁ o₂
+              (fun i => ((pref ++ suffix)[i]?).getD false) s j ∧
+            ¬ PhaseMeanCertificate.RawPhaseMeans r o₁ o₂
+              (fun i => ((pref ++ suffix)[i]?).getD false) s j}
+          have hcoverRaw : rawBad ⊆ aborted ∪ inaccurate := by
+            intro suffix hs
+            by_cases hdone : PhaseObservationExperiment.ObservationCompleted r o₁ o₂
+                (fun i => ((pref ++ suffix)[i]?).getD false) s j
+            · exact Or.inr ⟨hs.1, hdone, hs.2.2⟩
+            · exact Or.inl ⟨hs.1, hs.2.1, hdone⟩
+          have hfiniteUnion : (aborted ∪ inaccurate).Finite :=
+            (List.finite_length_eq Bool (m - pref.length)).subset (by
+              intro suffix hs
+              exact hs.elim (fun h => h.1) (fun h => h.1))
+          have hrawCard : rawBad.ncard ≤ aborted.ncard + inaccurate.ncard :=
+            (Set.ncard_le_ncard hcoverRaw hfiniteUnion).trans
+              (Set.ncard_union_le aborted inaccurate)
+          have habort : (aborted.ncard : ENNReal) *
+              (1 / 2 : ENNReal) ^ (m - pref.length) ≤
+                3 / (32 * ((s.L : ENNReal) + 1)) := by
+            apply (FinitePhaseExecutionAbort.conditional_phase_execution_abort_iff
+              n r o₁ o₂ p j pref).mpr
+            -- BLOCKER: for hj : j < s.L and the actual successful hprefix,
+            -- bound restart/capped-draw execution abort mass. Expanding
+            -- phaseObservationData gives the actual restart and observe
+            -- Option outputs; restartPhase_zero eliminates only phase-zero
+            -- restart failure, not its observation draw failures. Positive
+            -- phases need the uncapped restart expectation ≤20*n²*L*τ,
+            -- its Markov tail, capped rejection-draw law and finite-block
+            -- coverage. The concurrent ideal kernel does not yet supply
+            -- a trace/return-time trajectory law or program coupling.
+            -- This is the 3/(32*(L+1)) budget: 1/32 for the restart tail
+            -- plus at most 1/16 for the per-phase draw coupling.
+            sorry
+          have hmoment : ∀ index : PhaseObservationExperiment.Observable n,
+              (∑ suffix : List.Vector Bool (m - pref.length),
+                PhaseObservationExperiment.observationSquaredError r o₁ o₂
+                  (fun i => ((pref ++ suffix.val)[i]?).getD false) s j index) /
+                (2 : ℚ) ^ (m - pref.length) ≤
+                  40000 * (n : ℚ) ^ 8 / s.observations := by
+            intro index
+            apply (FinitePhaseObservationMSE.conditional_phase_observation_mse_iff
+              n r o₁ o₂ p j pref index).mpr
+            -- BLOCKER: actual masked second moments at a successful hprefix.
+            -- The finite Markov/observable union reduction is proved in
+            -- completed_failure_mass_le, and its operational mean lower
+            -- bounds and schedule arithmetic are proved. What remains is
+            -- the correlated trajectory sum. The concurrent IdealExchangeChain
+            -- now defines an ideal stationary kernel, and ObservablePoincare
+            -- states its projected variance inequality. We still need its
+            -- operational trajectory and trace law, warm endpoint domination
+            -- and the paper's
+            -- time-average MSE (main.tex:952-1087), then couple completed
+            -- capped executions and prove finite-block coverage. Pointwise
+            -- nonnegativity of the square cannot bound this sum by O(1/N).
+            sorry
+          have hestimate := FinitePhaseEstimationBound.completed_failure_mass_le
+            n r o₁ o₂ p hn j pref hmoment
+          calc
+            (rawBad.ncard : ENNReal) * (1 / 2 : ENNReal) ^ (m - pref.length) ≤
+                (aborted.ncard : ENNReal) * (1 / 2 : ENNReal) ^ (m - pref.length) +
+                (inaccurate.ncard : ENNReal) * (1 / 2 : ENNReal) ^ (m - pref.length) := by
+              rw [← add_mul, ← Nat.cast_add]
+              gcongr
+            _ ≤ 3 / (32 * ((s.L : ENNReal) + 1)) +
+                1 / (32 * ((s.L : ENNReal) + 1)) := add_le_add habort hestimate
+            _ = 1 / (8 * ((s.L : ENNReal) + 1)) := by
+              rw [← ENNReal.add_div]
+              norm_num only
+              rw [show (32 : ENNReal) * ((s.L : ENNReal) + 1) =
+                4 * (8 * ((s.L : ENNReal) + 1)) by ring]
+              simp only [div_eq_mul_inv, ENNReal.mul_inv
+                (Or.inl (by norm_num : (4 : ENNReal) ≠ 0))
+                (Or.inl (by norm_num : (4 : ENNReal) ≠ ⊤))]
+              rw [← mul_assoc, ENNReal.mul_inv_cancel (by norm_num) (by norm_num), one_mul]
+
         have hmass := FiniteTapePrefixBound.finite_prefix_failure_bound
           m P E (1 / (8 * ((s.L : ENNReal) + 1)))
           hlen hfree hcover hconditional
@@ -430,6 +508,16 @@ end CountingMatroid.Analysis.FiniteTapeLowerTail
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r22 · rejected handoff · `r22-conditional-abort-mse-1` was mechanically
+  rejected without diagnostic. Retained all proved observation, mean and
+  Markov reductions; replaced the unproved exported estimates with proved
+  normalization equivalences and kept both stochastic obligations local.
+
+* r22 · decomposed · defined the actual phase observation experiment, proved
+  raw-mean equivalence, stationary mean lower bounds, finite Markov/observable
+  union bounds and the schedule estimation budget. The parent separates abort
+  mass from masked observation MSE and uses both quantitative children.
 
 * r21 · partial · proved and used rejection-draw, chain-step, capped-return,
   observation, restart, and full-phase interval replay, including monotone
