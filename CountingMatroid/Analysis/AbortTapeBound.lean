@@ -1,5 +1,6 @@
 import CountingMatroid.Interface.Pseudocode
 import CountingMatroid.Analysis.BoundedRunResourceEnvelope
+import CountingMatroid.Analysis.FiniteTapeLowerTail
 import Mathlib.Data.Set.Finite.List
 
 set_option autoImplicit false
@@ -32,8 +33,8 @@ theorem singleRun_ne_zero_of_zero_phases (n r : ℕ)
   positivity
 
 /-- INTERNAL: At most one eighth of the fair finite tapes make the capped
-annealing run return its abort value. This isolates restart, zero-count, and
-bounded-draw aborts from inaccurate completed estimates.
+annealing run return zero. The proof reduces this event to the one-sided
+lower tail of the finite-tape product estimate.
 TEXLINE: main.tex:1253-1329,1392-1421 -/
 theorem abort_tape_mass_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
     (o₁ o₂ : IndependenceOracle n) (p : InputParams)
@@ -62,38 +63,43 @@ theorem abort_tape_mass_bound (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
     simp only [hempty, Set.ncard_empty, Nat.cast_zero, zero_mul]
     norm_num
   · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
-    -- BLOCKER (main.tex:1202-1280,1392-1421): the paper bounds two events in
-    -- an uncapped experiment: an unsuccessful restart or a missing observed
-    -- type, and exhaustion of the rejection sampler's trial cap. Neither that
-    -- experiment nor a coupling to `Program.boundedRun` exists in the current
-    -- analysis. `Program.boundedRun` returns only `(estimate, bitCursor)`, so
-    -- unfolding its value cannot identify which abort branch produced zero.
-    -- Executable next step: instrument an analysis-only run with a status that
-    -- distinguishes restart, zero-type, and bounded-draw aborts. Prove its
-    -- estimate equals `Program.boundedRun.val.1` on every tape, then prove that
-    -- positive completed ratios exclude zero output. This gives a *cover* of
-    -- this exact zero-output event by the three status events. Bound restart and
-    -- zero-type statuses using the paper's conditional phase estimates, and
-    -- draw status using the trial-cap coupling. Only then apply a finite-tape
-    -- union bound. Merely changing the event to `singleRun = 0` under another
-    -- name does not reduce the present obligation. In the current source,
-    -- `traceReturn` and `observePhase` use `Option` for both draw exhaustion and
-    -- other failures, while `boundedRun` further collapses every `none` to zero.
-    -- There is no theorem bounding the resulting status events or relating the
-    -- uncapped law in main.tex:1202-1280 to this finite-tape execution.
-    -- `FiniteTapeProductAccuracy.finite_tape_product_accuracy` cannot supply
-    -- this estimate: its event explicitly requires the output to be nonzero.
-    -- The missing same-paper obligation is a probability law for the three
-    -- abort statuses, transferred to length-`blockLength` tapes; in particular
-    -- it needs a proved bound on the run's bit cursor to avoid the default
-    -- `false` reads beyond a block.
-    sorry
+    let s := CountingMatroid.Interface.Pseudocode.setup n p
+    let m := CountingMatroid.Model.Run.blockLength n r p
+    let c := CountingMatroid.Analysis.TransversalPartition.partitionSum
+      r o₁ o₂ (s.ρ ^ s.L)
+    let aborts : Set (List Bool) := {bits | bits.length = m ∧
+      CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
+        (fun i => (bits[i]?).getD false) s = 0}
+    let low : Set (List Bool) := {bits | bits.length = m ∧
+      CountingMatroid.Interface.Pseudocode.singleRun r o₁ o₂
+        (fun i => (bits[i]?).getD false) s < (1 - p.ε / 4) * c}
+    have hc : 0 < c := by
+      have hpart := CountingMatroid.Analysis.TransversalPartition.transversal_partition_contamination
+        n r M₁ M₂ o₁ o₂ p hfull hr h₁ h₂ hpositive
+      have hz : (0 : ℚ) < commonBaseCount M₁ M₂ := by exact_mod_cast hpositive
+      exact lt_of_lt_of_le hz hpart.1
+    have hfactor : 0 < (1 - p.ε / 4 : ℚ) := by linarith [p.ε_lt_one]
+    have hsubset : aborts ⊆ low := by
+      intro bits hbits
+      exact ⟨hbits.1, by rw [hbits.2]; exact mul_pos hfactor hc⟩
+    have hfinite : low.Finite := by
+      apply (List.finite_length_eq Bool m).subset
+      intro bits hbits
+      exact hbits.1
+    have htail := CountingMatroid.Analysis.FiniteTapeLowerTail.finite_tape_lower_tail_bound
+      n r M₁ M₂ o₁ o₂ p hnpos hfull hr h₁ h₂ hpositive
+    change (Set.ncard aborts : ENNReal) * (1 / 2 : ENNReal) ^ m ≤ 1 / 8
+    calc
+      _ ≤ (Set.ncard low : ENNReal) * (1 / 2 : ENNReal) ^ m := by
+        gcongr
+      _ ≤ 1 / 8 := by simpa only [low, c, s, m] using htail
 
 end CountingMatroid.Analysis.AbortTapeBound
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r14 · decomposed · proved the abort event is contained in the positive-ground one-sided lower tail and reduced its mass bound to `FiniteTapeLowerTail.finite_tape_lower_tail_bound`.
 * r13 · blocked · `aesop` and `exact?` leave the positive-ground finite-tape mass inequality; `Program.boundedRun` still has no capped abort-status probability law or uncapped coupling in the imported analysis.
 * r12 · blocked · `SingleRunAccuracy.fairTape_event_card` supplies the finite-tape counting identity only downstream of this module; Mathlib's Markov and Chebyshev bounds exist, but there is still no law or mean-square estimate for this capped program's abort statuses to which they apply.
 * r11 · blocked · checked the only nearby finite-tape error bound; it excludes zero outputs, while the needed abort-status law, bit-cursor coverage, and uncapped-to-capped coupling are absent.

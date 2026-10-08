@@ -1,5 +1,6 @@
 import CountingMatroid.Model.Program
 import CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
+import CountingMatroid.Analysis.BoundedRunOracleCalls
 
 set_option autoImplicit false
 
@@ -541,7 +542,7 @@ theorem boundedRun_resource_envelope :
     · rw [boundedRun_zero_phases_oracleCalls n r o₁ o₂ tape s hL]
       exact Nat.zero_le _
     · exact (boundedRun_zero_phases_otherSteps n r o₁ o₂ tape s hL).trans hquad
-  · -- BLOCKER: The three remaining quantitative bounds require one phase invariant
+  · -- BLOCKER: The output-size and nonoracle-charge bounds require a phase invariant
     -- for every reachable current/stored multiplier, observation numeratorSum,
     -- observation type count (at most s.observations), and running product.
     -- A bound on all AnnealingCursor values cannot serve as the step hypothesis
@@ -549,7 +550,7 @@ theorem boundedRun_resource_envelope :
     -- of unbounded binary length. Even the isolated charge
     -- otherSteps (ratMul (2 ^ K : ℚ) 1) is at least K for every K.
     -- The invariant must then bound restartPhase, observePhase, and finishPhase
-    -- costs, including acceptance denominators in capped uniform draws.
+    -- nonoracle costs, including acceptance denominators in capped uniform draws.
     have hphasePower (j : ℕ) :
         binaryRatLength (CountingMatroid.Program.ratPower s.ρ j).val ≤
           binaryRatLength 1 + j * binaryRatLength s.ρ :=
@@ -561,14 +562,18 @@ theorem boundedRun_resource_envelope :
     have hproductCost (a b : ℚ) :
         otherSteps (ratMul a b) ≤ (binaryRatLength a + binaryRatLength b) ^ 2 :=
       otherSteps_ratMul_le a b
-    refine ⟨boundedRun_value_nonneg n r o₁ o₂ tape s hρ, ?_⟩
-    sorry
+    refine ⟨boundedRun_value_nonneg n r o₁ o₂ tape s hρ, ?_, ?_, ?_⟩
+    · sorry
+    · exact BoundedRunOracleCalls.boundedRun_oracleCalls_envelope
+        n r o₁ o₂ tape s
+    · sorry
 
 end CountingMatroid.Analysis.BoundedRunResourceEnvelope
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r15 · decomposed · separated the state-independent oracle charge into BoundedRunOracleCalls; output size and nonoracle charge still need a reachable-state invariant.
 * r14 · partial recovery · proved observation type-count and phase-power charge bounds; the positive-phase rational-size and abort-path invariant remains open.
 * r13 · partial recovery · proved phase-power binary length and a quadratic charge bound for rational multiplication; the reachable phase-state and abort-path cost invariant is still missing.
 * r12 · open · verified that rational multiplication has unbounded charge on arbitrary input (`otherSteps (ratMul (2 ^ K : ℚ) 1) ≥ K`); a reachable-state invariant must also bound observation counts by the loop length.
