@@ -74,6 +74,101 @@ private theorem chargedFold_preserves {ι β : Type} (P : β → Prop)
       rw [Arlib.Computation.Charged.val_foldl_cons]
       exact ih _ (hf b i hb)
 
+/-- INTERNAL: A charged finite loop preserves a counter bound that grows by one
+per iteration. -/
+private theorem chargedFold_count_growth {ι β : Type} (P : β → ℕ → Prop)
+    (f : β → ι → Arlib.Computation.Charged Op Cell β)
+    (hf : ∀ b i k, P b k → P (f b i).val (k + 1))
+    (l : List ι) (b : β) (k : ℕ) (hb : P b k) :
+    P (Arlib.Computation.Charged.foldl f l b).val (k + l.length) := by
+  induction l generalizing b k with
+  | nil => simpa using hb
+  | cons i xs ih =>
+      rw [Arlib.Computation.Charged.val_foldl_cons]
+      simpa [List.length_cons, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using
+        ih (f b i).val (k + 1) (hf b i k hb)
+
+/-- INTERNAL: Recording one state raises each type count by at most one.
+TEXLINE: main.tex:1362-1369 -/
+theorem recordObservation_counts_le {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (rho : ℚ)
+    (current next : CountingMatroid.Program.ObservationCursor n) (k : ℕ)
+    (hcounts : ∀ kind, current.counts kind ≤ k)
+    (h : (CountingMatroid.Program.recordObservation r o₁ o₂ rho current).val =
+      some next) : ∀ kind, next.counts kind ≤ k + 1 := by
+  simp only [CountingMatroid.Program.recordObservation,
+    Arlib.Computation.Charged.val_bind] at h
+  split at h
+  · simp at h
+  · simp [countIncrement] at h
+    subst next
+    intro kind
+    change (if kind = (CountingMatroid.Program.classifyState current.state).val then
+      current.counts kind + 1 else current.counts kind) ≤ k + 1
+    split_ifs <;> have := hcounts kind <;> omega
+  · simp only [Arlib.Computation.Charged.val_bind,
+      Arlib.Computation.Charged.val_pure] at h
+    cases Option.some.inj h
+    intro kind
+    simp only [countIncrement, Arlib.Computation.Charged.val_opMany]
+    split_ifs <;> have := hcounts kind <;> omega
+
+/-- INTERNAL: Every type count in a completed observation phase is bounded by
+its number of observations. TEXLINE: main.tex:1362-1369 -/
+theorem observePhase_counts_le {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool)
+    (s : AnnealingSchedule) (q : ℚ) (weights : Multipliers n)
+    (start : PairedSet n × ℕ)
+    (next : CountingMatroid.Program.ObservationCursor n)
+    (h : (CountingMatroid.Program.observePhase r o₁ o₂ tape s q weights start).val =
+      some next) : ∀ kind, next.counts kind ≤ s.observations := by
+  let P : Option (CountingMatroid.Program.ObservationCursor n) → ℕ → Prop :=
+    fun acc k => ∀ next, acc = some next → ∀ kind, next.counts kind ≤ k
+  let f : Option (CountingMatroid.Program.ObservationCursor n) → ℕ →
+      Arlib.Computation.Charged Op Cell
+        (Option (CountingMatroid.Program.ObservationCursor n)) :=
+    fun acc index =>
+      match acc with
+      | none => pure none
+      | some current => do
+          let onStart ← natEqual index 0
+          if onStart then CountingMatroid.Program.recordObservation r o₁ o₂ s.ρ current
+          else do
+            let next ← CountingMatroid.Program.chainStep r o₁ o₂ tape s.drawTrials q
+              weights current.state current.bitCursor
+            match next with
+            | none => pure none
+            | some (state, bitCursor) =>
+                CountingMatroid.Program.recordObservation r o₁ o₂ s.ρ
+                  ⟨state, bitCursor, current.counts, current.numeratorSum⟩
+  have hstep : ∀ acc index k, P acc k → P (f acc index).val (k + 1) := by
+    intro acc index k hacc next hnext
+    cases acc with
+    | none => simp [f] at hnext
+    | some current =>
+        dsimp [f] at hnext
+        by_cases hon : (natEqual index 0).val = true
+        · simp only [hon, ite_true] at hnext
+          exact recordObservation_counts_le r o₁ o₂ s.ρ current next k
+            (hacc current rfl) hnext
+        · simp only [Bool.not_eq_true] at hon
+          simp only [hon, Bool.false_eq_true, ↓reduceIte,
+            Arlib.Computation.Charged.val_bind] at hnext
+          split at hnext
+          · simp at hnext
+          · apply recordObservation_counts_le r o₁ o₂ s.ρ _ next k ?_ hnext
+            exact hacc current rfl
+  unfold CountingMatroid.Program.observePhase at h
+  simp only [Arlib.Computation.Charged.val_bind] at h
+  unfold Arlib.Computation.Charged.repeatFor at h
+  have hinit : P (some ⟨start.1, start.2, (allocateCounts n).val, 0⟩) 0 := by
+    intro initial hin kind
+    cases Option.some.inj hin
+    simp [allocateCounts]
+  have hfinal := chargedFold_count_growth P f hstep
+    (List.range s.observations) _ 0 hinit
+  simpa using hfinal next h
+
 /-- INTERNAL: Every successful observation loop has a nonnegative accumulator.
 TEXLINE: main.tex:1362-1378 -/
 theorem observePhase_numerator_nonneg {n : ℕ} (r : ℕ)
@@ -459,6 +554,10 @@ theorem boundedRun_resource_envelope :
         binaryRatLength (CountingMatroid.Program.ratPower s.ρ j).val ≤
           binaryRatLength 1 + j * binaryRatLength s.ρ :=
       ratPower_binary_length_le s.ρ j
+    have hphasePowerCost (j : ℕ) :
+        otherSteps (CountingMatroid.Program.ratPower s.ρ j) ≤
+          j * (binaryRatLength 1 + j * binaryRatLength s.ρ) ^ 2 :=
+      ratPower_otherSteps_le s.ρ j
     have hproductCost (a b : ℚ) :
         otherSteps (ratMul a b) ≤ (binaryRatLength a + binaryRatLength b) ^ 2 :=
       otherSteps_ratMul_le a b
@@ -470,6 +569,7 @@ end CountingMatroid.Analysis.BoundedRunResourceEnvelope
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r14 · partial recovery · proved observation type-count and phase-power charge bounds; the positive-phase rational-size and abort-path invariant remains open.
 * r13 · partial recovery · proved phase-power binary length and a quadratic charge bound for rational multiplication; the reachable phase-state and abort-path cost invariant is still missing.
 * r12 · open · verified that rational multiplication has unbounded charge on arbitrary input (`otherSteps (ratMul (2 ^ K : ℚ) 1) ≥ K`); a reachable-state invariant must also bound observation counts by the loop length.
 * r11 · open · direct simplification exposed the entire positive-phase fold; the generic charged loop bound requires a price for arbitrary cursors, while rational-operation costs are unbounded without a reachable-state length invariant.
