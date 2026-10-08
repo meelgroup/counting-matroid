@@ -56,6 +56,20 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
   -- on no abort suffices: acceptance-draw abort probability depends on
   -- the proposal. The joint value/cursor law and fresh unused suffix are
   -- needed for the adaptive composition. These are same-paper obligations.
+  -- Rechecked against the current sources: `FeasibilityContract.bounded`
+  -- certifies pretest costs, not this probability. Arlib's
+  -- `Arlib.MarkovChains.metropolis_stationary` supplies stationarity only;
+  -- `Arlib.Probability.FinProb.markov` and `chebyshev` still require the
+  -- restart expectation and observation MSE. In particular, the required
+  -- MSE is around the stationary mean, not the warm trajectory's own mean.
+  -- The paper proves the warm-start and trace estimates at main.tex:952-1087,
+  -- so their absence is not grounds for adding a Prior assumption.
+  -- The proved counting conversion
+  -- `CountingMatroid.Analysis.SingleRunAccuracy.fairTape_event_card` is
+  -- downstream: SingleRunAccuracy -> InaccurateNonzeroTapeBound ->
+  -- FiniteTapeProductAccuracy -> this module. Its three generic fair-tape
+  -- lemmas can be moved unchanged to a common dependency, but that move
+  -- alone would not supply the missing conditional estimate or coupling.
   sorry
 
 end CountingMatroid.Analysis.FiniteTapePhaseControl
@@ -63,6 +77,7 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-08 · blocked · fresh stdin probes with `exact?` and unfolding plus `aesop` leave the phase-fold event bound. Verified the pretest-cost dependency is irrelevant, the warm-start MSE/trace estimates remain missing, and the proved fair-tape counting conversion is downstream. No new declarations or proof debt.
 * r16 · blocked · live handoff admission was mechanically rejected with no further diagnostic; ownership remains here. Both unfolding with `aesop` and direct `exact?` failed on the missing phase probability bound.
 * r16 · open · extracted the accurate-ratio witness probability bound; unfolding the actual bounded-run fold and `aesop` leave the conditional phase law and finite-tape coupling. The deterministic product implication is proved separately.
 -/
