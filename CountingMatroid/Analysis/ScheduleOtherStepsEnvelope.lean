@@ -403,12 +403,22 @@ theorem schedule_otherSteps_envelope :
     simpa only [hten] using binaryRatLength_div_le p.ε 10
   unfold CountingMatroid.Program.schedule
   simp only [otherSteps_bind, natPower_otherSteps_eq]
+  simp only [CountingMatroid.Model.Operations.natMul,
+    CountingMatroid.Model.Operations.natAdd,
+    CountingMatroid.Model.Operations.successor,
+    CountingMatroid.Model.Operations.ratDiv,
+    CountingMatroid.Model.Operations.ratSub,
+    CountingMatroid.Model.Operations.ratMul,
+    CountingMatroid.Model.Operations.ratOfNat,
+    CountingMatroid.Model.Operations.rationalCeil,
+    Arlib.Computation.Charged.val]
   -- BLOCKER: The expanded sum still needs the schedule-specific estimate
   -- `binaryRatLength (observationNumerator / η²) ≤ K * inputSize ^ 16`,
   -- followed by bookkeeping for the primitive costs. Here
   -- `η = p.ε / (32 * (2*n*(n+bε)+1))`. The generic rational-length and
   -- ceiling-logarithm lemmas above supply the component estimates, but this
   -- composition has not been closed.
+  trace_state
   sorry
 
 end CountingMatroid.Analysis.ScheduleOtherStepsEnvelope

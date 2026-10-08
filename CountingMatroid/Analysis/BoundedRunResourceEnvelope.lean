@@ -354,6 +354,60 @@ theorem otherSteps_ratMul_le (a b : ℚ) :
   apply Nat.pow_le_pow_left
   omega
 
+/-- INTERNAL: Every intermediate value in a charged rational-power fold has
+bounded encoding length, giving a uniform per-step charge.
+TEXLINE: main.tex:1384-1390 -/
+private theorem ratPower_fold_otherSteps_le (q acc : ℚ) (l : List ℕ) :
+    otherSteps (Arlib.Computation.Charged.foldl
+      (fun current _ => ratMul current q) l acc) ≤
+      l.length * (binaryRatLength acc + l.length * binaryRatLength q) ^ 2 := by
+  induction l generalizing acc with
+  | nil => simp [otherSteps]
+  | cons i rest ih =>
+      rw [show Arlib.Computation.Charged.foldl
+        (fun current _ => ratMul current q) (i :: rest) acc =
+        ratMul acc q >>= fun next => Arlib.Computation.Charged.foldl
+          (fun current _ => ratMul current q) rest next from rfl,
+        CountingMatroid.Analysis.ResourceBound.otherSteps_bind]
+      have hhead := otherSteps_ratMul_le acc q
+      have htail := ih (acc * q)
+      have hlength :=
+        CountingMatroid.Analysis.ScheduleOtherStepsEnvelope.binaryRatLength_mul_le acc q
+      simp only [ratMul] at htail
+      simp only [List.length_cons]
+      have hsmall : binaryRatLength acc + binaryRatLength q ≤
+          binaryRatLength acc + (rest.length + 1) * binaryRatLength q := by
+        nlinarith
+      have hlarge : binaryRatLength (acc * q) +
+          rest.length * binaryRatLength q ≤
+          binaryRatLength acc + (rest.length + 1) * binaryRatLength q := by
+        nlinarith
+      have hfirst := (hhead.trans (Nat.pow_le_pow_left hsmall 2))
+      have hremaining := Nat.mul_le_mul_left rest.length
+        (Nat.pow_le_pow_left hlarge 2)
+      calc
+        otherSteps (ratMul acc q) +
+          otherSteps (Arlib.Computation.Charged.foldl
+            (fun current _ => ratMul current q) rest (acc * q)) ≤
+          (binaryRatLength acc + binaryRatLength q) ^ 2 +
+            rest.length * (binaryRatLength (acc * q) +
+              rest.length * binaryRatLength q) ^ 2 := Nat.add_le_add hhead htail
+        _ ≤ (binaryRatLength acc + (rest.length + 1) * binaryRatLength q) ^ 2 +
+            rest.length * (binaryRatLength acc +
+              (rest.length + 1) * binaryRatLength q) ^ 2 :=
+          Nat.add_le_add (Nat.pow_le_pow_left hsmall 2) hremaining
+        _ = (rest.length + 1) *
+            (binaryRatLength acc + (rest.length + 1) * binaryRatLength q) ^ 2 := by
+          ring
+
+/-- INTERNAL: The phase-power computation has polynomial nonoracle charge.
+TEXLINE: main.tex:1384-1390 -/
+theorem ratPower_otherSteps_le (q : ℚ) (j : ℕ) :
+    otherSteps (CountingMatroid.Program.ratPower q j) ≤
+      j * (binaryRatLength 1 + j * binaryRatLength q) ^ 2 := by
+  unfold CountingMatroid.Program.ratPower Arlib.Computation.Charged.repeatFor
+  simpa using ratPower_fold_otherSteps_le q 1 (List.range j)
+
 /-- INTERNAL: The capped run has a resource bound expressed only in the
 schedule fields that its code reads. This separates the phase-state invariant
 from the arithmetic used to construct the schedule and amplify the answer.
