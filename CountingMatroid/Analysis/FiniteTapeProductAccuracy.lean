@@ -71,23 +71,38 @@ theorem finite_tape_product_accuracy (n r : ℕ)
     simp only [hc, hempty, Set.ncard_empty, Nat.cast_zero, zero_mul]
     norm_num
   · have hnpos : 0 < n := Nat.pos_of_ne_zero hn
-    -- BLOCKER (main.tex:1207-1315,1392-1421): `aesop` leaves precisely this
-    -- positive-ground event-mass inequality. Unfolding the schedule and run
-    -- closes only the zero-phase case above. The imported analysis has no
-    -- conditional phase law for successful prior histories: in particular no
-    -- restart-cap Markov bound, observation MSE bound, or learned-weight
-    -- invariant. It also has no coupling of those uncapped laws to
-    -- `Program.boundedRun`, which folds phase status into `Option` and returns
-    -- only `(estimate, bitCursor)`. A finite-tape event bound for this exact
-    -- `singleRun` is needed after that coupling; no theorem in the current
-    -- imports supplies one. `Interface.Pseudocode.chainStepLaw` is defined by
-    -- running `chainStep` on a finite `fairTape`; it does not identify that
-    -- distribution with the paper's ideal Metropolis chain. There is no
-    -- `FinChain` or `FinDist` declaration in the project for the paired-state
-    -- process. Arlib has generic Markov/Chebyshev inequalities and finite-chain
-    -- Metropolis stationarity, but the program-to-chain law, phase observation
-    -- MSE bound, and finite-tape transfer are needed before they apply. These
-    -- are same-paper proof obligations, not Prior.
+    -- BLOCKER (main.tex:1207-1315,1392-1421): the next sound decomposition is
+    -- a proof-side *uncapped phase transcript*, with each phase carrying its
+    -- restart endpoint, observation counts, ratio, and next multiplier table.
+    -- This transcript must be related to the existing `Program.boundedRun`
+    -- fold, not merely to a new estimator: on every non-aborting execution,
+    -- its ratios multiply to `singleRun`, and its tables are the ones read by
+    -- the next `restartPhase`.
+    --
+    -- The first independent mathematical obligation is a transition-law
+    -- identity for a proof-side *uncapped* step from a valid paired state,
+    -- identifying its state kernel with the paper's lazy exchange Metropolis
+    -- chain (main.tex:712-768). Couple that step to `Program.chainStep` on
+    -- the event that all bounded uniform draws finish, bounding draw aborts
+    -- separately. Conditioning `Program.chainStep` on no abort is insufficient:
+    -- proposals needing an acceptance draw have a different abort chance,
+    -- so that conditioning can bias the state kernel. The existing
+    -- `Interface.Pseudocode.chainStepLaw` is a PMF built from a finite
+    -- `fairTape`; it is not the required uncapped transition identity.
+    --
+    -- From that identity, prove the paper's conditional claim: for *each*
+    -- prior successful transcript, a fresh phase has restart-cap or relative
+    -- observation error probability at most 1/(16*(s.L+1)), and an accurate
+    -- phase preserves the multiplier invariant (main.tex:1207-1285). Then
+    -- induct on the `s.L` transcripts, prove the deterministic telescoping
+    -- estimate (main.tex:1287-1315), and couple the uncapped transcript to
+    -- `Program.boundedRun`. The final coupling must show that every needed
+    -- bit lies below `Run.blockLength`; beyond that point `blockTape` defaults
+    -- to false. Only then does the resulting infinite-tape probability equal
+    -- this `Set.ncard` finite-tape mass. None of those three bridge facts is
+    -- present in the imports, and a child stated merely as this final count
+    -- inequality would only rename the current `sorry`. They are same-paper
+    -- obligations, not a Prior citation.
     sorry
 
 end CountingMatroid.Analysis.FiniteTapeProductAccuracy
@@ -95,6 +110,7 @@ end CountingMatroid.Analysis.FiniteTapeProductAccuracy
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r14 · recovery diagnosis · isolated the needed proof-side phase transcript, transition-law identity, conditional phase estimate, and bounded-run/finite-block coupling; no existing declaration supplies the first bridge, so the positive-ground theorem remains open.
 * r13 · blocked · `exact?` and `aesop` leave the positive-ground count inequality; `chainStepLaw` is only a finite-tape PMF, and the project has no paired-state ideal-chain law or conditional phase estimate to connect it to the paper's Markov/MSE argument.
 * r12 · blocked · positive-ground `exact?` and `aesop` leave the same event-mass inequality; Arlib has generic Markov/Chebyshev and Metropolis results, but no distributional bridge from `chainStep`, conditional phase law, or uncapped-to-capped coupling.
 * r11 · blocked · `aesop` leaves the positive-ground event-mass inequality and `exact?` finds no matching theorem. Mathlib has Chebyshev, but the program has no finite-tape phase law, mean-square bound, or uncapped-to-capped coupling to which it applies.
