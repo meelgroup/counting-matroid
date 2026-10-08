@@ -6,6 +6,7 @@ import CountingMatroid.Analysis.BoundedRunPhaseHistory
 import CountingMatroid.Analysis.BoundedRunResourceEnvelope
 import CountingMatroid.Analysis.FirstPhaseFailure
 import CountingMatroid.Analysis.FiniteTapeFirstPhaseBound
+import CountingMatroid.Analysis.FiniteTapePrefixBound
 import CountingMatroid.Analysis.CertifiedPhaseRatioSteps
 import Mathlib.Data.Set.Card.Arithmetic
 
@@ -211,8 +212,11 @@ product lower bound. Unlike the completed-product error event, this event
 includes aborted runs, so it can directly control the zero-output mass.
 The deterministic containment, actual-history bridge, stronger-certificate
 cover and finite union bound are proved. The remaining per-phase probability
-estimate remains open inside this theorem; `FiniteTapeFirstPhaseBound`
-proves only its denominator-clearing equivalence.
+estimate remains open inside this theorem. `FiniteTapePrefixBound` proves
+the fixed-prefix fresh-suffix law and the prefix-free conditional counting
+reduction. The actual stopping-prefix property and conditional analytic
+estimate still need proofs; `FiniteTapeFirstPhaseBound` supplies the
+denominator-clearing equivalence.
 TEXLINE: main.tex:1253-1315,1392-1421 -/
 theorem finite_tape_lower_tail_bound (n r : ℕ)
     (M₁ M₂ : Matroid (Fin n)) (o₁ o₂ : IndependenceOracle n)
@@ -244,27 +248,86 @@ theorem finite_tape_lower_tail_bound (n r : ℕ)
         intro j hj
         apply (FiniteTapeFirstPhaseBound.finite_tape_first_phase_failure_iff
           n r o₁ o₂ p j).mpr
-        -- BLOCKER: the remaining normalized first-certificate-failure mass is
-        -- at most 1/(8*(L+1)) only after the paper's conditional phase analysis.
-        -- Earlier CertifiedPhase predicates retain good learned tables. Their
-        -- reached cursor and fresh tape suffix must be coupled to an uncapped
-        -- restart/observation law, with restart mean 20*n^2*s.L*s.τ and each
-        -- observable's stationary-mean MSE 40000*n^8/s.observations. Accurate
-        -- observations must preserve the tables and imply the next certificate.
-        -- The capped rejection draws and blockLength coverage must then be
-        -- included in the joint law. Those estimates are absent from the
-        -- current project API; they are proved in the paper, not borrowed.
-        --
-        -- Checked routes: direct exact? on the per-phase estimate fails;
-        -- finite-cardinality/denominator normalization yields this counting
-        -- inequality but no bound on its numerator. A union bound alone is
-        -- already discharged by first_ratio_failure_mass_le_certificate_sum.
-        -- The live handoff r18-lower-tail-first-phase-1 was mechanically
-        -- rejected, so no unproved exported helper is retained. The upstream
-        -- finite_tape_inaccurate_ratios still excludes zero-output tapes and
-        -- cannot supply this abort-inclusive estimate. AbortTapeBound imports
-        -- this module, so it cannot supply the missing abort estimate either.
-        sorry
+        classical
+        let E := fun bits : List Bool => FirstPhaseFailure.FirstFailure r o₁ o₂
+          (fun i => (bits[i]?).getD false) s j
+        let cursor := fun bits : List Bool =>
+          match BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+              (fun i => (bits[i]?).getD false) s j with
+          | none => 0
+          | some current => current.bitCursor
+        let good : Set (List Bool) := {bits | bits.length = m ∧
+          ∀ a < j, FirstPhaseFailure.CertifiedPhase r o₁ o₂
+            (fun i => (bits[i]?).getD false) s a}
+        have hfinite : good.Finite :=
+          (List.finite_length_eq Bool m).subset (fun _ hb => hb.1)
+        let P := hfinite.toFinset.image (fun bits => bits.take (cursor bits))
+        have hlen : ∀ pref ∈ P, pref.length ≤ m := by
+          intro pref hp
+          obtain ⟨bits, hb, rfl⟩ := Finset.mem_image.mp hp
+          have hb' : bits ∈ good := hfinite.mem_toFinset.mp hb
+          simp only [List.length_take, hb'.1]
+          exact Nat.min_le_right _ _
+        have hcover : ∀ bits, bits.length = m → E bits →
+            ∃ pref ∈ P, pref <+: bits := by
+          intro bits hb he
+          refine ⟨bits.take (cursor bits), ?_, List.take_prefix _ _⟩
+          apply Finset.mem_image.mpr
+          exact ⟨bits, hfinite.mem_toFinset.mpr ⟨hb, he.1⟩, rfl⟩
+        have hfree_zero : j = 0 →
+            ∀ a ∈ P, ∀ b ∈ P, a <+: b → a = b := by
+          intro hjzero a ha b hb _
+          obtain ⟨bitsA, _, rfl⟩ := Finset.mem_image.mp ha
+          obtain ⟨bitsB, _, rfl⟩ := Finset.mem_image.mp hb
+          simp only [cursor, hjzero, BoundedRunPhaseHistory.phaseHistory,
+            Arlib.Computation.Charged.repeatFor, List.range_zero,
+            Arlib.Computation.Charged.val_foldl_nil,
+            BoundedRunPhaseHistory.initialCursor, List.take_zero]
+        have hphase :
+            (0 < j → ∀ bitsA ∈ good, ∀ bitsB ∈ good, cursor bitsA ≤ m →
+              bitsA.take (cursor bitsA) <+: bitsB → cursor bitsB = cursor bitsA) ∧
+            (∀ pref ∈ P,
+              (Set.ncard {suffix : List Bool |
+                suffix.length = m - pref.length ∧ E (pref ++ suffix)} : ENNReal) *
+                (1 / 2 : ENNReal) ^ (m - pref.length) ≤
+                  1 / (8 * ((s.L : ENNReal) + 1))) := by
+          -- BLOCKER: the fresh-suffix counting identity and transfer of a
+          -- uniform suffix bound are now proved in FiniteTapePrefixBound.
+          -- What remains is specific to the actual bounded-run program:
+          -- (1) a positive successful phase history must replay to the same
+          -- reached cursor when its consumed prefix is unchanged. Induction
+          -- with phaseHistory_succ closes j=0, but at j+1 needs successful
+          -- boundedRunPhase replay plus monotonicity of the prior bitCursor.
+          -- Unfolding that phase requires the corresponding restartPhase
+          -- and observePhase replay facts. No such operational invariant
+          -- is in the present API. The generic stopping_prefixes_free lemma
+          -- handles cursors beyond m by the whole-tape case, so blockLength
+          -- coverage is not a separate premise of prefix-freeness.
+          -- (2) uniformly for every such successful prefix, its fresh suffix
+          -- has first-certificate-failure mass at most 1/(8*(L+1)). This
+          -- needs the uncapped restart mean 20*n^2*L*tau, stationary-mean
+          -- observation MSE 40000*n^8/observations, preservation of learned
+          -- tables, and capped-draw/finite-block coupling. These are
+          -- same-paper obligations at main.tex:1207-1285,1392-1427.
+          -- The generic counting law does not establish these analytic or
+          -- operational hypotheses, and no new unproved child is exported.
+          sorry
+        have hfree : ∀ a ∈ P, ∀ b ∈ P, a <+: b → a = b := by
+          by_cases hjzero : j = 0
+          · exact hfree_zero hjzero
+          · apply FiniteTapePrefixBound.stopping_prefixes_free m
+              hfinite.toFinset cursor
+            · intro bits hb
+              exact (hfinite.mem_toFinset.mp hb).1
+            · intro bitsA ha bitsB hb
+              exact hphase.1 (Nat.pos_of_ne_zero hjzero)
+                bitsA (hfinite.mem_toFinset.mp ha)
+                bitsB (hfinite.mem_toFinset.mp hb)
+        have hmass := FiniteTapePrefixBound.finite_prefix_failure_bound
+          m P E (1 / (8 * ((s.L : ENNReal) + 1)))
+          hlen hfree hcover hphase.2
+        exact (FiniteTapeFirstPhaseBound.finite_tape_first_phase_failure_iff
+          n r o₁ o₂ p j).mp hmass
     _ ≤ (1 / 8 : ENNReal) := by
       simp only [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
       calc
@@ -283,6 +346,8 @@ end CountingMatroid.Analysis.FiniteTapeLowerTail
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r19 · partial · proved fixed-prefix fresh-suffix mass, variable-length prefix-free mass and conditional counting transfer in `FiniteTapePrefixBound`; the parent now uses these facts with the actual successful-history prefix set. Covered length and event containment and the phase-zero prefix case check. The single open obligation is positive-history cursor replay together with the uniform conditional phase estimate; no unproved child exported.
 
 * r18 · rejected handoff · the live first-phase-budget request was mechanically rejected without diagnostic. Retained all proved operational/certificate/counting bridges, and kept the single normalized per-phase probability obligation inside the assigned target; no new unproved exported helper remains.
 

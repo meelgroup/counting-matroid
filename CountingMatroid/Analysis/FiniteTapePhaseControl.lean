@@ -1,6 +1,7 @@
 import CountingMatroid.Analysis.TransversalPartition
 import Mathlib.Data.Set.Finite.List
 import CountingMatroid.Analysis.FirstPhaseFailure
+import CountingMatroid.Analysis.InitialRestartLaw
 import CountingMatroid.Analysis.BoundedRunResourceEnvelope
 
 set_option autoImplicit false
@@ -29,7 +30,9 @@ def AccurateRatioProduct (n r : ℕ) (o₁ o₂ : IndependenceOracle n)
 empirical ratios with probability at most one eighth. The intended witness
 is the sequence of `finishPhase` ratios in `Program.boundedRun`.
 The deterministic certificate extraction and first-failure union bound are
-proved here; the local finite-tape probability budget remains open.
+proved here. The initial restart law and its fresh-prefix/suffix probability
+identity are proved in `InitialRestartLaw`; observation concentration and the
+positive-phase conditional restart budget remain open.
 `FirstPhaseFailure` supplies the operational certificates and counting cover.
 TEXLINE: main.tex:1207-1296,1392-1427 -/
 theorem finite_tape_inaccurate_ratios (n r : ℕ)
@@ -161,27 +164,46 @@ theorem finite_tape_inaccurate_ratios (n r : ℕ)
   have hlocal (j : ℕ) (hj : j ∈ Finset.range s.L) :
       ((bad j).ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
         1 / (8 * ((s.L : ENNReal) + 1)) := by
-    -- BLOCKER: the exact remaining local estimate is the mass of tapes
-    -- whose first uncertified actual phase is j, including aborts. Earlier
-    -- certificates retain good learned tables at every used parameter.
-    -- The needed conditional restart mean is 20*n^2*s.L*s.τ, and the MSE
-    -- around each stationary observable mean is 40000*n^8/s.observations.
-    -- The program-specific laws providing these estimates and their
-    -- adaptive finite-tape coupling are absent. Accurate type frequencies
-    -- must also preserve GoodStoredMultipliers after the actual finishPhase.
-    --
-    -- ATTEMPT (finite counting): converting bad j to its finite toFinset
-    -- and applying ENNReal.le_div_iff_mul_le leaves its cardinality times
-    -- 2^(-m)*(8*(L+1)) ≤ 1. This needs a uniform suffix estimate after
-    -- partitioning tapes by reached phase histories. Marginal chainStep
-    -- probabilities cannot replace it: the bit cursor and rejection draw
-    -- denominator depend on earlier observations.
-    -- The analytic budget 1/(16*(L+1)) plus the phase draw budget
-    -- 1/(32*L) ≤ 1/(16*(L+1)) would prove this local bound. Both are
-    -- same-paper obligations (main.tex:1207-1285,1392-1427), not Prior fields.
-    -- The scheduler rejected the child handoff mechanically, so this
-    -- probability obligation remains in the original assigned declaration.
-    sorry
+    by_cases hjzero : j = 0
+    · subst j
+      have hL : 1 ≤ s.L := by
+        change 1 ≤ 2 * n *
+          (n + (CountingMatroid.Program.leastHalvings (p.ε / 10)).val)
+        exact Nat.one_le_iff_ne_zero.mpr
+          (Nat.ne_of_gt (Nat.mul_pos (Nat.mul_pos (by norm_num) hn)
+            (by omega)))
+      have hnL : n ≤ n * s.L := by
+        simpa only [Nat.mul_one] using Nat.mul_le_mul_left n hL
+      have hnm : n ≤ m := by
+        change n ≤ n * s.L + s.drawCalls * (1 + s.drawTrials * _) + 10
+        omega
+      have hsplit : n + (m - n) = m := Nat.add_sub_of_le hnm
+      change (Set.ncard {bits : List Bool | bits.length = m ∧
+        FirstPhaseFailure.FirstFailure r o₁ o₂
+          (fun i => (bits[i]?).getD false) s 0} : ENNReal) *
+        (1 / 2 : ENNReal) ^ m ≤ _
+      rw [← hsplit, InitialRestartLaw.initial_failure_mass_split]
+      -- BLOCKER (base phase): the goal is now the exact uniform average
+      -- over n fresh bits and (m-n)-bit observation suffixes. The restart
+      -- has no trace transitions and cannot exhaust its attempt cap.
+      -- `initialPhaseResult` runs observePhase at q=1 and weights=4, then
+      -- the actual finishPhase and table update. To bound its certificate
+      -- failure requires the stationary-mean observable MSE estimate and
+      -- the capped-draw coupling, as well as ideal initialization and the
+      -- learned-weight update implication. There is no independence claim
+      -- about consecutive observation states in the proved tape split.
+      -- Generic IID empirical-frequency concentration does not apply.
+      sorry
+    · -- BLOCKER (positive phase): condition on the reached complete prefix
+      -- and good stored tables. Prove the uncapped restart expectation
+      -- ≤ 20*n^2*s.L*s.τ and every observable MSE around its stationary
+      -- mean ≤ 40000*n^8/s.observations; couple the capped rejection draws
+      -- and adaptive cursor to the remaining length-blockLength tape.
+      -- Accurate observations must preserve GoodStoredMultipliers through
+      -- the actual finishPhase. The fresh-bit restart scan is now proved,
+      -- but the trace kernel and observable Poincare/MSE proof are absent.
+      -- These are same-paper obligations, main.tex:1207-1285,1392-1427.
+      sorry
   change (inaccurate.ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤ _
   calc
     (inaccurate.ncard : ENNReal) * (1 / 2 : ENNReal) ^ m ≤
@@ -205,6 +227,8 @@ end CountingMatroid.Analysis.FiniteTapePhaseControl
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r19 · partial · proved and used the exact fresh-prefix/observation-suffix law for phase zero; the base observation concentration and positive-phase conditional restart/MSE estimates remain local to this theorem. All new support declarations are proved.
 
 * r18 · partial · handoff mechanically rejected; retained all checked deterministic progress, proved the first-failure counting cover upstream, and kept the missing per-phase conditional probability estimate inside the assigned theorem. No new exported unproved helper remains.
 
