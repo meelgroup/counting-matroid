@@ -1,5 +1,7 @@
 import CountingMatroid.Analysis.StationaryObservableMSE
 import CountingMatroid.Analysis.SuccessfulPrefixAbortBound
+import CountingMatroid.Analysis.SuccessfulPhaseReplay
+import CountingMatroid.Analysis.SinglePhaseIntervalReplay
 
 set_option autoImplicit false
 
@@ -8,7 +10,9 @@ The operational coupling needed for a successful consumed prefix: completed
 finite-tape observation errors are dominated by 10 n² times the stationary
 ideal trajectory moment at a single fixed good phase cursor. This does not
 assert the stationary time-average estimate; that is a separate obligation.
-The prefix-to-trajectory domination remains open.
+Deterministic history replay and the fixed-mean error identity are proved,
+including prefixes truncated at the end of their finite block. Quantitative
+comparison of the remaining suffix law with the ideal trajectory remains open.
 -/
 
 namespace CountingMatroid.Analysis.SuccessfulPrefixTrajectoryDomination
@@ -16,6 +20,63 @@ namespace CountingMatroid.Analysis.SuccessfulPrefixTrajectoryDomination
 open CountingMatroid.Model CountingMatroid.Program
 open CountingMatroid.Analysis.PhaseObservationExperiment
 open CountingMatroid.Analysis.StationaryObservableMSE
+
+/-- INTERNAL: Replacing the unconsumed part of a finite tape preserves its
+reached phase cursor. If the consumed cursor is beyond the block, the prefix
+is the entire block and there is only the empty suffix; no coverage premise
+is needed for this deterministic replay statement.
+TEXLINE: main.tex:1207-1212,1392-1421 -/
+theorem phase_history_after_consumed_prefix {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (s : AnnealingSchedule) (j m : ℕ)
+    (bits pref : List Bool) (current : AnnealingCursor n)
+    (hlen : bits.length = m)
+    (hhistory : BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+      (fun i => (bits[i]?).getD false) s j = some current)
+    (hpref : pref = bits.take current.bitCursor)
+    (suffix : List.Vector Bool (m - pref.length)) :
+    BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false) s j = some current := by
+  by_cases hwithin : current.bitCursor ≤ m
+  · apply SuccessfulPhaseReplay.successful_history_replay_of_phase_replay
+      r o₁ o₂ s (SinglePhaseIntervalReplay.single_phase_interval_replay r o₁ o₂ s)
+      (fun i => (bits[i]?).getD false) j current hhistory
+    intro i hi
+    have hipref : i < pref.length := by
+      rw [hpref, List.length_take, hlen, Nat.min_eq_left hwithin]
+      exact hi
+    rw [List.getElem?_append_left hipref, hpref, List.getElem?_take_of_lt hi]
+  · have hprefFull : pref = bits := by
+      rw [hpref, List.take_of_length_le (by omega)]
+    have hsuffix : suffix.val = [] := by
+      apply List.length_eq_zero_iff.mp
+      rw [suffix.property, hprefFull, hlen, Nat.sub_self]
+    simpa only [hprefFull, hsuffix, List.append_nil] using hhistory
+
+/-- INTERNAL: Once history replay fixes the phase cursor, every completed
+observation is centered at that cursor's stationary mean. This also retains
+zero error on either operational abort, without conditioning away the abort.
+TEXLINE: main.tex:1207-1212,1241-1255 -/
+theorem observation_squared_error_at_cursor {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool)
+    (s : AnnealingSchedule) (j : ℕ) (current : AnnealingCursor n)
+    (hhistory : BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s j = some current)
+    (hgood : FirstPhaseFailure.GoodStoredMultipliers r o₁ o₂ s j current)
+    (hN : 0 < s.observations) (index : Observable n) :
+    observationSquaredError r o₁ o₂ tape s j index =
+      match phaseObservationData r o₁ o₂ tape s j with
+      | none => 0
+      | some (_, observed) =>
+          (empiricalMean s observed index - observableMean r o₁ o₂ s j current index) ^ 2 := by
+  classical
+  cases hdata : phaseObservationData r o₁ o₂ tape s j with
+  | none => simp only [observationSquaredError, hdata]
+  | some pair =>
+      rcases pair with ⟨reached, observed⟩
+      have hreached := ((observation_data_iff r o₁ o₂ tape s j reached observed).mp hdata).1
+      rw [hhistory] at hreached
+      have heq : reached = current := (Option.some.inj hreached).symm
+      subst reached
+      simp only [observationSquaredError, hdata, if_pos (And.intro hgood hN)]
 
 /-- INTERNAL: Couple completed executions after a successful consumed prefix
 to a fixed stationary ideal trajectory, retaining every operational abort.
@@ -55,26 +116,88 @@ theorem successful_prefix_trajectory_domination (n r : ℕ)
       (pref ++ suffix.val).length = m := by
     rw [List.length_append, suffix.property]
     omega
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  have hfixed (suffix : List.Vector Bool (m - pref.length)) :
+      BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+        (fun i => ((pref ++ suffix.val)[i]?).getD false) s j = some current :=
+    phase_history_after_consumed_prefix r o₁ o₂ s j m bits pref current
+      hlen hhistory hpref suffix
+  have hN : 0 < s.observations :=
+    (FinitePhaseEstimationBound.schedule_estimation_budget n p hn).2.1
+  have herr (suffix : List.Vector Bool (m - pref.length)) :=
+    observation_squared_error_at_cursor r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false) s j current
+      (hfixed suffix) hstored hN index
   let hw := good_current_weights_pos n r o₁ o₂ p hn j current hstored
+  let hq := pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j
+  let π := IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+    current.currentWeights hq hw
+  let G := operationalObservable r o₁ o₂ s.ρ index
+  let P := IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
+    current.currentWeights hn hq hw
+  have hmoment : 0 ≤ stationaryObservationMoment n r o₁ o₂ p hn j current hw index := by
+    unfold stationaryObservationMoment trajectorySquaredMoment
+    apply Finset.sum_nonneg
+    intro path _
+    exact mul_nonneg (mul_nonneg (π.coe_nonneg (path 0))
+      (Finset.prod_nonneg (fun (i : Fin s.observations) _ =>
+        P.coe_nonneg (path i.castSucc) (path i.succ)))) (sq_nonneg _)
+  have hmean : Arlib.Probability.FinDist.Ex π G =
+      (observableMean r o₁ o₂ s j current index : ℝ) :=
+    operational_observable_mean n r o₁ o₂ p hn j current hw index
+  have herrReal (suffix : List.Vector Bool (m - pref.length)) :
+      (observationSquaredError r o₁ o₂
+        (fun i => ((pref ++ suffix.val)[i]?).getD false) s j index : ℝ) =
+      match phaseObservationData r o₁ o₂
+        (fun i => ((pref ++ suffix.val)[i]?).getD false) s j with
+      | none => 0
+      | some (_, observed) =>
+          ((empiricalMean s observed index : ℝ) - Arlib.Probability.FinDist.Ex π G) ^ 2 := by
+    rw [herr suffix]
+    cases hdata : phaseObservationData r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false) s j with
+    | none => simp only [Rat.cast_zero]
+    | some pair =>
+        rcases pair with ⟨reached, observed⟩
+        simp only [hmean, Rat.cast_pow, Rat.cast_sub]
   refine ⟨current, hw, hstored, ?_⟩
-  -- Attempt: the actual certified history supplies this fixed good cursor,
-  -- and positivity permits its concrete ideal kernel. The exact prefix length
-  -- is only min current.bitCursor blockLength, so replay on completed suffixes
-  -- requires a cursor/denominator coverage bound before fresh-bit domination.
-  -- After replay, identify recordObservation with operationalObservable along
-  -- the path and dominate the capped restart endpoint by the uncapped law
-  -- ≤ 2 μ_j ≤ 10 n² π. There is no operational transition/trace law theorem
-  -- in the current imports that supplies this comparison.
-  -- A second stdin attempt with aesop exhausted its search and left exactly
-  -- this moment-domination inequality for both Boolean and pair indices.
-  -- BLOCKER: finite-block replay and capped-to-ideal trajectory domination,
-  -- including the trace endpoint mixing estimate at main.tex:1214-1240.
-  sorry
+  let completed := Finset.univ.filter (fun suffix : List.Vector Bool (m - pref.length) =>
+    ObservationCompleted r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false) s j)
+  change (∑ suffix ∈ completed, (1 / (2 : ℝ) ^ (m - pref.length)) *
+    (observationSquaredError r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false) s j index : ℝ)) ≤
+      (10 * (n : ℝ) ^ 2) *
+        stationaryObservationMoment n r o₁ o₂ p hn j current hw index
+  by_cases habort : completed = ∅
+  · rw [habort, Finset.sum_empty]
+    exact mul_nonneg (by positivity) hmoment
+  ·
+    conv_lhs =>
+      arg 2
+      intro suffix
+      rw [herrReal suffix]
+    -- Deterministic replay has fixed the same good cursor and stationary
+    -- mean on every suffix, including a prefix filling the block.
+    -- A stdin probe expanding trajectorySquaredMoment and applying
+    -- Finset.sum_le_sum fails because the left index is a completed bit
+    -- suffix, whereas the right index is an ideal state path. Reindexing
+    -- needs a realized-path law and a bound on the mass of each path.
+    -- BLOCKER: no transition-law theorem identifies successful
+    -- boundedUniform/chainStep draws with a subkernel of idealChain on a
+    -- remaining finite block. Nor is there a trace kernel with the paper's
+    -- 18*n^4 inverse gap, needed to dominate the uncapped restart endpoint
+    -- by 2*mu_j (main.tex:1020-1087,1214-1240).
+    -- Tape/denominator coverage is needed for that stochastic coupling,
+    -- rather than for history replay. No new unproved helper is assumed.
+    sorry
 
 end CountingMatroid.Analysis.SuccessfulPrefixTrajectoryDomination
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-08 · reduced · proved finite consumed-prefix history replay without a coverage premise and the fixed-cursor error identity; the parent uses both, centers errors at the ideal mean, and separates the all-abort case. Expanding the stationary moment exposes different index spaces (bit suffixes and ideal paths); their stochastic comparison remains the single original open obligation.
 
 * r24 · open · extracted the reached good cursor and proved full completed-tape length; aesop left the exact moment-domination inequality, without any trajectory-law comparison in the hypotheses. The first live child handoff was mechanically rejected without further diagnostic.
 -/
