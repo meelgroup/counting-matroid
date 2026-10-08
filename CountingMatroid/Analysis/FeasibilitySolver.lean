@@ -68,6 +68,11 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
   -- Schrijver's cited theorem supplies the algorithmic result in the paper,
   -- but neither pinned Mathlib nor Arlib supplies charged code or its cost
   -- certificate.  Mathlib's `Matroid.Indep.augment` concerns one matroid.
+  -- Its conclusion only preserves `M.Indep (insert e I)`; neither it nor
+  -- `Matroid.Indep.augment_finset` preserves independence in a second matroid.
+  -- `FeasibilityBounded` is unconditional in both oracle functions and in r,
+  -- unlike `FeasibilityCorrect`: any proposed loop must therefore be bounded
+  -- even on nonmatroid answers, not just on inputs satisfying the promises.
   -- Finite enumeration yields a correct decider but has exponential query
   -- count; packaging it as this solver would make `FeasibilityBounded` false.
   -- Using `Charged.pure` on direct applications of the bare oracle functions
@@ -81,6 +86,7 @@ end CountingMatroid.Analysis.FeasibilitySolver
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r11 · open · searched pinned Mathlib and Arlib for common independent sets, intersection algorithms, augmenting paths, and submodular minimization; no matching solver was found. Checked the single-matroid augmentation signatures and the unconditional cost quantifiers; the existing charged implementation dependency remains unresolved.
 * r10 · recovery · isolated the missing charged augmenting-path implementation and its two cost proofs; a mathematical decider or a prior theorem alone cannot instantiate this contract without charged code.
 * r9 · open · searched pinned Mathlib and Arlib for a two-oracle intersection algorithm or submodular minimization route; only single-matroid augmentation is present. The remaining goal is the cited solver's charged implementation and both uniform polynomial bounds.
 * r8 · open · rechecked the entire pinned Mathlib and Arlib sources by matroid-intersection, common-independent-set, and augmenting-path statements; no executable two-oracle solver or cost certificate matches `FeasibilityContract`. The Schrijver citation remains the missing borrowed dependency.
