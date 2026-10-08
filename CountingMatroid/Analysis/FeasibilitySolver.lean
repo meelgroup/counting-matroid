@@ -77,6 +77,9 @@ theorem exists_feasibility_contract : Nonempty FeasibilityContract := by
   -- count; packaging it as this solver would make `FeasibilityBounded` false.
   -- Using `Charged.pure` on direct applications of the bare oracle functions
   -- would undercount queries and would not implement the paper's oracle model.
+  -- Library-first recheck: `Matroid.sum_indep_iff` characterizes two
+  -- projections of a set on a disjoint sum, not a common independent set
+  -- on the original ground. It supplies neither this decider nor its costs.
   -- No weaker proof-side statement supplies a `FeasibilityContract` without
   -- this concrete implementation, so the contract itself is left unchanged.
   sorry
@@ -86,6 +89,7 @@ end CountingMatroid.Analysis.FeasibilitySolver
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r12 · open · library-first search again found no deterministic two-oracle intersection solver with polynomial charged bounds; checked augmentation and direct-sum independence statements. Preserved the existing bridge and target, and proposed the explicitly cited Schrijver dependency for Prior review; no new proof debt introduced.
 * r11 · open · searched pinned Mathlib and Arlib for common independent sets, intersection algorithms, augmenting paths, and submodular minimization; no matching solver was found. Checked the single-matroid augmentation signatures and the unconditional cost quantifiers; the existing charged implementation dependency remains unresolved.
 * r10 · recovery · isolated the missing charged augmenting-path implementation and its two cost proofs; a mathematical decider or a prior theorem alone cannot instantiate this contract without charged code.
 * r9 · open · searched pinned Mathlib and Arlib for a two-oracle intersection algorithm or submodular minimization route; only single-matroid augmentation is present. The remaining goal is the cited solver's charged implementation and both uniform polynomial bounds.
