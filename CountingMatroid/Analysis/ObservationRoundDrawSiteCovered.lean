@@ -2,14 +2,19 @@ import CountingMatroid.Analysis.BoundedRunOtherSteps
 import CountingMatroid.Analysis.ScheduleResourceEnvelope
 import CountingMatroid.Analysis.ObservationRoundDrawSites
 import CountingMatroid.Analysis.PhaseChainWork
+import CountingMatroid.Analysis.SuccessfulPrefixCursor
+import CountingMatroid.Analysis.PhaseBitCursorBound
 
 set_option autoImplicit false
 
 /-!
 The quantitative finite-block obligation for the concrete observation draw
 stopping maps. The bound must account for all earlier actual phase updates,
-restart attempts, and k observations. The proof remains open; positivity is
-already proved separately in ObservationRoundDrawSites.
+restart attempts, and k observations. The additive multiplier, draw, restart, observation, and actual-history
+budgets are proved in the support modules. The target proof combines prefix
+replay for the lower endpoint with the quartic bound for the full trial interval.
+Its final standalone compiler validation remains pending: diagnostic checks
+have stalled before the first post-import checkpoint, without a proof error.
 -/
 
 namespace CountingMatroid.Analysis.ObservationRoundDrawSiteCovered
@@ -17,6 +22,172 @@ namespace CountingMatroid.Analysis.ObservationRoundDrawSiteCovered
 open CountingMatroid.Model CountingMatroid.Program
 open CountingMatroid.Analysis.PhaseObservationExperiment
 open CountingMatroid.Analysis.ObservationRoundDrawSites
+
+/-- INTERNAL: Transfer a continuation's value property across charged sequencing. -/
+private theorem bind_value_property {α β : Type}
+    (c : Arlib.Computation.Charged Model.Operations.Op Model.Operations.Cell α)
+    (f : α → Arlib.Computation.Charged Model.Operations.Op Model.Operations.Cell β)
+    (P : β → Prop) (h : ∀ x, P (f x).val) : P (c >>= f).val := by
+  simpa only [Arlib.Computation.Charged.val_bind] using h c.val
+
+/-- INTERNAL: Keep the stored annealing base opaque while peeling binds. -/
+private def RhoProperty (rho : ℚ) (s : AnnealingSchedule) : Prop := s.ρ = rho
+
+/-- INTERNAL: Keep the draw-call identity opaque while peeling binds. -/
+private def DrawCallsProperty (s : AnnealingSchedule) : Prop :=
+  s.drawCalls = 3 * s.L * (s.restartCap + s.observations)
+
+set_option backward.isDefEq.respectTransparency false in
+/-- INTERNAL: The concrete annealing ratio has a ground-size encoding bound.
+The matching fact in ScheduleValueEnvelope is private.
+TEXLINE: main.tex:1382-1390 -/
+private theorem setup_rho_length_bound (n : ℕ) (p : InputParams) (hn : 0 < n) :
+    binaryRatLength (CountingMatroid.Interface.Pseudocode.setup n p).ρ ≤ 4 * n + 6 := by
+  let q := (CountingMatroid.Interface.Pseudocode.setup n p).ρ
+  have hremaining (head : ScheduleOtherStepsEnvelope.ScheduleOpeningResult) :
+      (ScheduleOtherStepsEnvelope.scheduleRemaining n p head).val.ρ = head.rho := by
+    change RhoProperty head.rho (ScheduleOtherStepsEnvelope.scheduleRemaining n p head).val
+    unfold ScheduleOtherStepsEnvelope.scheduleRemaining
+    dsimp only
+    iterate 30
+      apply bind_value_property
+      intro
+    rfl
+  have hq : q = 1 - 1 / (2 * n : ℚ) := by
+    change (CountingMatroid.Program.schedule n p).val.ρ = _
+    rw [ScheduleOtherStepsEnvelope.schedule_split, Arlib.Computation.Charged.val_bind,
+      hremaining, ScheduleOtherStepsEnvelope.scheduleOpening_value]
+  have hden : q.den = 2 * n := by
+    rw [hq]
+    have hcast : (2 * n : ℚ) = ((2 * n : ℕ) : ℚ) := by norm_num [Nat.cast_mul]
+    rw [hcast, one_div, show (1 : ℚ) = ((1 : ℕ) : ℚ) by norm_num,
+      Rat.natCast_sub_den, Rat.inv_natCast_den_of_pos (by omega : 0 < 2 * n)]
+  have hb := (AnnealingPartitionDrift.schedule_power_lower n p hn)
+  have hnum0 : 0 ≤ q.num := Rat.num_nonneg.mpr hb.1.le
+  have hnum1 : q.num ≤ (q.den : ℤ) := by
+    have hunit : q ≤ 1 := hb.2.1
+    rw [← q.num_div_den] at hunit
+    have h : (q.num : ℚ) ≤ (q.den : ℚ) := by
+      simpa using (div_le_iff₀ (by exact_mod_cast q.den_pos)).mp hunit
+    exact_mod_cast h
+  have hnum : q.num.natAbs ≤ q.den := by
+    have h : (q.num.natAbs : ℤ) ≤ (q.den : ℤ) := by
+      simpa [Int.natAbs_of_nonneg hnum0] using hnum1
+    exact_mod_cast h
+  have hnlog := Nat.log_le_self 2 q.num.natAbs
+  have hdlog := Nat.log_le_self 2 q.den
+  change binaryRatLength q ≤ _
+  unfold binaryRatLength binaryNatLength
+  simp only [← Nat.log2_eq_log_two] at hnlog hdlog
+  omega
+
+/-- INTERNAL: The fixed block's quartic width covers the additive history
+multiplier budget and the acceptance-ratio denominator width.
+TEXLINE: main.tex:1356-1390 -/
+private theorem quartic_width_covers (n L N I rhoLength : ℕ)
+    (hrho : rhoLength ≤ 4 * n + 6) :
+    let K := 4 + n * (4 + L * rhoLength) + 6 + L * (n * n * (4 * (N + 4)))
+    4 * K + n + 1 ≤ 1000000 * (L + 1) ^ 4 * (n + 1) ^ 4 *
+      (N + 1) ^ 4 * (I + 1) ^ 4 := by
+  let B := (L + 1) * (n + 1) ^ 2 * (N + 1)
+  have hB : 1 ≤ B := by
+    have hp : 0 < B := by dsimp [B]; positivity
+    omega
+  have hbase : (n + 1) ^ 2 ≤ B := by
+    calc
+      (n + 1) ^ 2 = 1 * (n + 1) ^ 2 * 1 := by ring
+      _ ≤ (L + 1) * (n + 1) ^ 2 * (N + 1) := by gcongr <;> omega
+  have hbaseL : (L + 1) * (n + 1) ^ 2 ≤ B := by
+    calc
+      (L + 1) * (n + 1) ^ 2 = ((L + 1) * (n + 1) ^ 2) * 1 := by ring
+      _ ≤ ((L + 1) * (n + 1) ^ 2) * (N + 1) := by gcongr; omega
+  have hnB : n ≤ B := (show n ≤ (n + 1) ^ 2 by nlinarith).trans hbase
+  have hthermal : n * L * rhoLength ≤ 10 * B := by
+    calc
+      n * L * rhoLength ≤ (n + 1) * (L + 1) * (10 * (n + 1)) := by gcongr <;> omega
+      _ = 10 * ((L + 1) * (n + 1) ^ 2) := by ring
+      _ ≤ 10 * B := Nat.mul_le_mul_left 10 hbaseL
+  have hupdate : L * (n * n * (4 * (N + 4))) ≤ 16 * B := by
+    calc
+      L * (n * n * (4 * (N + 4))) ≤
+          (L + 1) * ((n + 1) * (n + 1) * (4 * (4 * (N + 1)))) := by gcongr <;> omega
+      _ = 16 * B := by dsimp [B]; ring
+  have hK : 4 + n * (4 + L * rhoLength) + 6 + L * (n * n * (4 * (N + 4))) ≤ 40 * B := by
+    nlinarith only [hB, hnB, hthermal, hupdate]
+  have hW : 4 * (4 + n * (4 + L * rhoLength) + 6 + L * (n * n * (4 * (N + 4)))) + n + 1 ≤ 162 * B := by
+    omega
+  have hBpow : B ≤ B ^ 2 := le_self_pow hB (by decide)
+  have hwidth : B ^ 2 ≤ (L + 1) ^ 4 * (n + 1) ^ 4 * (N + 1) ^ 4 * (I + 1) ^ 4 := by
+    calc
+      B ^ 2 = (L + 1) ^ 2 * (n + 1) ^ 4 * (N + 1) ^ 2 * 1 := by dsimp [B]; ring
+      _ ≤ (L + 1) ^ 4 * (n + 1) ^ 4 * (N + 1) ^ 4 * (I + 1) ^ 4 := by
+        have hL : (L + 1) ^ 2 ≤ (L + 1) ^ 4 := Nat.pow_le_pow_right (by omega) (by decide)
+        have hN : (N + 1) ^ 2 ≤ (N + 1) ^ 4 := Nat.pow_le_pow_right (by omega) (by decide)
+        have hI : 1 ≤ (I + 1) ^ 4 := by
+          have hp : 0 < (I + 1) ^ 4 := by positivity
+          omega
+        exact Nat.mul_le_mul (Nat.mul_le_mul (Nat.mul_le_mul hL (le_refl _)) hN) hI
+  dsimp only
+  apply hW.trans
+  calc
+    162 * B ≤ 1000000 * B ^ 2 := by nlinarith only [hBpow, hB]
+    _ ≤ 1000000 * ((L + 1) ^ 4 * (n + 1) ^ 4 * (N + 1) ^ 4 * (I + 1) ^ 4) := Nat.mul_le_mul_left _ hwidth
+    _ = _ := by ring
+
+/-- INTERNAL: The final schedule constructor stores exactly the charged
+three-draw allowance. TEXLINE: main.tex:1405-1408 -/
+private theorem schedule_tail_draw_calls_eq (bε : ℕ) (rho : ℚ) (L : ℕ) (eta : ℚ)
+    (tau restartCap observations : ℕ) (p : InputParams) :
+    let s := (do
+      let attemptsAndObservations ← Model.Operations.natAdd restartCap observations
+      let threeL ← Model.Operations.natMul 3 L
+      let drawCalls ← Model.Operations.natMul threeL attemptsAndObservations
+      let drawTrials ← CountingMatroid.Program.leastDrawTrials drawCalls
+      let bδ ← CountingMatroid.Program.leastHalvings p.δ
+      let tenBδ ← Model.Operations.natMul 10 bδ
+      let repetitions ← Model.Operations.successor tenBδ
+      pure (AnnealingSchedule.mk bε rho L eta tau restartCap observations
+        drawCalls drawTrials bδ repetitions) :
+        Arlib.Computation.Charged Model.Operations.Op Model.Operations.Cell AnnealingSchedule).val
+    s.drawCalls = 3 * s.L * (s.restartCap + s.observations) := by
+  simp only [Arlib.Computation.Charged.val_bind, Arlib.Computation.Charged.val_pure,
+    Model.Operations.natAdd, Model.Operations.natMul, Arlib.Computation.Charged.val_op]
+
+set_option backward.isDefEq.respectTransparency false in
+/-- INTERNAL: Peel schedule binds without expanding their expensive values.
+TEXLINE: main.tex:1405-1408 -/
+private theorem setup_draw_calls_eq (n : ℕ) (p : InputParams) :
+    let s := CountingMatroid.Interface.Pseudocode.setup n p
+    s.drawCalls = 3 * s.L * (s.restartCap + s.observations) := by
+  change DrawCallsProperty (CountingMatroid.Program.schedule n p).val
+  unfold CountingMatroid.Program.schedule
+  iterate 29
+    apply bind_value_property
+    intro
+  exact schedule_tail_draw_calls_eq _ _ _ _ _ _ _ p
+
+/-- INTERNAL: Convert a phase-linear chain budget into the block's
+three-draw-call allowance without unfolding the concrete schedule. -/
+private theorem draw_budget_arithmetic (n L A D W₀ W : ℕ) (hW : W₀ ≤ W) :
+    L * (n + A * (1 + 3 * D * W₀)) ≤ n * L + 3 * L * A * (1 + D * W) + 10 := by
+  have hm := Nat.mul_le_mul_left (3 * L * A * D) hW
+  calc
+    L * (n + A * (1 + 3 * D * W₀)) = n * L + L * A + 3 * L * A * D * W₀ := by ring
+    _ ≤ n * L + (3 * (L * A) + 10) + 3 * L * A * D * W :=
+      Nat.add_le_add (by omega) hm
+    _ = _ := by ring
+
+/-- INTERNAL: Sum the reached history, restart, observation-prefix, and
+stopped-site budgets without unfolding the concrete schedule. -/
+private theorem observation_cursor_arithmetic (n L B N C j k u v w bits : ℕ)
+    (hj : j + 1 ≤ L) (hk : k + 1 ≤ N)
+    (hc : u ≤ j * (n + (B + N) * C))
+    (hs : v ≤ u + n + B * C) (ho : w ≤ v + k * C)
+    (hd : bits ≤ w + C) : bits ≤ L * (n + (B + N) * C) := by
+  have hkC := Nat.mul_le_mul_right C hk
+  have hjC := Nat.mul_le_mul_right (n + (B + N) * C) hj
+  simp only [Nat.add_mul, Nat.one_mul] at hc hkC hjC ⊢
+  omega
 
 /-- INTERNAL: Every stopped observation draw has its cursor after the
 external consumed prefix and enough remaining block space for all trials.
@@ -35,67 +206,120 @@ theorem observation_round_draw_site_covered (n r : ℕ)
     ∀ site suffix, suffix.length = t → ∀ d,
       observationDrawSite n r o₁ o₂ p j pref k site suffix = some d →
       pref.length ≤ d.1 ∧ d.1 + s.drawTrials * ((d.2 - 1).log2 + 1) ≤ m := by
+  /- PARKED: Complete proof text retained, but not certified. Standalone parent
+     checks first reported transient missing ChainStepBitBound/PhaseBitCursorBound
+     object files. After publication, checks (including a one-thread bounded
+     diagnostic and the generated Lake setup) stalled loading imports. A scratch
+     IO checkpoint immediately after the same imports was never reached.
+     All three support-source checks passed; no target proof error was emitted. -/
   classical
   let s := CountingMatroid.Interface.Pseudocode.setup n p
+  let m := CountingMatroid.Model.Run.blockLength n r p
+  let K := 4 + n * (4 + s.L * binaryRatLength s.ρ) + 6 +
+    s.L * (n * n * (4 * (s.observations + 4)))
+  let C := 1 + 3 * s.drawTrials * (4 * K + n + 1)
+  have hone : binaryRatLength (1 : ℚ) = 4 := by decide
+  let A := 4 + n * (4 + s.L * binaryRatLength s.ρ)
+  let U := s.L * (n * n * (4 * (s.observations + 4)))
+  have hq : binaryRatLength 1 + n * (binaryRatLength 1 + s.L * binaryRatLength s.ρ) ≤ K := by
+    have ha : A ≤ A + 6 + U :=
+      (Nat.le_add_right A 6).trans (Nat.le_add_right (A + 6) U)
+    simpa only [hone, A, U] using ha
+  have hw : 6 + s.L * (n * n * (4 * (s.observations + 4))) ≤ K := by
+    change 6 + U ≤ A + 6 + U
+    exact (Nat.le_add_right (6 + U) A).trans_eq
+      ((Nat.add_comm (6 + U) A).trans (Nat.add_assoc A 6 U).symm)
   dsimp only
   intro site suffix hlen d hsite
   unfold observationDrawSite at hsite
   simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at hsite
   obtain ⟨current, hhistory, start, hrestart, reached, hobserve, hsite⟩ := hsite
   let tape : ℕ → Bool := fun i => ((pref ++ suffix)[i]?).getD false
-  let S := BoundedRunPhase.runSize n s
-  have hS : 5 ≤ S := by
-    dsimp [S, BoundedRunPhase.runSize, binaryRatLength, binaryNatLength]
-    omega
-  have h6 : 6 ≤ S ^ 10 := by
-    have hp := Nat.pow_le_pow_left hS 10
-    norm_num at hp
-    omega
-  let initial := BoundedRunPhaseHistory.initialCursor n s
-  have hinit : BoundedRunPhase.PhaseSizeInvariant S 0 (some initial) := by
-    intro cur hcur
-    cases Option.some.inj hcur
-    dsimp [initial, BoundedRunPhaseHistory.initialCursor,
-      Model.Operations.initialWeights, Model.Operations.allocateLearnedWeights]
-    simp only [Nat.one_mul]
-    change (∀ _ : DefectIndex n, binaryRatLength (4 : ℚ) ≤ S ^ 10) ∧
-      (∀ (_ : ℕ) (_ : DefectIndex n), binaryRatLength (4 : ℚ) ≤ S ^ 10) ∧
-      binaryRatLength (1 : ℚ) ≤ S ^ 10
-    have hfour : binaryRatLength (4 : ℚ) = 6 := by decide
-    have hone : binaryRatLength (1 : ℚ) = 4 := by decide
-    rw [hfour, hone]
-    exact ⟨fun _ => h6, fun _ _ => h6, by omega⟩
-  have hscan := BoundedRunOtherSteps.phaseFold_work_and_size r o₁ o₂ tape s
-    (ScheduleResourceEnvelope.schedule_rho_nonneg n p) j 0 (by dsimp only [s]; omega)
-    (some initial) hinit
-  have hhistorySize : BoundedRunPhase.PhaseSizeInvariant S j
-      (BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s j) := by
-    simpa only [Nat.zero_add, BoundedRunPhaseHistory.phaseHistory,
-      Arlib.Computation.Charged.repeatFor, List.range_eq_range'] using hscan.2
-  have hcoarse := hhistorySize current hhistory
-  let K := binaryRatLength 1 + n * binaryRatLength (s.ρ ^ j) + (j + 1) * S ^ 10
-  have hweightBudget (state : PairedSet n) (kind : StateKind n) :
-      ∀ w, (weightOfKind r o₁ o₂ (s.ρ ^ j) current.currentWeights state kind).val = some w →
-        binaryRatLength w ≤ 2 * K :=
-    (PhaseChainWork.weightOfKind_work_size r o₁ o₂ (s.ρ ^ j)
-      current.currentWeights state kind K (by dsimp [K]; omega)
-      (fun index => (hcoarse.1 index).trans (by dsimp [K]; omega))).2
-  -- The existing phase-size invariant supplies a real stored-table bound,
-  -- but its (j+1)*runSize^10 budget does not fit blockLength's quartic width.
-  -- This second route therefore cannot replace the tighter count-ratio
-  -- update invariant needed by the paper's multiplier-bit calculation.
-  -- FinishPhaseWeightsSize.finishPhase_weights_length_le supplies the
-  -- per-phase increment n*n*(4*(observations+4)); it still needs to be
-  -- iterated through this actual history and its stored-table writes.
-  -- The direct drawCalls-based cursor route also needs the global restart-attempt invariant:
-  -- multiplying restartCap separately by j*tau would exceed drawCalls.
-  unfold CountingMatroid.Model.Run.blockLength
-  sorry
+  have hlower : pref.length ≤ d.1 := by
+    obtain ⟨bits, original, hbits, hprevious, horiginal, hgood, hpref, hprefLength⟩ :=
+      SuccessfulPrefixAbortBound.successful_prefix_has_good_cursor n r o₁ o₂ p j hj pref hprefix
+    have hsame : BoundedRunPhaseHistory.phaseHistory r o₁ o₂ tape s j = some original := by
+      by_cases hwithin : original.bitCursor ≤ m
+      · apply SuccessfulPhaseReplay.successful_history_replay_of_phase_replay r o₁ o₂ s
+          (SinglePhaseIntervalReplay.single_phase_interval_replay r o₁ o₂ s)
+          (fun i => (bits[i]?).getD false) j original horiginal tape
+        intro i hi
+        have hipref : i < pref.length := by
+          rw [hpref, List.length_take, hbits, Nat.min_eq_left hwithin]
+          exact hi
+        dsimp only [tape]
+        rw [List.getElem?_append_left hipref, hpref, List.getElem?_take_of_lt hi]
+      · have hprefFull : pref = bits := by rw [hpref, List.take_of_length_le (by omega)]
+        have hsuffix : suffix = [] := by
+          apply List.length_eq_zero_iff.mp
+          rw [hlen, hprefFull, hbits, Nat.sub_self]
+        simpa only [tape, hprefFull, hsuffix, List.append_nil] using horiginal
+    have heq : original = current := Option.some.inj (hsame.symm.trans hhistory)
+    have hpre : pref.length ≤ current.bitCursor := by rw [← heq, hprefLength]; exact Nat.min_le_left _ _
+    have hs := (RestartPhaseIntervalReplay.restartPhase_success_interval r o₁ o₂ s
+      current.tables j current.bitCursor tape start hrestart).1
+    have ho := (ObservePhaseIntervalReplay.observePhase_success_interval r o₁ o₂
+      {s with observations := k} (s.ρ ^ j) current.currentWeights start tape reached hobserve).1
+    split at hsite
+    · cases hsite
+    · exact hpre.trans (hs.trans (ho.trans
+        (chainDrawSite_success_interval r o₁ o₂ s (s.ρ ^ j) current.currentWeights
+          reached.state reached.bitCursor site tape d hsite).1))
+  refine ⟨hlower, ?_⟩
+  have hsize := PhaseHistoryMultiplierLength.phase_history_multiplier_length_le
+    r o₁ o₂ tape s j current hhistory
+  have hweights : ∀ i, binaryRatLength (current.currentWeights i) ≤ K := by
+    intro i
+    exact (hsize.1 i).trans ((Nat.add_le_add_left (Nat.mul_le_mul_right _ (Nat.le_of_lt hj : j ≤ s.L)) _).trans hw)
+  have htables : ∀ phase i, binaryRatLength (current.tables phase i) ≤ K := by
+    intro phase i
+    exact (hsize.2 phase i).trans ((Nat.add_le_add_left (Nat.mul_le_mul_right _ (Nat.le_of_lt hj : j ≤ s.L)) _).trans hw)
+  have hqj : binaryRatLength 1 + n * binaryRatLength (s.ρ ^ j) ≤ K := by
+    have hp := BoundedRunResourceEnvelope.ratPower_binary_length_le s.ρ j
+    rw [BoundedRunResourceEnvelope.ratPower_value] at hp
+    have hm := Nat.mul_le_mul_right (binaryRatLength s.ρ) (show j ≤ s.L from Nat.le_of_lt hj)
+    exact (Nat.add_le_add_left (Nat.mul_le_mul_left n (hp.trans (Nat.add_le_add_left hm _))) _).trans hq
+  have hh := PhaseBitCursorBound.phase_history_bit_bound r o₁ o₂ tape s j K
+    (Nat.le_of_lt hj) hq hw current hhistory
+  have hs := PhaseBitCursorBound.restart_phase_bit_bound r o₁ o₂ tape s current.tables j
+    current.bitCursor K (Nat.le_of_lt hj) hq htables start hrestart
+  have ho := PhaseBitCursorBound.observe_phase_bit_bound r o₁ o₂ tape {s with observations := k}
+    (s.ρ ^ j) current.currentWeights start K hqj hweights reached hobserve
+  split at hsite
+  · cases hsite
+  · have hd := ChainStepBitBound.chain_draw_site_bit_bound r o₁ o₂ tape s (s.ρ ^ j)
+      current.currentWeights reached.state reached.bitCursor K hqj hweights site d hsite
+    have hsum : d.1 + s.drawTrials * ((d.2 - 1).log2 + 1) ≤
+        s.L * (n + (s.restartCap + s.observations) * C) := by
+      exact observation_cursor_arithmetic n s.L s.restartCap s.observations C j k
+        current.bitCursor start.2 reached.bitCursor
+        (d.1 + s.drawTrials * ((d.2 - 1).log2 + 1))
+        (Nat.succ_le_of_lt hj) (Nat.succ_le_of_lt hk) hh hs ho hd
+    apply hsum.trans
+    have hwidth := quartic_width_covers n s.L s.observations (binaryInputLength n r p)
+      (binaryRatLength s.ρ) (setup_rho_length_bound n p hn)
+    let W := 1000000 * (s.L + 1) ^ 4 * (n + 1) ^ 4 *
+      (s.observations + 1) ^ 4 * (binaryInputLength n r p + 1) ^ 4
+    have hcalls : s.drawCalls = 3 * s.L * (s.restartCap + s.observations) := setup_draw_calls_eq n p
+    have hblock : m = n * s.L + s.drawCalls * (1 + s.drawTrials * W) + 10 := by
+      dsimp only [m, s, W, CountingMatroid.Interface.Pseudocode.setup,
+        CountingMatroid.Model.Run.blockLength]
+    exact ((draw_budget_arithmetic n s.L (s.restartCap + s.observations) s.drawTrials
+      (4 * K + n + 1) W hwidth).trans_eq
+      (congrArg (fun calls => n * s.L + calls * (1 + s.drawTrials * W) + 10) hcalls.symm)).trans_eq hblock.symm
 
 end CountingMatroid.Analysis.ObservationRoundDrawSiteCovered
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* this round · blocked on validation · retained the full target proof without a new open obligation; support elaborations passed, but parent import loading did not complete, and no granted build permission was observed.
+
+* this round · verification pending · all eight public support lemmas passed standalone elaboration; both certification waves were mechanically rejected without a diagnostic. Parent checks have encountered transient missing imports or stalled before the first post-import checkpoint; the complete proof text is preserved.
+
+* this round · continued vertically · the live handoff was mechanically rejected without further diagnostic; completed the actual-history cursor induction and retained all owned support files. Parent verification and final publication are pending.
+
+* this round · decomposed · proved tight multiplier, capped-draw, trace-return, restart, and observation budgets; the parent uses the isolated actual-history cursor induction. Scheduled child certification is pending; no prior assumption or statement change was introduced.
 
 * r27 · refined blocker · applied the proved phase-fold size invariant and instantiated weightOfKind_work_size; the resulting (j+1)*runSize^10 bound is too coarse for the fixed quartic tape width, so a tighter multiplier-update bound remains necessary.
 
