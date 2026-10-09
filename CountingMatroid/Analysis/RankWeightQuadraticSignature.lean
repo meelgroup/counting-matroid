@@ -5,6 +5,10 @@ import Mathlib.RingTheory.MvPolynomial.EulerIdentity
 import Mathlib.LinearAlgebra.QuadraticForm.Signature
 import Mathlib.Data.Real.Basic
 import CountingMatroid.Analysis.LinearPolynomialChainRule
+import CountingMatroid.Analysis.LinearSubstitutionHessian
+import CountingMatroid.Analysis.QuadraticNonpositiveHyperplane
+import CountingMatroid.Analysis.BinaryRankWeightSignature
+import CountingMatroid.Analysis.MixedDirectionalRankWeightSignature
 
 set_option autoImplicit false
 
@@ -15,14 +19,22 @@ correspondence and coefficient extraction proved in the counting paper.
 substitutions, and nonnegative scalar multiplication. The signature uses
 Mathlib's maximum dimension of a positive definite subspace over the reals.
 The empty- and singleton-ground signature cases are proved, using the
-homogeneous-degree invariant of every descendant. The signature case with
-at most one output variable follows from the ambient dimension bound. The remaining
-Bränden–Huh input below is an unresolved borrowed result. The exact normal
+homogeneous-degree invariant of every descendant. The two-element ground
+case is proved by rank submodularity and a two-square calculation, with
+the resulting hyperplane transported through every allowed substitution.
+The signature case with at most one output variable follows from the ambient
+dimension bound. The remaining
+Bränden–Huh input is the unresolved borrowed mixed-derivative prerequisite
+in `MixedDirectionalRankWeightSignature`. The exact normal
 form of a descendant is proved: nonnegative directional derivatives in the
 original variables, followed by one nonnegative linear substitution and a
 nonnegative scalar. A nonzero quadratic uses exactly ground-set size minus
 two derivatives. The unresolved signature bound is applied to this normal
-form; no Lorentzian assumption has been introduced.
+form. A proved nonpositive-hyperplane invariant transports the Hessian
+through the final substitution and scaling and recovers the exact orthogonal
+kernel used by the signature bound. Only its establishment for the original
+mixed directional derivative on ground sets of size at least three remains
+open in that support module; no Lorentzian assumption has been introduced.
 -/
 
 namespace CountingMatroid.Analysis.RankWeightQuadraticSignature
@@ -312,6 +324,40 @@ theorem iteratedDirectionalDerivative_isHomogeneous {σ : Type} [Fintype σ]
       (d - ds.length - 1) (fun s _ => ih.pderiv.C_mul (a s))
     simpa [iteratedDirectionalDerivative, Nat.sub_sub] using h
 
+/-- INTERNAL: Identify the parent's directional-derivative recursion with
+the library-list fold used by the independent mixed-derivative prerequisite.
+TEXLINE: main.tex:334-348 -/
+theorem iteratedDirectionalDerivative_eq_foldr {σ : Type} [Fintype σ]
+    (ds : List (σ → ℚ)) (p : MvPolynomial σ ℚ) :
+    iteratedDirectionalDerivative ds p =
+      ds.foldr (fun d f => ∑ s, MvPolynomial.C (d s) * MvPolynomial.pderiv s f) p := by
+  induction ds with
+  | nil => rfl
+  | cons d ds ih => simp only [iteratedDirectionalDerivative, List.foldr_cons, ih]
+
+/-- INTERNAL: Scalar multiplication of a rational polynomial scales its
+real Hessian quadratic form by the same scalar.
+TEXLINE: main.tex:326-348 -/
+theorem hessian_C_mul {τ : Type} [Fintype τ] [DecidableEq τ]
+    (c : ℚ) (p : MvPolynomial τ ℚ) :
+    (hessian (MvPolynomial.C c * p)).toQuadraticForm' =
+      (c : ℝ) • (hessian p).toQuadraticForm' := by
+  have hmat : hessian (MvPolynomial.C c * p) = (c : ℝ) • hessian p := by
+    ext i j
+    simp [hessian]
+  rw [hmat]
+  unfold Matrix.toQuadraticForm'
+  rw [map_smul, LinearMap.BilinMap.toQuadraticMap_smul]
+
+/-- INTERNAL: Linear substitution of a rational polynomial pulls back its
+real Hessian quadratic form, including singular substitutions.
+TEXLINE: main.tex:326-348 -/
+theorem hessian_linearSubstitution {σ τ : Type} [Fintype σ] [Fintype τ]
+    [DecidableEq σ] [DecidableEq τ] (a : σ → τ → ℚ) (p : MvPolynomial σ ℚ) :
+    (hessian (linearSubstitution a p)).toQuadraticForm' =
+      (hessian p).toQuadraticForm'.comp (Matrix.toLin' (fun s t => (a s t : ℝ))) := by
+  exact LinearSubstitutionHessian.linear_aeval_hessian_quadraticForm a p
+
 /-- PAPER: main.tex:334-348
 BORROWED: Bränden–Huh, Lorentzian polynomials (2020), Theorems 4.10,
 2.10 and Corollary 2.11, together with the defining quadratic signature.
@@ -395,12 +441,8 @@ theorem branden_huh_quadratic_signature {α τ : Type} [Fintype α] [Fintype τ]
         letI : Invertible (2 : ℝ) := invertibleOfNonzero (by norm_num)
         let l : (τ → ℝ) →ₗ[ℝ] ℝ := Q.associated e
         suffices hnonpos : ∀ v ∈ LinearMap.ker l, Q v ≤ 0 by
-          have hdim := QuadraticForm.sigPos_add_finrank_le_of_nonpos hnonpos
-          have hnull := l.finrank_range_add_finrank_ker
-          have hrange : Module.finrank ℝ (LinearMap.range l) ≤ 1 := by
-            simpa using (LinearMap.range l).finrank_le
-          change sigPos Q ≤ 1
-          omega
+          exact QuadraticNonpositiveHyperplane.HasNonpositiveHyperplane.sigPos_le_one
+            ⟨l, fun v hv => hnonpos v (LinearMap.mem_ker.mpr hv)⟩
         have hgne : g ≠ 0 := by
           intro hgzero
           have hz : hessian g = 0 := by
@@ -426,26 +468,28 @@ theorem branden_huh_quadratic_signature {α τ : Type} [Fintype α] [Fintype τ]
             apply hgne
             simp [hrepr, hc0]
           exact lt_of_le_of_ne hc hcne.symm
-        dsimp only [l, Q]
-        rw [hrepr]
-        -- BLOCKER: the remaining expression is now in exact directional
-        -- normal form: ds has length |α|-2, every direction and substitution
-        -- entry is nonnegative, and c is positive. Its Hessian must be
-        -- nonpositive on the associated-orthogonal complement of e.
-        -- The algebraic normal-form construction above is proved. The
-        -- missing invariant is the common-source compatibility of mixed
-        -- nonnegative directional derivatives of the matroid polynomial.
-        -- Bounds for individual coordinate derivatives cannot be added:
-        -- the cone of forms with sigPos ≤ 1 is not closed under addition.
-        -- Mathlib's eRk_submod concerns ranks of two sets, not the signed
-        -- quadratic inequality for weighted sums over all derivative paths.
-        -- PRIOR-PROPOSAL: this unchanged quadratic consequence is explicitly
-        -- borrowed at main.tex:334-348 from BH2020, Theorems 4.10, 2.10,
-        -- and Corollary 2.11, together with the defining quadratic signature.
-        -- hQe is proved, so the kernel is the orthogonal complement of an
-        -- actual positive vector; rank-nullity completes the signature
-        -- bound once this remaining nonpositivity goal is established.
-        sorry
+        have hsource : QuadraticNonpositiveHyperplane.HasNonpositiveHyperplane
+            (hessian (iteratedDirectionalDerivative ds (tuttePolynomial N q))).toQuadraticForm' := by
+          by_cases htwo : Fintype.card α = 2
+          · have hdszero : ds = [] := List.length_eq_zero_iff.mp (by omega)
+            rw [hdszero]
+            dsimp only [iteratedDirectionalDerivative]
+            exact BinaryRankWeightSignature.binary_tutte_nonpositive_hyperplane
+              N q hq hqone htwo
+          · rw [iteratedDirectionalDerivative_eq_foldr]
+            exact MixedDirectionalRankWeightSignature.mixed_directional_rank_weight_nonpositive_hyperplane
+              N hfull q hq hqone ds hds hlength
+        have htransform : Q = (c : ℝ) •
+            (hessian (iteratedDirectionalDerivative ds (tuttePolynomial N q))).toQuadraticForm'.comp
+              (Matrix.toLin' (fun s t => (a s t : ℝ))) := by
+          dsimp only [Q]
+          rw [hrepr, hessian_C_mul, hessian_linearSubstitution]
+        have hwhole : QuadraticNonpositiveHyperplane.HasNonpositiveHyperplane Q := by
+          rw [htransform]
+          exact (hsource.comp _).smul c (by exact_mod_cast hc)
+        intro v hv
+        exact hwhole.nonpos_of_associated_eq_zero e v hQe (LinearMap.mem_ker.mp hv)
+
       · have hz : hessian g = 0 := by
           ext s t
           have hnot : ¬ 0 < hessian g s t := fun hst => hpositive ⟨s, t, hst⟩
@@ -464,6 +508,8 @@ end CountingMatroid.Analysis.RankWeightQuadraticSignature
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · handoff-ready · after the live scheduler opened capacity, isolated the sole remaining original-variable invariant in MixedDirectionalRankWeightSignature and proved the fold identity connecting it to the parent. All other children are proved; the parent uses the independent prerequisite and contains no remaining proof hole of its own. The prerequisite still has the mixed-directional compatibility gap, so this is a proof boundary, not a completed Bränden–Huh proof.
+* 2026-10-09 · partial · proved Hessian congruence under linear substitution and scalar scaling, and the nonpositive-hyperplane invariant with its pullback, scaling, signature and positive-vector orthogonal-kernel consequences. Proved the two-element Tutte quadratic by the exact rank-weight pair bound and a two-square identity, so the parent closes every descendant on ground sets of size at most two. Its single remaining gap is establishment of the invariant for |α|≥3 after exactly |α|-2 nonnegative directional derivatives; all subsequent transport is proved. No new assumption or open child was introduced.
 * 2026-10-09 · partial · proved the linear polynomial chain rule and substitution composition in LinearPolynomialChainRule, then proved finite intermediate variables, the exact directional normal form, and its homogeneous degree. The parent uses this representation and proves that its direction list has length |α|-2 and its scalar is positive. The original nonpositive-kernel gap now concerns this normalized expression. A stdin application of eRk_submod failed by statement shape; separate checked stdin examples show that adding two signature-one forms can produce signature two. The unresolved cited input is compatibility of mixed nonnegative directional derivatives of the common matroid polynomial, not the algebraic normalization. No assumption or new open helper was introduced.
 * 2026-10-09 · partial · proved the at-most-one-output-variable branch using sigPos_le_finrank and Module.finrank_pi; preserved all earlier homogeneous-degree, coefficient-cone and small-ground proofs. Current statement-shape searches found no matroid-polynomial, Lorentzian closure or substitute spectral declaration supplying nonpositivity on the positive-vector orthogonal complement. The remaining cited Bränden–Huh input stays open in its original theorem, without new helpers or assumptions.
 * 2026-10-09 · blocked · preserved the proved empty-ground branch; searched project, pinned Mathlib and Arlib for Lorentzian rank-weight base, closure and quadratic signature results without finding an applicable declaration. A stdin application of descendant_constant to the nonempty branch fails because its initial polynomial must be constant. Proposed the unchanged cited Bränden–Huh consequence as prior input; introduced no helper or assumption.
