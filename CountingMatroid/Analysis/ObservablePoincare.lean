@@ -1,14 +1,24 @@
 import CountingMatroid.Analysis.ObservableProjection
 import CountingMatroid.Analysis.ObservableVarianceDecomposition
 import CountingMatroid.Analysis.TransversalEventMean
+import CountingMatroid.Analysis.ExchangeFlowEnergy
+import CountingMatroid.Analysis.OnePairObservablePoincare
+import CountingMatroid.Analysis.TransversalVarianceBound
+import CountingMatroid.Analysis.DefectMeanExchangeFlow
 
 set_option autoImplicit false
 
 /-!
 The paper's observable Poincare estimate for the concrete operational law.
 The energy identity below handles zero target weights explicitly. The
-quantitative transport estimate is an independent same-paper obligation;
-stationarity alone does not establish it.
+quantitative transport and transversal estimates are independent same-paper
+obligations in DefectMeanExchangeFlow and TransversalVarianceBound;
+stationarity alone does not establish them. The defect-mean step is reduced
+to an exchange-supported signed current with prescribed conditional-mean
+divergence and a normalized energy bound. Its summation-by-parts and
+Cauchy--Schwarz implications are proved in ExchangeFlowEnergy. The one-pair
+boundary case is closed outright using the constant-two estimate in
+OnePairObservablePoincare.
 -/
 
 namespace CountingMatroid.Analysis.ObservablePoincare
@@ -18,6 +28,7 @@ open CountingMatroid.Analysis.IdealExchangeChain
 open CountingMatroid.Analysis.ObservableProjection
 open CountingMatroid.Analysis.ObservableVarianceDecomposition
 open CountingMatroid.Analysis.TransversalEventMean
+open CountingMatroid.Analysis.ExchangeFlowEnergy
 open Arlib.Probability Arlib.Probability.FinDist Arlib.MarkovChains
 
 /-- INTERNAL: Write the ideal Metropolis energy using symmetric proposal
@@ -111,6 +122,19 @@ theorem observable_poincare (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
   have hE : 0 ≤ E := by
     rw [hEeq]
     exact dirichlet_self_nonneg (ideal_chain_stationary r o₁ o₂ q w hn hq hw) H
+  by_cases hnOne : n = 1
+  · subst n
+    have hzero : π ∅ = 0 := by
+      have hk : (classifyState (∅ : PairedSet 1)).val = .invalid := by decide
+      simp [π, operationalLaw, StationaryMeanIdentities.stateWeight, hk, weightOfKind]
+    have hfullmass : π {(0, false), (0, true)} = 0 := by
+      have hk : (classifyState ({(0, false), (0, true)} : PairedSet 1)).val = .invalid := by decide
+      simp [π, operationalLaw, StationaryMeanIdentities.stateWeight, hk, weightOfKind]
+    have htwo := OnePairObservablePoincare.one_pair_observable_poincare π hzero hfullmass H
+    change Var π (observableProjection π H) ≤ 2 * E at htwo
+    have hbound : Var π (observableProjection π H) ≤ 2000 * E :=
+      htwo.trans (by nlinarith [hE])
+    simpa only [Nat.cast_one, one_pow, mul_one, hEeq] using hbound
   have hp : 1 / (5 * (n : ℝ) ^ 2) ≤ p₀ := by
     dsimp only [p₀, π]
     rw [operational_class_mass]
@@ -121,6 +145,12 @@ theorem observable_poincare (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       Rat.cast_pow, Rat.cast_natCast] using hcast
   have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
   have hp₀ : 0 < p₀ := (div_pos (by norm_num) (by positivity)).trans_le hp
+  let κ := fun state next : PairedSet n =>
+    exchangeProposal n hn state next * min (π state) (π next)
+  have hκ : ∀ state next, 0 ≤ κ state next := fun state next =>
+    mul_nonneg ((exchangeProposal n hn).coe_nonneg state next)
+      (le_min (π.coe_nonneg state) (π.coe_nonneg next))
+  have hpotential : potentialEnergy κ H = E := rfl
   let R := 2 * (n : ℝ) ^ 2 * E / p₀
   choose a b hlarge using (fun i k : Fin n => large_pair_event π i k)
   -- Choose the large two-pair event before asking for transport. Event
@@ -198,22 +228,42 @@ theorem observable_poincare (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       _ = (72 * (n : ℝ) ^ 2 + 73 * (n : ℝ) + 16) * R := by ring
       _ ≤ 2000 * (n : ℝ) ^ 6 * E := observable_poincare_constant_bound n hn p₀ E hp hE
       _ = _ := by rw [hEeq]
-  -- STILL OPEN: main.tex:777-839 requires the binary conditioning tree,
-  -- the conditional defect-coefficient inequalities (397-449), and the
-  -- signed transport construction (493-709). main.tex:851-911 requires
-  -- the same transport applied to the chosen large two-pair event. The
-  -- choice and Jensen step (868-873,909-911) are now proved and used above.
-  -- Library entrywise Dirichlet comparison cannot supply this: it asks for
-  -- pointwise domination on non-neighbors, where exchangeProposal is zero.
-  -- The pinned sources have no Lorentzian/rank-weight quadratic-signature
-  -- theorem with which to discharge the conditional coefficient bounds.
-  -- These are same-paper proof obligations, not assumptions in Prior.
-  sorry
+  constructor
+  · exact TransversalVarianceBound.transversal_variance_bound
+      n r M₁ M₂ o₁ o₂ q w hn hfull hr h₁ h₂ hq hqone hw hgood H
+  · intro i k hik
+    let A := pairEvent i k (a i k) (b i k)
+    -- The paper constructs this current before choosing H. Its cost is
+    -- measured using the normalized ideal-exchange conductances κ, so the
+    -- conversion from the unnormalized coefficient is exactly 2n²/p₀.
+    suffices hflow : ∃ flow : FlowCertificate κ (conditionalMeanDemand π (.defect i k) A),
+        flowEnergy κ flow.current ≤ (8 + 32 * (n : ℝ)) * (2 * (n : ℝ) ^ 2 / p₀) by
+      obtain ⟨flow, hcost⟩ := hflow
+      have hb := flow.pairing_sq_le hκ
+        ((8 + 32 * (n : ℝ)) * (2 * (n : ℝ) ^ 2 / p₀)) hcost H
+      rw [conditional_mean_demand_pairing, hpotential] at hb
+      change (classMean π H (.defect i k) - eventMean π H A) ^ 2 ≤ _
+      calc
+        _ ≤ ((8 + 32 * (n : ℝ)) * (2 * (n : ℝ) ^ 2 / p₀)) * E := hb
+        _ = (8 + 32 * (n : ℝ)) * R := by dsimp [R]; ring
+    exact DefectMeanExchangeFlow.defect_mean_exchange_flow
+      n r M₁ M₂ o₁ o₂ q w hn hfull hr h₁ h₂ hq hqone hw hgood
+      i k hik (a i k) (b i k) (hlarge i k)
 
 end CountingMatroid.Analysis.ObservablePoincare
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r26 · handoff-rejected · observable-tree-flow-r26-20261008-v2 was also rejected with “mechanical admission rejected; retain all files” after a properly granted targeted Lake build succeeded; all four support files remain owned here, and the two same-paper obligations remain open.
+
+* r26 · handoff-rejected · observable-tree-flow-r26-20261008 was rejected with “mechanical admission rejected; retain all files”; the parent passed standalone elaboration and both child statements elaborated, but the two same-paper proofs remain open and ownership was not transferred.
+
+* r26 · decomposed · closed the n=1 case with constant two and proved the signed-flow energy criterion; the parent now applies separately elaborated TransversalVarianceBound and DefectMeanExchangeFlow, exposing the adaptive variance tree and the balanced-current construction for live parallel handoff.
+
+* r26 · partial · closed the n=1 case with constant two; proved the zero-conductance-safe signed-flow energy criterion and conditional-mean pairing in ExchangeFlowEnergy; the larger-ground defect-transfer branch now asks for the precise current and cost constructed at main.tex:511-709, while the binary-tree transversal estimate remains open.
+
+* r26 · partial · proved the zero-conductance-safe signed-flow energy criterion and conditional-mean pairing in ExchangeFlowEnergy; the defect-transfer branch now asks for the precise current and cost constructed at main.tex:511-709, while the binary-tree transversal estimate remains open.
 
 * current · partial · proved the projection variance decomposition and mass bookkeeping in ObservableVarianceDecomposition, and reduced the original open goal to the paper's transversal variance and defect-mean transport estimates; the normalization and final constants are proved.
 -/
