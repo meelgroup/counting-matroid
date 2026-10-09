@@ -3,6 +3,9 @@ import CountingMatroid.Analysis.ChainStepIntervalReplay
 import CountingMatroid.Analysis.BoundedUniformAbortMass
 import CountingMatroid.Analysis.ClassifiedStateSelection
 import CountingMatroid.Analysis.BoundedUniformSuccessWords
+import CountingMatroid.Analysis.BoundedUniformSubkernel
+import CountingMatroid.Analysis.SelectedMetropolisKernel
+import CountingMatroid.Analysis.CoveredChainIndexedSubkernel
 
 set_option autoImplicit false
 set_option backward.isDefEq.respectTransparency false
@@ -12,13 +15,11 @@ The one-transition finite-bit subkernel needed for recorded observation paths.
 Only successful transitions whose consumed interval fits in the supplied suffix
 are counted. This isolates rejection sampling and Metropolis acceptance from
 the quantitative whole-run coverage and stopping-prefix composition arguments.
-The zero-length suffix case is proved. On nonsingleton grounds, the comparison
-also holds for suffixes shorter than a nonholding attempt's two index words
-plus its laziness bit, and for every suffix length when the trial cap is zero.
-The exact successful integer value/cursor law and fixed-endpoint continuation
-bound are proved in the imported BoundedUniformSuccessWords module. Aggregation
-over stopping endpoints and the selector/Metropolis transition comparison
-remain open.
+The comparison is proved for every suffix length. Exact successful draw
+mass is aggregated over all stopping cursors before composing fresh suffixes.
+The occupied/unoccupied selector is a bijection, and the rational acceptance
+branch, including its rejection contribution to the diagonal, agrees with the
+ideal Metropolis accept/reject kernel.
 -/
 
 namespace CountingMatroid.Analysis.CoveredChainStepSubkernel
@@ -142,26 +143,19 @@ theorem covered_chain_mass_forced_hold {n : ℕ} (r : ℕ)
   classical
   by_cases heq : state = next
   · rw [if_pos heq]
-    have hmass := BoundedUniformSuccessWords.bounded_uniform_continuation_mass
-      head 1 2 t 0 1 (by omega) (by omega) (by omega)
-      (by simpa [show (2 - 1).log2 = 0 by decide] using Nat.succ_le_of_lt ht)
-      (fun _ => True) 1 (by norm_num) (by
-        intro pref _
-        simp [FiniteStoppedFiberMass.fairMass, card_vector])
-    have hm : FiniteStoppedFiberMass.fairMass head t (fun tape =>
-        (boundedUniform tape 1 2 head.length).val = (some 1, head.length + 1)) ≤
-        (1 / 2 : ℝ) := by
-      simpa [show (2 - 1).log2 = 0 by decide] using hmass
+    have hm := BoundedUniformSubkernel.bounded_uniform_covered_mass
+      head 1 2 t 1 (by omega) (by omega)
     have hbound := FiniteStoppedFiberMass.fairMass_mono head t
       (fun tape => ∃ stop, stop ≤ head.length + t ∧
         (chainStep r o₁ o₂ tape trials q weights state head.length).val =
           some (next, stop))
-      (fun tape => (boundedUniform tape 1 2 head.length).val =
-        (some 1, head.length + 1)) (by
+      (fun tape => ∃ stop, stop ≤ head.length + t ∧
+        (boundedUniform tape 1 2 head.length).val = (some 1, stop)) (by
       intro suffix hs
       obtain ⟨stop, hstop, hrun⟩ := hs
       have hb := hhold suffix stop hstop hrun
       have hb' : FiniteStoppedFiberMass.finiteTape (head ++ suffix.val) head.length = true := hb
+      refine ⟨head.length + 1, by omega, ?_⟩
       rw [BoundedUniformAbortMass.boundedUniform_value _ 1 2 _ (by omega)]
       simp [BoundedUniformAbortMass.sampleWords, BoundedUniformAbortMass.readWord,
         show (2 - 1).log2 = 0 by decide, hb'])
@@ -259,37 +253,29 @@ theorem covered_chain_step_subkernel {n : ℕ} (r : ℕ)
         exact ExchangeProposalGeometry.ideal_chain_lazy r o₁ o₂ q weights hn hq hw state hcard
       · rw [if_neg heq]
         exact (idealChain r o₁ o₂ q weights hn hq hw).coe_nonneg state next
-    · -- The joint successful value/cursor law and its fixed-endpoint fresh
-      -- continuation bound are now proved in BoundedUniformSuccessWords.
-      -- BLOCKER (missing local lemmas): aggregate these endpoint bounds over
-      -- k < trials to obtain a successful value mass at most 1 / v, retaining
-      -- uniform fresh-suffix continuation bounds at every endpoint. The
-      -- geometric coefficients are independent of the returned value, but
-      -- the three adaptive draws cannot be multiplied before disintegration.
-      -- Next, the selector bridge must show for each element of state (resp.
-      -- stateᶜ) a unique k : Fin n with selectPaired state true k (resp. false)
-      -- returning that element. classified_state_selection proves only
-      -- existence of a result for each index; it does not identify the
-      -- uniform index sum with exchange_proposal_average. After these two
-      -- steps, identify numerator/denominator acceptance with the rational
-      -- weight ratio, including rejection contributions to the diagonal.
-      -- A direct fixed-endpoint stopped_fiber_bound supplies a coefficient
-      -- times a continuation bound; it does not close this unsummed chain
-      -- comparison. The first fair-bit split below is independent of that
-      -- missing weighted multi-draw argument.
-      unfold coveredChainStepMass
-      rw [FiniteStoppedFiberMass.sum_split t 1 (by omega)
-        (fun bits => if ∃ stop, stop ≤ head.length + t ∧
-          (chainStep r o₁ o₂ (fun i => ((head ++ bits)[i]?).getD false)
-            trials q weights state head.length).val = some (next, stop)
-          then 1 / (2 : ℝ) ^ t else 0)]
-      sorry
+    · rw [SelectedMetropolisKernel.selected_metropolis_kernel
+        r o₁ o₂ q weights hn hq hw state next hcard]
+      have hm := CoveredChainIndexedSubkernel.covered_chain_indexed_mass
+        r o₁ o₂ trials q weights hn hq hw state next hcard hvalid head t htpos
+      have hrepr : coveredChainStepMass r o₁ o₂ trials q weights head t state next =
+          FiniteStoppedFiberMass.fairMass head t (fun tape =>
+            ∃ stop, stop ≤ head.length + t ∧
+              (chainStep r o₁ o₂ tape trials q weights state head.length).val =
+                some (next, stop)) := by
+        unfold coveredChainStepMass FiniteStoppedFiberMass.fairMass
+          FiniteStoppedFiberMass.finiteTape
+        apply Finset.sum_congr rfl
+        intro suffix _
+        split_ifs <;> rfl
+      rw [hrepr]
+      simpa only [CoveredChainIndexedSubkernel.indexedCandidate] using hm
 
 end CountingMatroid.Analysis.CoveredChainStepSubkernel
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · proved · summed covered successful draw endpoints before composition, proved the occupied/complement selector bijections, identified rational acceptance and rejection with the Metropolis outcome average, and closed the full one-step subkernel comparison. All new support declarations are proved.
 * 2026-10-09 · partial · proved the successful sampler value/cursor cylinder law and fixed-endpoint continuation bound in BoundedUniformSuccessWords, used them in the holding-mass proof, and strengthened nonholding consumption to two index words. The remaining branch is split at its first fair bit; aggregating the three adaptive draws and identifying selector uniformity with the Metropolis kernel remain open. No new unproved declaration introduced.
 * 2026-10-09 · partial · proved minimum successful integer-word consumption, propagated it through every nonholding chain leaf, and bounded holding-only covered mass by one-half. The target now closes when n ≥ 2 and t ≤ (n - 1).log2 + 1, or when n ≥ 2 and trials = 0. The remaining obligation is the successful value/cursor counting law, with its required formula recorded at the open branch; no new proof debt introduced.
 * 2026-10-09 · decomposed · isolated the covered one-transition comparison; zero suffix mass follows by replay onto an all-holding tape. Positive-length comparison needs successful rejection-word counting, then the established proposal geometry.
