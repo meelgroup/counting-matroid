@@ -2,8 +2,10 @@ import CountingMatroid.Analysis.ExchangeProposalGeometry
 import CountingMatroid.Analysis.ChainStepIntervalReplay
 import CountingMatroid.Analysis.BoundedUniformAbortMass
 import CountingMatroid.Analysis.ClassifiedStateSelection
+import CountingMatroid.Analysis.BoundedUniformSuccessWords
 
 set_option autoImplicit false
+set_option backward.isDefEq.respectTransparency false
 
 /-!
 The one-transition finite-bit subkernel needed for recorded observation paths.
@@ -11,9 +13,12 @@ Only successful transitions whose consumed interval fits in the supplied suffix
 are counted. This isolates rejection sampling and Metropolis acceptance from
 the quantitative whole-run coverage and stopping-prefix composition arguments.
 The zero-length suffix case is proved. On nonsingleton grounds, the comparison
-also holds for suffixes shorter than a nonholding attempt's first index word
+also holds for suffixes shorter than a nonholding attempt's two index words
 plus its laziness bit, and for every suffix length when the trial cap is zero.
-The remaining successful-draw transition comparison is open.
+The exact successful integer value/cursor law and fixed-endpoint continuation
+bound are proved in the imported BoundedUniformSuccessWords module. Aggregation
+over stopping endpoints and the selector/Metropolis transition comparison
+remain open.
 -/
 
 namespace CountingMatroid.Analysis.CoveredChainStepSubkernel
@@ -43,24 +48,16 @@ theorem bounded_uniform_success_consumes_word
     (tape : ℕ → Bool) (trials v start value stop : ℕ) (hv : 2 ≤ v)
     (h : (boundedUniform tape trials v start).val = (some value, stop)) :
     start + ((v - 1).log2 + 1) ≤ stop := by
-  rw [BoundedUniformAbortMass.boundedUniform_value tape trials v start hv] at h
-  induction trials generalizing start with
-  | zero => cases h
-  | succ trials ih =>
-    simp only [BoundedUniformAbortMass.sampleWords, Option.isSome_none,
-      Bool.false_eq_true, ite_false] at h
-    split at h
-    · rw [BoundedUniformAbortMass.sampleWords_some] at h
-      have hc := congrArg Prod.snd h
-      rw [BoundedUniformAbortMass.readWord_cursor] at hc
-      exact hc.le
-    · have hc := ih (BoundedUniformAbortMass.readWord tape
-        ((v - 1).log2 + 1) 0 start).2 h
-      rw [BoundedUniformAbortMass.readWord_cursor] at hc
-      omega
+  obtain ⟨k, _, hstop, _, _, _⟩ :=
+    (BoundedUniformSuccessWords.bounded_uniform_success_words
+      tape trials v start value stop hv).mp h
+  rw [hstop]
+  have hm : ((v - 1).log2 + 1) ≤ (k + 1) * ((v - 1).log2 + 1) :=
+    Nat.le_mul_of_pos_left _ (by omega)
+  omega
 
 /-- INTERNAL: Every nonholding successful chain attempt on a nonsingleton
-ground consumes a complete first index word after its laziness bit.
+ground consumes both complete index words after its laziness bit.
 TEXLINE: main.tex:746-751,1392-1401 -/
 theorem chain_step_nonhold_consumes_word {n : ℕ} (r : ℕ)
     (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool)
@@ -68,7 +65,7 @@ theorem chain_step_nonhold_consumes_word {n : ℕ} (r : ℕ)
     (state next : PairedSet n) (start stop : ℕ) (hn : 2 ≤ n)
     (hb : tape start = false)
     (h : (chainStep r o₁ o₂ tape trials q weights state start).val =
-      some (next, stop)) : start + 1 + ((n - 1).log2 + 1) ≤ stop := by
+      some (next, stop)) : start + 1 + 2 * ((n - 1).log2 + 1) ≤ stop := by
   unfold chainStep at h
   simp +instances only [Arlib.Computation.Charged.val_bind,
     Model.Operations.fairBit, Model.Operations.successor,
@@ -83,45 +80,50 @@ theorem chain_step_nonhold_consumes_word {n : ℕ} (r : ℕ)
       simp +instances only [ha, Arlib.Computation.Charged.val_bind] at h
       have hA := bounded_uniform_success_consumes_word tape trials n
         (start + 1) value stopA hn ha
-      have hB := (BoundedUniformReplay.boundedUniform_interval_replay
-        trials n stopA tape).1
-      have hC (v : ℕ) := (BoundedUniformReplay.boundedUniform_interval_replay
-        trials v (boundedUniform tape trials n stopA).val.2 tape).1
-      dsimp only at hB hC
-      split at h
-      · cases h
-      · simp +instances only [Arlib.Computation.Charged.val_bind] at h
-        split at h
-        · simp +instances only [Arlib.Computation.Charged.val_bind,
-            Model.Operations.erasePaired, Model.Operations.insertPaired,
-            Arlib.Computation.Charged.val_opMany] at h
+      cases hb : (boundedUniform tape trials n stopA).val with
+      | mk choiceB stopB =>
+        cases choiceB with
+        | none =>
+          simp +instances only [hb, Arlib.Computation.Charged.val_pure] at h
+          cases h
+        | some valueB =>
+          simp +instances only [hb, Arlib.Computation.Charged.val_bind] at h
+          have hB := bounded_uniform_success_consumes_word tape trials n
+            stopA valueB stopB hn hb
+          have hC (v : ℕ) := (BoundedUniformReplay.boundedUniform_interval_replay
+            trials v stopB tape).1
+          dsimp only at hC
           split at h
-          · have he := congrArg (fun out => out.map Prod.snd) h
-            simp only [Arlib.Computation.Charged.val_pure, Option.map_some, Option.some.injEq] at he
-            omega
-          · simp +instances only [Arlib.Computation.Charged.val_bind] at h
+          · simp +instances only [Arlib.Computation.Charged.val_bind,
+              Model.Operations.erasePaired, Model.Operations.insertPaired,
+              Arlib.Computation.Charged.val_opMany] at h
             split at h
-            · rename_i old new ho hn
-              simp +instances only [Arlib.Computation.Charged.val_bind] at h
+            · have he := congrArg (fun out => out.map Prod.snd) h
+              simp only [Arlib.Computation.Charged.val_pure, Option.map_some, Option.some.injEq] at he
+              omega
+            · simp +instances only [Arlib.Computation.Charged.val_bind] at h
               split at h
-              · simp +instances only [Arlib.Computation.Charged.val_bind,
-                  Model.Operations.ratDiv, Model.Operations.rationalDenominator,
-                  Model.Operations.rationalNumerator,
-                  Arlib.Computation.Charged.val_opMany] at h
-                have hc := hC (new / old).den
+              · rename_i old new ho hn
+                simp +instances only [Arlib.Computation.Charged.val_bind] at h
                 split at h
-                · cases h
-                · simp +instances only [Arlib.Computation.Charged.val_bind] at h
+                · simp +instances only [Arlib.Computation.Charged.val_bind,
+                    Model.Operations.ratDiv, Model.Operations.rationalDenominator,
+                    Model.Operations.rationalNumerator,
+                    Arlib.Computation.Charged.val_opMany] at h
+                  have hc := hC (new / old).den
                   split at h
-                  all_goals
-                    have he := congrArg (fun out => out.map Prod.snd) h
-                    simp only [Arlib.Computation.Charged.val_pure, Option.map_some, Option.some.injEq] at he
-                    omega
-              · have he := congrArg (fun out => out.map Prod.snd) h
-                simp only [Arlib.Computation.Charged.val_pure, Option.map_some, Option.some.injEq] at he
-                omega
-            · cases h
-        · cases h
+                  · cases h
+                  · simp +instances only [Arlib.Computation.Charged.val_bind] at h
+                    split at h
+                    all_goals
+                      have he := congrArg (fun out => out.map Prod.snd) h
+                      simp only [Arlib.Computation.Charged.val_pure, Option.map_some, Option.some.injEq] at he
+                      omega
+                · have he := congrArg (fun out => out.map Prod.snd) h
+                  simp only [Arlib.Computation.Charged.val_pure, Option.map_some, Option.some.injEq] at he
+                  omega
+              · cases h
+          · cases h
 
 /-- INTERNAL: If covered successes force the laziness bit, their finite
 suffix mass is at most one-half at the original state and zero elsewhere.
@@ -138,48 +140,42 @@ theorem covered_chain_mass_forced_hold {n : ℕ} (r : ℕ)
     coveredChainStepMass r o₁ o₂ trials q weights head t state next ≤
       if state = next then (1 / 2 : ℝ) else 0 := by
   classical
-  let event := fun suffix : List.Vector Bool t => ∃ stop : ℕ,
-    stop ≤ head.length + t ∧
-      (chainStep r o₁ o₂ (fun i => ((head ++ suffix.val)[i]?).getD false)
-        trials q weights state head.length).val = some (next, stop)
-  have hbit (suffix : List.Vector Bool t) (hs : event suffix) :
-      suffix.get ⟨0, ht⟩ = true := by
-    obtain ⟨stop, hstop, hrun⟩ := hs
-    have hb := hhold suffix stop hstop hrun
-    rw [List.getElem?_append_right (by omega), Nat.sub_self,
-      List.getElem?_eq_getElem (by simpa only [suffix.property] using ht),
-      Option.getD_some] at hb
-    exact hb
   by_cases heq : state = next
   · rw [if_pos heq]
-    have hc := BoundedUniformAbortMass.forced_bits_card t {⟨0, ht⟩} event (by
-      intro suffix hs i hi
-      have hi0 : i = ⟨0, ht⟩ := Finset.mem_singleton.mp hi
-      subst i
-      exact hbit suffix hs)
-    simp only [Finset.card_singleton] at hc
-    have hm : coveredChainStepMass r o₁ o₂ trials q weights head t state next =
-        ((Finset.univ.filter event).card : ℝ) / (2 : ℝ) ^ t := by
-      unfold coveredChainStepMass
-      change (∑ suffix : List.Vector Bool t,
-        if event suffix then 1 / (2 : ℝ) ^ t else 0) = _
-      rw [← Finset.sum_filter]
-      simp only [Finset.sum_const, nsmul_eq_mul, mul_one_div]
-    rw [hm]
-    calc
-      _ ≤ ((2 ^ (t - 1) : ℕ) : ℝ) / (2 : ℝ) ^ t := by
-        exact div_le_div_of_nonneg_right (Nat.cast_le.mpr (by
-          convert hc using 1
-          congr 1
-          ext suffix
-          simp only [Finset.mem_filter])) (by positivity)
-      _ = 1 / 2 := by
-        rw [Nat.cast_pow, Nat.cast_ofNat,
-          show (2 : ℝ) ^ t = 2 ^ (t - 1) * 2 by
-            conv_lhs => rw [show t = (t - 1) + 1 by omega]
-            rw [pow_succ]]
-        have hp : (2 : ℝ) ^ (t - 1) ≠ 0 := by positivity
-        field_simp
+    have hmass := BoundedUniformSuccessWords.bounded_uniform_continuation_mass
+      head 1 2 t 0 1 (by omega) (by omega) (by omega)
+      (by simpa [show (2 - 1).log2 = 0 by decide] using Nat.succ_le_of_lt ht)
+      (fun _ => True) 1 (by norm_num) (by
+        intro pref _
+        simp [FiniteStoppedFiberMass.fairMass, card_vector])
+    have hm : FiniteStoppedFiberMass.fairMass head t (fun tape =>
+        (boundedUniform tape 1 2 head.length).val = (some 1, head.length + 1)) ≤
+        (1 / 2 : ℝ) := by
+      simpa [show (2 - 1).log2 = 0 by decide] using hmass
+    have hbound := FiniteStoppedFiberMass.fairMass_mono head t
+      (fun tape => ∃ stop, stop ≤ head.length + t ∧
+        (chainStep r o₁ o₂ tape trials q weights state head.length).val =
+          some (next, stop))
+      (fun tape => (boundedUniform tape 1 2 head.length).val =
+        (some 1, head.length + 1)) (by
+      intro suffix hs
+      obtain ⟨stop, hstop, hrun⟩ := hs
+      have hb := hhold suffix stop hstop hrun
+      have hb' : FiniteStoppedFiberMass.finiteTape (head ++ suffix.val) head.length = true := hb
+      rw [BoundedUniformAbortMass.boundedUniform_value _ 1 2 _ (by omega)]
+      simp [BoundedUniformAbortMass.sampleWords, BoundedUniformAbortMass.readWord,
+        show (2 - 1).log2 = 0 by decide, hb'])
+    have hrepr : coveredChainStepMass r o₁ o₂ trials q weights head t state next =
+        FiniteStoppedFiberMass.fairMass head t (fun tape =>
+          ∃ stop, stop ≤ head.length + t ∧
+            (chainStep r o₁ o₂ tape trials q weights state head.length).val =
+              some (next, stop)) := by
+      unfold coveredChainStepMass FiniteStoppedFiberMass.fairMass FiniteStoppedFiberMass.finiteTape
+      apply Finset.sum_congr rfl
+      intro suffix _
+      split_ifs <;> rfl
+    rw [hrepr]
+    exact hbound.trans hm
   · rw [if_neg heq]
     have hz : coveredChainStepMass r o₁ o₂ trials q weights head t state next = 0 := by
       unfold coveredChainStepMass
@@ -233,7 +229,7 @@ theorem covered_chain_step_subkernel {n : ℕ} (r : ℕ)
     rw [hzero]
     exact (idealChain r o₁ o₂ q weights hn hq hw).coe_nonneg state next
   · have htpos : 0 < t := Nat.pos_of_ne_zero ht
-    by_cases hsmall : 2 ≤ n ∧ (t ≤ (n - 1).log2 + 1 ∨ trials = 0)
+    by_cases hsmall : 2 ≤ n ∧ (t ≤ 2 * ((n - 1).log2 + 1) ∨ trials = 0)
     · have hm := covered_chain_mass_forced_hold r o₁ o₂ trials q weights
         head t state next htpos (by
           intro suffix stop hstop hrun
@@ -263,24 +259,30 @@ theorem covered_chain_step_subkernel {n : ℕ} (r : ℕ)
         exact ExchangeProposalGeometry.ideal_chain_lazy r o₁ o₂ q weights hn hq hw state hcard
       · rw [if_neg heq]
         exact (idealChain r o₁ o₂ q weights hn hq hw).coe_nonneg state next
-    · -- Concrete route: split the laziness bit, group the two index draws
-      -- and acceptance draw by their consumed stopping prefixes, and use
-      -- exchange_proposal_average to identify the ideal proposal. The joint
-      -- successful boundedUniform value/cursor law is required here; the
-      -- abort bound and interval replay alone do not supply that law.
-      -- BLOCKER (missing local lemma): for v ≥ 2, width = (v - 1).log2 + 1,
-      -- k < trials, a < v, and (k + 1) * width ≤ t, the fair-suffix mass
-      -- of boundedUniform returning (some a, head.length + (k + 1) * width)
-      -- must be identified as
-      --   ((2 ^ width - v : ℕ) : ℝ) ^ k / (2 : ℝ) ^ ((k + 1) * width).
-      -- This value/cursor law, followed by fresh-suffix conditioning, supplies
-      -- both the uniform proposal indices and the rational acceptance/rejection
-      -- probabilities. forced_bits_card only bounds aborts or holding paths;
-      -- interval replay identifies cylinders but does not count accepted words.
-      -- The subsequent selector bridge must identify the index-to-element
-      -- maps as bijections onto state and stateᶜ. classified_state_selection
-      -- establishes lookup existence, but not that uniformity statement.
+    · -- The joint successful value/cursor law and its fixed-endpoint fresh
+      -- continuation bound are now proved in BoundedUniformSuccessWords.
+      -- BLOCKER (missing local lemmas): aggregate these endpoint bounds over
+      -- k < trials to obtain a successful value mass at most 1 / v, retaining
+      -- uniform fresh-suffix continuation bounds at every endpoint. The
+      -- geometric coefficients are independent of the returned value, but
+      -- the three adaptive draws cannot be multiplied before disintegration.
+      -- Next, the selector bridge must show for each element of state (resp.
+      -- stateᶜ) a unique k : Fin n with selectPaired state true k (resp. false)
+      -- returning that element. classified_state_selection proves only
+      -- existence of a result for each index; it does not identify the
+      -- uniform index sum with exchange_proposal_average. After these two
+      -- steps, identify numerator/denominator acceptance with the rational
+      -- weight ratio, including rejection contributions to the diagonal.
+      -- A direct fixed-endpoint stopped_fiber_bound supplies a coefficient
+      -- times a continuation bound; it does not close this unsummed chain
+      -- comparison. The first fair-bit split below is independent of that
+      -- missing weighted multi-draw argument.
       unfold coveredChainStepMass
+      rw [FiniteStoppedFiberMass.sum_split t 1 (by omega)
+        (fun bits => if ∃ stop, stop ≤ head.length + t ∧
+          (chainStep r o₁ o₂ (fun i => ((head ++ bits)[i]?).getD false)
+            trials q weights state head.length).val = some (next, stop)
+          then 1 / (2 : ℝ) ^ t else 0)]
       sorry
 
 end CountingMatroid.Analysis.CoveredChainStepSubkernel
@@ -288,6 +290,7 @@ end CountingMatroid.Analysis.CoveredChainStepSubkernel
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · partial · proved the successful sampler value/cursor cylinder law and fixed-endpoint continuation bound in BoundedUniformSuccessWords, used them in the holding-mass proof, and strengthened nonholding consumption to two index words. The remaining branch is split at its first fair bit; aggregating the three adaptive draws and identifying selector uniformity with the Metropolis kernel remain open. No new unproved declaration introduced.
 * 2026-10-09 · partial · proved minimum successful integer-word consumption, propagated it through every nonholding chain leaf, and bounded holding-only covered mass by one-half. The target now closes when n ≥ 2 and t ≤ (n - 1).log2 + 1, or when n ≥ 2 and trials = 0. The remaining obligation is the successful value/cursor counting law, with its required formula recorded at the open branch; no new proof debt introduced.
 * 2026-10-09 · decomposed · isolated the covered one-transition comparison; zero suffix mass follows by replay onto an all-holding tape. Positive-length comparison needs successful rejection-word counting, then the established proposal geometry.
 -/
