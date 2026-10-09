@@ -1,7 +1,7 @@
 import CountingMatroid.Analysis.IdealExchangeChain
 import CountingMatroid.Analysis.PhaseObservationExperiment
 import CountingMatroid.Analysis.PositiveTimeTraceKernel
-import CountingMatroid.Analysis.SuccessfulPrefixRestartEndpointMass
+import CountingMatroid.Analysis.RestartSuffixMassDefinition
 import CountingMatroid.Analysis.RestartPhaseIntervalReplay
 
 import CountingMatroid.Analysis.CappedTraceIterationSubkernel
