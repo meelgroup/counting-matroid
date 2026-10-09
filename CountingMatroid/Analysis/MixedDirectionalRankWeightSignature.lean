@@ -1,5 +1,7 @@
 import CountingMatroid.Analysis.BinaryRankWeightSignature
 import CountingMatroid.Analysis.QuadraticSignatureHyperplane
+import CountingMatroid.Analysis.LorentzianDirectionalSignature
+import CountingMatroid.Analysis.RankWeightCoordinateLorentzian
 
 set_option autoImplicit false
 
@@ -9,12 +11,17 @@ signature theorem. Linear substitution and scalar closure are proved in the
 parent's other support modules. The empty direction list is handled by
 the two-element rank-weight calculation, and an identically zero direction
 anywhere in the list gives the zero quadratic form. The remaining case,
-where the list is nonempty and every direction is nonzero,
-is reduced to the cited Brändén–Huh positive-signature bound. The passage
-from that bound to a hyperplane is proved by Mathlib diagonalization in
-`QuadraticSignatureHyperplane`; the pinned libraries contain no applicable
-Lorentzian base or closure theorem. Separate hyperplane bounds for summands
-do not establish the common-source compatibility needed here.
+where the list is nonempty and every direction is nonzero, now uses two
+separate prerequisites: the matroid-specific coordinate Lorentzian certificate
+in `RankWeightCoordinateLorentzian`, and the general nonnegative directional
+signature consequence in `LorentzianDirectionalSignature`. Both support files
+were released through a compiler-validated scheduler handoff; this module
+does not supply their full proofs. Their basic degree/coefficient facts and
+degree-two closure case are proved. The passage from a signature bound to a
+hyperplane is proved by Mathlib diagonalization in
+`QuadraticSignatureHyperplane`. The target proof contains no local hole,
+but its full proof depends on both prerequisites; the pinned libraries contain
+no applicable Lorentzian API.
 -/
 
 namespace CountingMatroid.Analysis.MixedDirectionalRankWeightSignature
@@ -74,6 +81,8 @@ theorem mixed_directional_rank_weight_nonpositive_hyperplane {α : Type}
         N q hq hqone (by simpa using hlength.symm)
     | cons d ds =>
       apply QuadraticSignatureHyperplane.hasNonpositiveHyperplane_of_sigPos_le_one
+      -- The missing published inputs are now separate child obligations.
+      -- The following comments preserve the pre-decomposition proof evidence.
       -- The linear-algebra implication is now proved: diagonalization
       -- deletes the sole positive square and transports its kernel back.
       -- The remaining goal is exactly sigPos of the displayed Hessian ≤ 1;
@@ -106,13 +115,17 @@ theorem mixed_directional_rank_weight_nonpositive_hyperplane {α : Type}
       -- coordinate derivative Hessians cannot be added into a shared one.
       -- RankWeightQuadraticSignature imports and uses this theorem, so its
       -- general signature declaration cannot be imported as a proof of it.
-      sorry
+      exact LorentzianDirectionalSignature.directional_hessian_sigPos_le_one _ _
+        (RankWeightCoordinateLorentzian.rank_weight_coordinate_lorentzian
+          N hfull q hq hqone) (d :: ds) hds hlength
 
 end CountingMatroid.Analysis.MixedDirectionalRankWeightSignature
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · validated parallel handoff · request agent5-coordinate-lorentzian-20261009-1 accepted at semantic-use stage; LorentzianDirectionalSignature and RankWeightCoordinateLorentzian transferred to scheduler ownership. The unchanged target has a complete proof body using both children; the mathematical proof debt is explicitly retained in their open base-certificate and directional-closure declarations.
+* 2026-10-09 · decomposed · introduced the coordinate Lorentzian certificate and separated the matroid-specific certificate from general nonnegative directional closure. Proved the basic homogeneous-degree/coefficient invariants and the general degree-two closure case. The target uses both children; support exchange, higher-degree coordinate signatures, and general directional closure remain open for live OPEN handoff. No Prior field or assumption was added.
 * 2026-10-09 · partial · proved QuadraticSignatureHyperplane.hasNonpositiveHyperplane_of_sigPos_le_one using Mathlib's weighted-square diagonalization and signature count; the nonempty branch now uses it. The remaining single hole is the at-most-one-positive Hessian signature bound from the cited Lorentzian base and closure input, absent from the pinned libraries. No assumption or open child lemma was added.
 * 2026-10-09 · blocked · independently verified the borrowed-library blocker with symlink-following searches of all pinned Lean sources, including matroid/polynomial statement shapes and quadratic-signature APIs; no applicable base or closure input was found. Preserved every proof and the exact target, adding only diagnostic evidence; no new lemma, assumption, proof debt or import.
 * 2026-10-09 · partial · proved mixed_derivatives_eq_zero_of_zero_mem and used it to close every list containing an identically zero direction, preserving the empty-list proof. Statement-shape searches including polynomial stability, complete log-concavity, quadratic signature and Arlib's local-to-global/PSD APIs found no applicable borrowed input. The nonempty all-nonzero case remains the same single proof hole; no assumption, child proof debt or import was added.
