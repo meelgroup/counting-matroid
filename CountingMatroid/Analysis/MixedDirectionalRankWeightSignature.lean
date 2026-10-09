@@ -78,6 +78,16 @@ theorem mixed_directional_rank_weight_nonpositive_hyperplane {α : Type}
       -- it does not establish that subspace for these matroid coefficients.
       -- Arlib's local-to-global variance identities and PSD-order closure
       -- likewise do not provide the required matroid-polynomial input.
+      -- Rechecked with hidden/ignored files included and package symlinks
+      -- followed: Mathlib's matroid sources contain no Polynomial or
+      -- MvPolynomial API; Arlib has no Matroid, MvPolynomial, pderiv or
+      -- eRk declaration. No Lorentzian, complete-log-concavity, real-stable
+      -- or hyperbolic-polynomial result was found in either library.
+      -- Precisely missing are: Lorentzianity of the displayed T_{q,N},
+      -- preservation by the nonnegative directional fold, and the quadratic
+      -- Hessian implication giving HasNonpositiveHyperplane. The available
+      -- QuadraticForm.sigPos_add_finrank_le_of_nonpos instead requires the
+      -- nonpositive subspace as a hypothesis; it cannot supply this witness.
       -- The cited input is main.tex:334-348, BH2020 Theorems 4.10, 2.10
       -- and Corollary 2.11. Propose this exact consequence as prior input;
       -- no field of Prior has been added or assumed here.
@@ -95,6 +105,7 @@ end CountingMatroid.Analysis.MixedDirectionalRankWeightSignature
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · blocked · independently verified the borrowed-library blocker with symlink-following searches of all pinned Lean sources, including matroid/polynomial statement shapes and quadratic-signature APIs; no applicable base or closure input was found. Preserved every proof and the exact target, adding only diagnostic evidence; no new lemma, assumption, proof debt or import.
 * 2026-10-09 · partial · proved mixed_derivatives_eq_zero_of_zero_mem and used it to close every list containing an identically zero direction, preserving the empty-list proof. Statement-shape searches including polynomial stability, complete log-concavity, quadratic signature and Arlib's local-to-global/PSD APIs found no applicable borrowed input. The nonempty all-nonzero case remains the same single proof hole; no assumption, child proof debt or import was added.
 * 2026-10-09 · blocked · proved the identically zero head-direction branch; searched pinned Mathlib and Arlib by Lorentzian/log-concave closure, matroid polynomial Hessian and positive signature without finding the cited input. Stdin probes verified the tail-length and binary-cardinality mismatches. Proposed this unchanged Brändén–Huh consequence as prior input; no new helper, assumption or import was introduced.
 * 2026-10-09 · open · stated the exact original-variable mixed-directional prerequisite and proved its empty-direction branch using BinaryRankWeightSignature; direct list induction cannot use its quadratic induction hypothesis on the cubic tail.
