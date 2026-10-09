@@ -6,8 +6,9 @@ set_option autoImplicit false
 The original-variable mixed-derivative prerequisite for the rank-weight
 signature theorem. Linear substitution and scalar closure are proved in the
 parent's other support modules. The empty direction list is handled by
-the two-element rank-weight calculation, and an identically zero head
-direction gives the zero quadratic form. The remaining nonempty-list case
+the two-element rank-weight calculation, and an identically zero direction
+anywhere in the list gives the zero quadratic form. The remaining case,
+where the list is nonempty and every direction is nonzero,
 is the cited Brändén–Huh input: the pinned libraries contain no applicable
 Lorentzian base or closure theorem. Separate hyperplane bounds for summands
 do not establish the common-source compatibility needed here.
@@ -17,6 +18,22 @@ namespace CountingMatroid.Analysis.MixedDirectionalRankWeightSignature
 
 open scoped BigOperators
 open QuadraticNonpositiveHyperplane
+
+/-- INTERNAL: A zero direction anywhere in the mixed-derivative list
+annihilates the polynomial, and all subsequent derivatives preserve zero.
+TEXLINE: main.tex:340-343 -/
+theorem mixed_derivatives_eq_zero_of_zero_mem {σ : Type} [Fintype σ]
+    (ds : List (σ → ℚ)) (f : MvPolynomial σ ℚ)
+    (hz : ∃ d ∈ ds, ∀ s, d s = 0) :
+    ds.foldr (fun d f => ∑ s, MvPolynomial.C (d s) * MvPolynomial.pderiv s f) f = 0 := by
+  induction ds with
+  | nil => simp only [List.not_mem_nil, false_and, exists_false] at hz
+  | cons d ds ih =>
+    obtain ⟨e, he, hezero⟩ := hz
+    rcases List.mem_cons.mp he with rfl | he
+    · simp only [List.foldr_cons, hezero, map_zero, zero_mul, Finset.sum_const_zero]
+    · rw [List.foldr_cons, ih ⟨e, he, hezero⟩]
+      simp only [map_zero, mul_zero, Finset.sum_const_zero]
 
 /-- PAPER: main.tex:334-348
 The original-variable hyperplane consequence of the cited Lorentzian base
@@ -39,23 +56,28 @@ theorem mixed_directional_rank_weight_nonpositive_hyperplane {α : Type}
     let g := ds.foldr (fun d f => ∑ s, MvPolynomial.C (d s) * MvPolynomial.pderiv s f) p
     HasNonpositiveHyperplane (Matrix.toQuadraticForm' (fun i j =>
       ((MvPolynomial.constantCoeff (MvPolynomial.pderiv i (MvPolynomial.pderiv j g)) : ℚ) : ℝ))) := by
-  induction ds with
-  | nil =>
-    exact BinaryRankWeightSignature.binary_tutte_nonpositive_hyperplane
-      N q hq hqone (by simpa using hlength.symm)
-  | cons d ds ih =>
-    by_cases hd : ∀ s, d s = 0
-    · dsimp only
-      simp only [List.foldr_cons, hd, map_zero, zero_mul, Finset.sum_const_zero,
-        Rat.cast_zero]
-      refine ⟨0, ?_⟩
-      intro v hv
-      change Matrix.toLinearMap₂' ℝ (0 : Matrix (Option α) (Option α) ℝ) v v ≤ 0
-      rw [map_zero]
-      simp
-    · -- BLOCKER: library name not found. Searches of pinned Mathlib and Arlib
-      -- by matroid rank-weight polynomial, Lorentzian/log-concave closure,
-      -- Hessian and positive signature found no applicable base/closure result.
+  by_cases hz : ∃ d ∈ ds, ∀ s, d s = 0
+  · dsimp only
+    rw [mixed_derivatives_eq_zero_of_zero_mem ds _ hz]
+    simp only [map_zero, Rat.cast_zero]
+    refine ⟨0, ?_⟩
+    intro v hv
+    change Matrix.toLinearMap₂' ℝ (0 : Matrix (Option α) (Option α) ℝ) v v ≤ 0
+    rw [map_zero]
+    simp
+  · cases ds with
+    | nil =>
+      exact BinaryRankWeightSignature.binary_tutte_nonpositive_hyperplane
+        N q hq hqone (by simpa using hlength.symm)
+    | cons d ds =>
+      -- BLOCKER: library name not found. Statement-shape searches of pinned
+      -- Mathlib and Arlib found no rank-weight polynomial Hessian bound,
+      -- Lorentzian/complete-log-concavity invariant, or polynomial-stability
+      -- closure supplying the common nonpositive hyperplane. Mathlib's
+      -- quadratic signature API bounds dimension given a nonpositive subspace;
+      -- it does not establish that subspace for these matroid coefficients.
+      -- Arlib's local-to-global variance identities and PSD-order closure
+      -- likewise do not provide the required matroid-polynomial input.
       -- The cited input is main.tex:334-348, BH2020 Theorems 4.10, 2.10
       -- and Corollary 2.11. Propose this exact consequence as prior input;
       -- no field of Prior has been added or assumed here.
@@ -73,6 +95,7 @@ end CountingMatroid.Analysis.MixedDirectionalRankWeightSignature
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · partial · proved mixed_derivatives_eq_zero_of_zero_mem and used it to close every list containing an identically zero direction, preserving the empty-list proof. Statement-shape searches including polynomial stability, complete log-concavity, quadratic signature and Arlib's local-to-global/PSD APIs found no applicable borrowed input. The nonempty all-nonzero case remains the same single proof hole; no assumption, child proof debt or import was added.
 * 2026-10-09 · blocked · proved the identically zero head-direction branch; searched pinned Mathlib and Arlib by Lorentzian/log-concave closure, matroid polynomial Hessian and positive signature without finding the cited input. Stdin probes verified the tail-length and binary-cardinality mismatches. Proposed this unchanged Brändén–Huh consequence as prior input; no new helper, assumption or import was introduced.
 * 2026-10-09 · open · stated the exact original-variable mixed-directional prerequisite and proved its empty-direction branch using BinaryRankWeightSignature; direct list induction cannot use its quadratic induction hypothesis on the cubic tail.
 -/
