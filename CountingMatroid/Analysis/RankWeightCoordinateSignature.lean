@@ -6,8 +6,17 @@ set_option autoImplicit false
 
 /-! The matroid-specific coordinate Hessian bound, independently of the
 subset support exchange argument. Ground sizes at most two and derivatives
-beginning with two identical labels are verified; the general
-derivative-to-quadratic-signature result remains open. -/
+beginning with two identical labels are verified. The general bound remains
+an open borrowed dependency: main.tex:334-348 invokes Brändén–Huh (2020),
+Theorem 4.10, Theorem 2.10 and Corollary 2.11 without proving them.
+
+No independent rank-weight Lorentzian or Hessian-signature theorem was found
+in the pinned Mathlib or Arlib sources. The downstream
+`RankWeightCoordinateLorentzian.rank_weight_coordinate_lorentzian` cannot
+supply the missing input: it constructs its coordinate-signature field using
+this theorem. The generic coordinate and directional certificate APIs require
+that field as a hypothesis; they do not establish the matroid-specific bound.
+-/
 
 namespace CountingMatroid.Analysis.RankWeightCoordinateSignature
 
@@ -106,7 +115,16 @@ theorem rank_weight_coordinate_signature {α : Type} [Fintype α] [DecidableEq �
       | nil => simp only [List.length_nil] at hlength; omega
       | cons s xs =>
         simp only [List.foldr_cons]
-        -- BLOCKER: list induction cannot apply this theorem to the tail:
+        -- BLOCKER (library name not found): the borrowed Brändén–Huh
+        -- rank-weight signature result has no independent declaration in the
+        -- pinned libraries. Applying CoordinateLorentzian.coordinate_signature
+        -- in a stdin probe leaves exactly CoordinateLorentzian p |α|, whose
+        -- signature field is the present obligation. The downstream
+        -- rank_weight_coordinate_lorentzian constructs that field with this
+        -- theorem, so importing it would be both cyclic and circular.
+        -- PRIOR-PROPOSAL: carry this unchanged coordinate-signature statement,
+        -- cited at main.tex:334-348, rather than a stronger certificate.
+        -- Earlier route diagnosis: list induction cannot apply this theorem to the tail:
         -- its length plus two is |α|-1, whereas the tail polynomial still
         -- has degree three. A derivative in a label must first be identified
         -- with a contracted-matroid rank polynomial; a derivative in none
@@ -123,6 +141,7 @@ end CountingMatroid.Analysis.RankWeightCoordinateSignature
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · library dependency blocked · rechecked the target and its named dependencies; the file elaborates with its existing open signature warning. Searched 9,774 Mathlib and 385 Arlib Lean sources for Lorentzian, M-convex, Tutte/rank-generating, log-concavity, and matroid/polynomial/Hessian statements; found no applicable borrowed result. A stdin coordinate-certificate application exposes the missing certificate, and the downstream certificate explicitly calls this theorem. Proposed only the unchanged borrowed coordinate-signature statement as Prior input; preserved every proof and added no helper debt.
 * 2026-10-09 · partial · proved that iterated coordinate derivatives of a monomial decrease all exponents; consequently two repeated leading label derivatives annihilate the rank-weight polynomial after any tail. This closes an additional signature branch, without using positivity, full ground, or a Lorentzian assumption. The live handoff was deferred because LorentzianDirectionalSignature still had an active writer.
 * 2026-10-09 · open · separated the general coordinate signature from the independently proved subset support description; preserved the binary and vacuous cases. The nonempty-list route requires a degree-three derivative invariant or a contracted-rank-polynomial normal form, not the available two-element certificate.
 -/
