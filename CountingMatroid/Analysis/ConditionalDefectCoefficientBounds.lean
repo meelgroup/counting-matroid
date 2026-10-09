@@ -2,6 +2,7 @@ import CountingMatroid.Analysis.ConditionalDefectCoefficients
 import CountingMatroid.Analysis.ConditionalDefectExtractionCoefficients
 import CountingMatroid.Analysis.TwoPairSignatureBound
 import CountingMatroid.Analysis.DefectPartitionTriangle
+import CountingMatroid.Analysis.ConditionalOperationalCoefficients
 
 set_option autoImplicit false
 
@@ -15,10 +16,12 @@ coordinate-restriction coefficient calculations, selected-label derivatives,
 and exact q^n/n! normalization are proved in
 `ConditionalDefectExtractionCoefficients` and used below. The determinant
 and Schur consequences are connected to those descendants via the existing
-Bränden–Huh signature declaration. The remaining local gap identifies
-coefficients of `conditionedPairPolynomial` with conditional operational
-transversal and defect sums. No signature or operational identity is assumed
-as an extra theorem hypothesis.
+Bränden–Huh signature declaration. The exact normalization and operational
+rank-weight state sums are proved in `ConditionalSelectedStateSum`.
+`ConditionalOperationalCoefficients` carries the remaining independent
+occupancy-to-classification identity used here. The target has no local
+proof gap; completion depends on that coefficient bridge and the existing
+signature input. No extra theorem hypothesis is introduced.
 -/
 
 namespace CountingMatroid.Analysis.ConditionalDefectCoefficientBounds
@@ -57,9 +60,9 @@ theorem conditional_defect_coefficient_bounds (n r : ℕ)
   have hc (index : DefectIndex n) (he : σ index.emptyPair = none)
       (hf : σ index.fullPair = none) : 0 < D index :=
     defect_total_pos r o₁ o₂ q hq σ index he hf
-  -- This is the sole remaining operational coefficient boundary. All
-  -- ordinary-pair extractions and retained-coordinate substitutions below
-  -- are evaluated by proved coefficient-calculus lemmas, not by this gap.
+  -- The coefficient bridge uses the proved operational state-sum
+  -- representation; the determinant and Schur arguments below use its
+  -- exact pair and triple entries.
   have hcoeff :
       (∀ (i j : Fin n) (hij : i ≠ j), σ i = none → σ j = none →
         ∀ s t : Fin 2,
@@ -76,25 +79,9 @@ theorem conditional_defect_coefficient_bounds (n r : ℕ)
             (if s = t then 2 else 1) : ℚ) : ℝ) =
           threePairMatrix (D ⟨j, i, hij.symm⟩) (D ⟨i, j, hij⟩)
             (D ⟨j, k, hjk⟩) (D ⟨i, k, hik⟩) Z s t) := by
-    dsimp only [P]
-    simp_rw [conditioned_pair_tutte_coefficient_sum]
-    -- BLOCKER (main.tex:354-367,403-407): the coefficient calculations now
-    -- expose a finite sum of coefficients of the original Tutte polynomial.
-    -- Reindex its surviving exponent vectors by respecting paired n-sets:
-    -- their selected-label exponents must have exactly the occupancy encoded
-    -- by the requested exponent, with normalization q^n already checked.
-    -- Rewrite the resulting matroid rank weights using
-    -- PairedRankValue.paired_rank_eq_eRk and the transversal projection
-    -- identity to recover D and Z. No current local lemma carries out this
-    -- reindexing and operational coefficient identification.
-    -- The root extraction theorem has no σ, and omitted_polynomial sums
-    -- use complementary exponents: neither rewrites this expression.
-    -- A direct coeff_pderiv rewrite fails at the outer pair identification;
-    -- the proved masked-substitution coefficient sum resolves that boundary.
-    -- Derivatives at assigned labels and the n! cancellation are now proved
-    -- as well. The remaining finite support-to-state sum identity is not a
-    -- signature premise and cannot be discharged by positivity.
-    sorry
+    exact CountingMatroid.Analysis.ConditionalOperationalCoefficients.conditional_operational_coefficients
+      n r M₁ M₂ o₁ o₂ q hfull hr h₁ h₂ hq σ
+
   constructor
   · intro i j hij hi hj
     have hquad := conditioned_pair_quadratic M₁ M₂ q hq σ i j hij hi hj
@@ -130,6 +117,7 @@ end CountingMatroid.Analysis.ConditionalDefectCoefficientBounds
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · decomposed · proved arbitrary-assignment selected-state normalization, monomial conditioning, assignment equivalence and operational coefficient sums in ConditionalSelectedStateSum. The parent now uses ConditionalOperationalCoefficients for the remaining finite occupancy-to-classification reindexing; both downstream signature arguments are unchanged.
 * 2026-10-09 · partial · found and used the existing arbitrary-assignment descendants; proved ordinary-pair extraction, coordinate restriction, masked pair identification, selected-label derivative coefficients and the exact n! normalization in ConditionalDefectExtractionCoefficients. Connected both signature-to-inequality arguments. The single remaining gap is reindexing the surviving Tutte coefficient sum as the respecting operational state totals.
 * 2026-10-09 · partial · found and used the existing arbitrary-assignment descendants; proved exact ordinary-pair and retained-coordinate coefficient extraction in ConditionalDefectExtractionCoefficients. Connected both signature-to-inequality arguments. The single remaining gap is the selected-label Tutte coefficient identity before ordinary-pair extraction.
 * 2026-10-09 · blocked · searched the project and pinned libraries for the conditioned extraction at main.tex:403-417; only the root selected-triple extraction and unsigned omitted-polynomial coefficient sums exist. A Lean root-triangle application fails on the arbitrary-assignment type mismatch. Checked numerical witnesses showing positivity alone implies neither inequality; left the existing target gap in place without new proof debt or assumptions.
