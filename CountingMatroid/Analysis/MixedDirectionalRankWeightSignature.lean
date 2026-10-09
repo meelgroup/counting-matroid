@@ -1,4 +1,5 @@
 import CountingMatroid.Analysis.BinaryRankWeightSignature
+import CountingMatroid.Analysis.QuadraticSignatureHyperplane
 
 set_option autoImplicit false
 
@@ -9,7 +10,9 @@ parent's other support modules. The empty direction list is handled by
 the two-element rank-weight calculation, and an identically zero direction
 anywhere in the list gives the zero quadratic form. The remaining case,
 where the list is nonempty and every direction is nonzero,
-is the cited Brändén–Huh input: the pinned libraries contain no applicable
+is reduced to the cited Brändén–Huh positive-signature bound. The passage
+from that bound to a hyperplane is proved by Mathlib diagonalization in
+`QuadraticSignatureHyperplane`; the pinned libraries contain no applicable
 Lorentzian base or closure theorem. Separate hyperplane bounds for summands
 do not establish the common-source compatibility needed here.
 -/
@@ -70,6 +73,11 @@ theorem mixed_directional_rank_weight_nonpositive_hyperplane {α : Type}
       exact BinaryRankWeightSignature.binary_tutte_nonpositive_hyperplane
         N q hq hqone (by simpa using hlength.symm)
     | cons d ds =>
+      apply QuadraticSignatureHyperplane.hasNonpositiveHyperplane_of_sigPos_le_one
+      -- The linear-algebra implication is now proved: diagonalization
+      -- deletes the sole positive square and transports its kernel back.
+      -- The remaining goal is exactly sigPos of the displayed Hessian ≤ 1;
+      -- it still needs the cited matroid-polynomial base/closure input.
       -- BLOCKER: library name not found. Statement-shape searches of pinned
       -- Mathlib and Arlib found no rank-weight polynomial Hessian bound,
       -- Lorentzian/complete-log-concavity invariant, or polynomial-stability
@@ -105,6 +113,7 @@ end CountingMatroid.Analysis.MixedDirectionalRankWeightSignature
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · partial · proved QuadraticSignatureHyperplane.hasNonpositiveHyperplane_of_sigPos_le_one using Mathlib's weighted-square diagonalization and signature count; the nonempty branch now uses it. The remaining single hole is the at-most-one-positive Hessian signature bound from the cited Lorentzian base and closure input, absent from the pinned libraries. No assumption or open child lemma was added.
 * 2026-10-09 · blocked · independently verified the borrowed-library blocker with symlink-following searches of all pinned Lean sources, including matroid/polynomial statement shapes and quadratic-signature APIs; no applicable base or closure input was found. Preserved every proof and the exact target, adding only diagnostic evidence; no new lemma, assumption, proof debt or import.
 * 2026-10-09 · partial · proved mixed_derivatives_eq_zero_of_zero_mem and used it to close every list containing an identically zero direction, preserving the empty-list proof. Statement-shape searches including polynomial stability, complete log-concavity, quadratic signature and Arlib's local-to-global/PSD APIs found no applicable borrowed input. The nonempty all-nonzero case remains the same single proof hole; no assumption, child proof debt or import was added.
 * 2026-10-09 · blocked · proved the identically zero head-direction branch; searched pinned Mathlib and Arlib by Lorentzian/log-concave closure, matroid polynomial Hessian and positive signature without finding the cited input. Stdin probes verified the tail-length and binary-cardinality mismatches. Proposed this unchanged Brändén–Huh consequence as prior input; no new helper, assumption or import was introduced.
