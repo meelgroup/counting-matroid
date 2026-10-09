@@ -3,6 +3,7 @@ import CountingMatroid.Analysis.SlotBlockSignature
 import CountingMatroid.Analysis.OmittedSlotQuadratic
 import CountingMatroid.Analysis.OmittedTutteNormalization
 import CountingMatroid.Analysis.OmittedSlotCoefficientFormula
+import CountingMatroid.Analysis.SlotOmissionPatternCharacterization
 
 set_option autoImplicit false
 
@@ -13,9 +14,11 @@ split estimate and the real signature-to-orthogonal-nonpositivity implication
 are proved. The explicit block matrix is assembled on the old holes and two
 new coordinates. The dual-matroid omitted-label extraction is constructed;
 its descendant, homogeneous degree, and exact normalization to the operational
-omitted-rank polynomial are proved. Identifying the surviving omitted-label
-patterns with the final Hessian completion totals remains open; no signature
-or rank-weight inequality is assumed by the parent theorem.
+omitted-rank polynomial are proved. The surviving omitted-label patterns
+are identified exactly with the operational completion totals in all four
+Hessian blocks, including the zero diagonals. The imported rank-weight
+signature theorem and the proved block-form calculation give nonpositivity
+on the balanced hyperplane and hence the recursive split bound.
 -/
 
 namespace CountingMatroid.Analysis.DefectSlotSplitSignature
@@ -125,6 +128,7 @@ noncomputable def futureMatrix {n : ℕ} (r : ℕ) (o₁ o₂ : IndependenceOrac
         (q ^ (n - (CountingMatroid.Model.Subroutines.pairedRank r o₁ o₂ state).val) : ℚ)
       else 0
 
+set_option maxHeartbeats 1000000 in
 /-- PAPER: main.tex:584-625
 For the actual operational rank weights, the extracted omitted-element
 Hessian is nonpositive on the orthogonal complement of e_a+e_b. Its
@@ -174,27 +178,98 @@ theorem slot_split_signature (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
         r M₁ M₂ o₁ o₂ q hfull hr h₁ h₂ hq]
       rw [OmittedSlotCoefficientFormula.slot_quadratic_state_sum
         r o₁ o₂ q B R U hU t ht]
-      -- STILL OPEN: the exact coefficient identity for this constructed
-      -- omitted-label descendant. Its four blocks must be futureMatrix,
-      -- the two opposite child slotTotals, and u (with zero diagonals).
-      -- BUILD BLOCKER (2026-10-09): a later permitted rebuild failed in
-      -- the concurrently edited RankWeightQuadraticSignature.lean:460:
-      -- Unknown constant List.length_eq_zero.mp. Its .olean is absent, so
-      -- further parent/probe elaboration cannot run until that dependency
-      -- is repaired by its owner. Both new support modules were checked
-      -- and built successfully before this independent dependency change.
-      -- The descendant and degree-two obligations are now proved. What
-      -- remains is the purely combinatorial equivalence between
-      -- SlotOmissionPattern at single i 1 + single j 1 and the completion
-      -- predicates in the four blocks (including impossibility of the
-      -- diagonal patterns). The complete derivative/substitution calculus
-      -- now reduces the coefficient to an explicit finite state sum.
-      -- Normalization, oracle ranks, dual rank, and all extraction
-      -- multiplicities are proved in the two imported support modules.
-      -- The existing selected-triple extraction has type Fin 3 and uses
-      -- selected labels; it cannot rewrite a coefficient indexed by R⊕Bool.
-      -- This is a same-paper bridge, not a proposed Prior assumption.
-      sorry
+      simp_rw [SlotOmissionPatternCharacterization.omission_pattern_iff
+        B R U hBR hU hsize t ht]
+      have hnotpair (k : R) : (k : PairedGround n) ∉ ({(t, false), (t, true)} : PairedSet n) := by
+        intro hk
+        rcases Finset.mem_insert.mp hk with hk | hk
+        · exact (hU t ht false).2 (hk ▸ k.property)
+        · exact (hU t ht true).2 ((Finset.mem_singleton.mp hk) ▸ k.property)
+      have hset_old (k l : R) :
+          ((R ∪ {(t, false), (t, true)}).erase (k : PairedGround n)).erase l =
+            (R.erase k).erase l ∪ {(t, false), (t, true)} := by
+        rw [Finset.erase_union_distrib, Finset.erase_eq_of_notMem (hnotpair k),
+          Finset.erase_union_distrib, Finset.erase_eq_of_notMem (hnotpair l)]
+      have hpair (c : Bool) : ({(t, false), (t, true)} : PairedSet n).erase (t, c) =
+          {(t, !c)} := by
+        cases c <;> simp [Finset.erase_insert_of_ne, Prod.ext_iff]
+      have hset_mixed (k : R) (c : Bool) :
+          ((R ∪ {(t, false), (t, true)}).erase (k : PairedGround n)).erase (t, c) =
+            (insert (t, !c) R).erase k := by
+        rw [Finset.erase_union_distrib, Finset.erase_eq_of_notMem (hnotpair k),
+          Finset.erase_union_distrib, hpair,
+          Finset.erase_eq_of_notMem (by
+            intro he
+            exact (hU t ht c).2 (Finset.mem_of_mem_erase he))]
+        have hn : (k : PairedGround n) ≠ (t, !c) := by
+          intro hk
+          exact (hU t ht (!c)).2 (hk ▸ k.property)
+        rw [Finset.erase_insert_of_ne hn.symm]
+        exact Finset.union_singleton _ _
+      have hset_new :
+          ((R ∪ {(t, false), (t, true)}).erase (t, false)).erase (t, true) = R := by
+        rw [Finset.erase_union_distrib, hpair false,
+          Finset.erase_eq_of_notMem (hU t ht false).2,
+          Finset.erase_union_distrib, Finset.erase_eq_of_notMem (hU t ht true).2]
+        simp
+      have hcompletion (S : PairedSet n) (W : Finset (Fin n))
+          (hole : PairedGround n) (state : PairedSet n) (w : ℝ) :
+          (if (∃ choices : Fin n → Bool,
+            state = B ∪ S.erase hole ∪ W.image (fun t => (t, choices t))) then w else 0) =
+            if SlotCompletion B S W hole state then w else 0 := by
+        by_cases hs : SlotCompletion B S W hole state
+        · have hs₂ : ∃ choices : Fin n → Bool,
+              state = B ∪ S.erase hole ∪ W.image (fun t => (t, choices t)) := hs
+          rw [if_pos hs, if_pos hs₂]
+        · have hs₂ : ¬ ∃ choices : Fin n → Bool,
+              state = B ∪ S.erase hole ∪ W.image (fun t => (t, choices t)) := hs
+          rw [if_neg hs, if_neg hs₂]
+      have hset_mixed_rev (k : R) (c : Bool) :
+          ((R ∪ {(t, false), (t, true)}).erase (t, c)).erase (k : PairedGround n) =
+            (insert (t, !c) R).erase k := by
+        rw [Finset.erase_right_comm, hset_mixed]
+      have hset_new_rev :
+          ((R ∪ {(t, false), (t, true)}).erase (t, true)).erase (t, false) = R := by
+        rw [Finset.erase_right_comm, hset_new]
+      cases i with
+      | inl i =>
+        cases j with
+        | inl j =>
+          by_cases hij : i = j
+          · subst j
+            simp [SlotBlockSignature.slotBlockMatrix, V, futureMatrix]
+          · have hijv : (i : PairedGround n) ≠ (j : PairedGround n) :=
+              Subtype.val_injective.ne hij
+            simp only [SlotBlockSignature.slotBlockMatrix, V, futureMatrix,
+              ne_eq, Sum.inl.injEq, hij, hijv, not_false_eq_true, true_and, ite_false, mul_one,
+              OmittedSlotCoefficientFormula.activeLabel, Sum.elim_inl]
+            simp only [hset_old, Finset.union_assoc]
+            simp only [Rat.cast_sum, apply_ite (fun z : ℚ => (z : ℝ)), Rat.cast_zero]
+        | inr c =>
+          cases c <;>
+            simp only [SlotBlockSignature.slotBlockMatrix, a, b, sₐ, sᵦ, slotTotal,
+              ne_eq, Sum.inl_ne_inr, not_false_eq_true, true_and, Bool.false_eq_true, ite_false,
+              ite_true, mul_one, OmittedSlotCoefficientFormula.activeLabel,
+              Sum.elim_inl, Sum.elim_inr, hset_mixed, Bool.not_false, Bool.not_true] <;>
+            simp only [Rat.cast_sum, apply_ite (fun z : ℚ => (z : ℝ)), Rat.cast_zero, hcompletion]
+      | inr c =>
+        cases j with
+        | inl j =>
+          cases c <;>
+            simp only [SlotBlockSignature.slotBlockMatrix, a, b, sₐ, sᵦ, slotTotal,
+              ne_eq, Sum.inr_ne_inl, not_false_eq_true, true_and, Bool.false_eq_true, ite_false,
+              ite_true, mul_one, OmittedSlotCoefficientFormula.activeLabel,
+              Sum.elim_inl, Sum.elim_inr, hset_mixed_rev, Bool.not_false, Bool.not_true] <;>
+            simp only [Rat.cast_sum, apply_ite (fun z : ℚ => (z : ℝ)), Rat.cast_zero, hcompletion]
+        | inr d =>
+          cases c <;> cases d <;>
+            simp only [SlotBlockSignature.slotBlockMatrix, u, slotTotal, SlotCompletion,
+              ne_eq, Sum.inr.injEq, Bool.false_eq_true, Bool.true_eq_false, not_false_eq_true,
+              not_true_eq_false, true_and, false_and, ite_false, ite_true, mul_one,
+              Finset.sum_const_zero, Rat.cast_zero, zero_mul,
+              OmittedSlotCoefficientFormula.activeLabel, Sum.elim_inr, hset_new, hset_new_rev,
+              Finset.erase_insert (hU t ht false).2] <;>
+            simp only [Rat.cast_sum, apply_ite (fun z : ℚ => (z : ℝ)), Rat.cast_zero]
     rw [← hentries]
     exact RankWeightQuadraticSignature.branden_huh_quadratic_signature
       N hN q hq hqone G hdesc hdegree
@@ -282,6 +357,7 @@ end CountingMatroid.Analysis.DefectSlotSplitSignature
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · proved · closed slot_split_signature using the proved two-active-omission completion characterization; identified all four operational Hessian blocks and impossible diagonal patterns, retaining the existing signature and split-control proofs.
 * 2026-10-09 · partial, dependency blocked · proved exact dual-Tutte normalization, paired rank n, complement dual-rank identity, extraction multiplicities, and the finite-state omitted-slot coefficient formula in two new support modules; the parent uses both and still needs omission-pattern/completion equivalence. Both targeted builds and the parent elaboration passed before a concurrent RankWeightQuadraticSignature edit removed its object and failed a later permitted rebuild at List.length_eq_zero.mp.
 * 2026-10-09 · partial · proved the real signature-to-orthogonal-nonpositivity step and exact block-vector expansion in two support modules; the original open theorem now has only the explicit operational block-matrix sigPos bound open. Its all-slot omitted-polynomial descendant and coefficient extraction remain unavailable; no new open declaration or Prior assumption was introduced.
 -/
