@@ -4,6 +4,7 @@ import Mathlib.RingTheory.MvPolynomial.Homogeneous
 import Mathlib.RingTheory.MvPolynomial.EulerIdentity
 import Mathlib.LinearAlgebra.QuadraticForm.Signature
 import Mathlib.Data.Real.Basic
+import CountingMatroid.Analysis.LinearPolynomialChainRule
 
 set_option autoImplicit false
 
@@ -16,9 +17,12 @@ Mathlib's maximum dimension of a positive definite subspace over the reals.
 The empty- and singleton-ground signature cases are proved, using the
 homogeneous-degree invariant of every descendant. The signature case with
 at most one output variable follows from the ambient dimension bound. The remaining
-Bränden–Huh input below is an unresolved borrowed result: the pinned
-Mathlib and Arlib sources supply no Lorentzian rank-weight polynomial
-theorem or its closure properties.
+Bränden–Huh input below is an unresolved borrowed result. The exact normal
+form of a descendant is proved: nonnegative directional derivatives in the
+original variables, followed by one nonnegative linear substitution and a
+nonnegative scalar. A nonzero quadratic uses exactly ground-set size minus
+two derivatives. The unresolved signature bound is applied to this normal
+form; no Lorentzian assumption has been introduced.
 -/
 
 namespace CountingMatroid.Analysis.RankWeightQuadraticSignature
@@ -220,6 +224,94 @@ theorem tutte_descendant_coeff_nonneg {α τ : Type} [Fintype α]
     rw [MvPolynomial.coeff_C_mul]
     exact mul_nonneg hc (ih d)
 
+/-- INTERNAL: Every intermediate variable type in a descendant of a finite
+variable polynomial is finite, even though the constructors do not carry
+this instance explicitly.
+TEXLINE: main.tex:326-348 -/
+theorem descendant_finite_variables {σ τ : Type} [Finite σ]
+    (p : MvPolynomial σ ℚ) (g : MvPolynomial τ ℚ) (hg : Descendant p τ g) :
+    Finite τ := by
+  induction hg with
+  | initial => infer_instance
+  | derivative _ _ ih => exact ih
+  | substitute _ _ _ _ => infer_instance
+  | scale _ _ _ ih => exact ih
+
+/-- INTERNAL: Iterated directional differentiation in the original variable
+space. The list head is the last derivative applied.
+TEXLINE: main.tex:326-348 -/
+noncomputable def iteratedDirectionalDerivative {σ : Type} [Fintype σ]
+    (ds : List (σ → ℚ)) (p : MvPolynomial σ ℚ) : MvPolynomial σ ℚ :=
+  match ds with
+  | [] => p
+  | d :: ds => ∑ s, MvPolynomial.C (d s) *
+      MvPolynomial.pderiv s (iteratedDirectionalDerivative ds p)
+
+/-- INTERNAL: Normalize the whole descendant derivation into nonnegative
+directional derivatives in the original variable space followed by one
+nonnegative linear substitution and one nonnegative scalar. This is an exact
+polynomial identity, not an assumed Lorentzian closure property.
+TEXLINE: main.tex:326-348 -/
+theorem descendant_directional_normal_form {σ τ : Type} [instσ : Fintype σ]
+    (p : MvPolynomial σ ℚ) (g : MvPolynomial τ ℚ) (hg : Descendant p τ g) :
+    ∀ [Fintype τ], ∃ (c : ℚ) (a : σ → τ → ℚ) (ds : List (σ → ℚ)),
+      0 ≤ c ∧ (∀ s t, 0 ≤ a s t) ∧ (∀ d ∈ ds, ∀ s, 0 ≤ d s) ∧
+      g = MvPolynomial.C c * linearSubstitution a (iteratedDirectionalDerivative ds p) := by
+  classical
+  induction hg with
+  | initial =>
+    intro instσ'
+    cases Subsingleton.elim instσ' instσ
+    refine ⟨1, (fun s t => if s = t then 1 else 0), [], by norm_num,
+      (by intro s t; dsimp; split_ifs <;> norm_num), (by simp), ?_⟩
+    simpa [iteratedDirectionalDerivative, linearSubstitution] using
+      (MvPolynomial.aeval_X_left_apply p).symm
+  | @derivative τ g t hg ih =>
+    intro _
+    obtain ⟨c, a, ds, hc, ha, hds, hrepr⟩ := ih
+    refine ⟨c, a, (fun s => a s t) :: ds, hc, ha, ?_, ?_⟩
+    · intro d hd s
+      rcases List.mem_cons.mp hd with rfl | hd
+      · exact ha s t
+      · exact hds d hd s
+    · rw [hrepr, MvPolynomial.pderiv_C_mul]
+      congr 1
+      exact LinearPolynomialChainRule.linear_aeval_pderiv a _ t
+  | @substitute τ υ instυ g b hb hg ih =>
+    intro instυ'
+    cases Subsingleton.elim instυ' instυ
+    haveI : Finite τ := descendant_finite_variables p g hg
+    letI : Fintype τ := Fintype.ofFinite τ
+    obtain ⟨c, a, ds, hc, ha, hds, hrepr⟩ := ih
+    refine ⟨c, (fun s u => ∑ t, a s t * b t u), ds, hc, ?_, hds, ?_⟩
+    · intro s u
+      exact Finset.sum_nonneg (fun t _ => mul_nonneg (ha s t) (hb t u))
+    · rw [hrepr]
+      unfold linearSubstitution
+      rw [map_mul, MvPolynomial.aeval_C, MvPolynomial.algebraMap_eq,
+        LinearPolynomialChainRule.linear_aeval_comp]
+  | scale k hk hg ih =>
+    intro _
+    obtain ⟨c, a, ds, hc, ha, hds, hrepr⟩ := ih
+    refine ⟨k * c, a, ds, mul_nonneg hk hc, ha, hds, ?_⟩
+    rw [hrepr, ← mul_assoc, ← MvPolynomial.C.map_mul]
+
+/-- INTERNAL: The degree of an iterated directional derivative decreases
+by the number of directions, with truncated subtraction covering zero.
+TEXLINE: main.tex:334-348 -/
+theorem iteratedDirectionalDerivative_isHomogeneous {σ : Type} [Fintype σ]
+    (p : MvPolynomial σ ℚ) (d : ℕ) (hp : p.IsHomogeneous d)
+    (ds : List (σ → ℚ)) :
+    (iteratedDirectionalDerivative ds p).IsHomogeneous (d - ds.length) := by
+  induction ds with
+  | nil => simpa [iteratedDirectionalDerivative] using hp
+  | cons a ds ih =>
+    have h := MvPolynomial.IsHomogeneous.sum Finset.univ
+      (fun s => MvPolynomial.C (a s) *
+        MvPolynomial.pderiv s (iteratedDirectionalDerivative ds p))
+      (d - ds.length - 1) (fun s _ => ih.pderiv.C_mul (a s))
+    simpa [iteratedDirectionalDerivative, Nat.sub_sub] using h
+
 /-- PAPER: main.tex:334-348
 BORROWED: Bränden–Huh, Lorentzian polynomials (2020), Theorems 4.10,
 2.10 and Corollary 2.11, together with the defining quadratic signature.
@@ -309,16 +401,44 @@ theorem branden_huh_quadratic_signature {α τ : Type} [Fintype α] [Fintype τ]
             simpa using (LinearMap.range l).finrank_le
           change sigPos Q ≤ 1
           omega
-        -- BLOCKER: the degree and nonnegative-coefficient invariants above
-        -- do not prove nonpositivity on ker (Q.associated e). This is the
-        -- missing Lorentzian invariant, including its preservation under
-        -- nonnegative substitutions. Current searches by statement shape
-        -- found no polynomial result in Mathlib's matroid API, no polynomial
-        -- log-concavity/stability or Lorentzian API in Mathlib or Arlib, and
-        -- no spectral bound that supplies this matroid-polynomial premise.
-        -- The generic signature/dimension lemmas only finish the argument
-        -- after hnonpos; they do not establish it. The outstanding branch
-        -- has at least two ground elements and at least two output variables.
+        have hgne : g ≠ 0 := by
+          intro hgzero
+          have hz : hessian g = 0 := by
+            rw [hgzero]
+            ext s t
+            simp [hessian]
+          have hzero : Q e = 0 := by
+            simp [Q, hz, Matrix.toQuadraticForm']
+          linarith
+        obtain ⟨c, a, ds, hc, ha, hds, hrepr⟩ :=
+          descendant_directional_normal_form (tuttePolynomial N q) g hg
+        have hnormaldegree : g.IsHomogeneous (Fintype.card α - ds.length) := by
+          rw [hrepr]
+          exact (linearSubstitution_isHomogeneous a _ _
+            (iteratedDirectionalDerivative_isHomogeneous _ _
+              (tuttePolynomial_isHomogeneous N q) ds)).C_mul c
+        have hlength : ds.length + 2 = Fintype.card α := by
+          have heq := hnormaldegree.inj_right hdegree hgne
+          omega
+        have hcpos : 0 < c := by
+          have hcne : c ≠ 0 := by
+            intro hc0
+            apply hgne
+            simp [hrepr, hc0]
+          exact lt_of_le_of_ne hc hcne.symm
+        dsimp only [l, Q]
+        rw [hrepr]
+        -- BLOCKER: the remaining expression is now in exact directional
+        -- normal form: ds has length |α|-2, every direction and substitution
+        -- entry is nonnegative, and c is positive. Its Hessian must be
+        -- nonpositive on the associated-orthogonal complement of e.
+        -- The algebraic normal-form construction above is proved. The
+        -- missing invariant is the common-source compatibility of mixed
+        -- nonnegative directional derivatives of the matroid polynomial.
+        -- Bounds for individual coordinate derivatives cannot be added:
+        -- the cone of forms with sigPos ≤ 1 is not closed under addition.
+        -- Mathlib's eRk_submod concerns ranks of two sets, not the signed
+        -- quadratic inequality for weighted sums over all derivative paths.
         -- PRIOR-PROPOSAL: this unchanged quadratic consequence is explicitly
         -- borrowed at main.tex:334-348 from BH2020, Theorems 4.10, 2.10,
         -- and Corollary 2.11, together with the defining quadratic signature.
@@ -344,6 +464,7 @@ end CountingMatroid.Analysis.RankWeightQuadraticSignature
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · partial · proved the linear polynomial chain rule and substitution composition in LinearPolynomialChainRule, then proved finite intermediate variables, the exact directional normal form, and its homogeneous degree. The parent uses this representation and proves that its direction list has length |α|-2 and its scalar is positive. The original nonpositive-kernel gap now concerns this normalized expression. A stdin application of eRk_submod failed by statement shape; separate checked stdin examples show that adding two signature-one forms can produce signature two. The unresolved cited input is compatibility of mixed nonnegative directional derivatives of the common matroid polynomial, not the algebraic normalization. No assumption or new open helper was introduced.
 * 2026-10-09 · partial · proved the at-most-one-output-variable branch using sigPos_le_finrank and Module.finrank_pi; preserved all earlier homogeneous-degree, coefficient-cone and small-ground proofs. Current statement-shape searches found no matroid-polynomial, Lorentzian closure or substitute spectral declaration supplying nonpositivity on the positive-vector orthogonal complement. The remaining cited Bränden–Huh input stays open in its original theorem, without new helpers or assumptions.
 * 2026-10-09 · blocked · preserved the proved empty-ground branch; searched project, pinned Mathlib and Arlib for Lorentzian rank-weight base, closure and quadratic signature results without finding an applicable declaration. A stdin application of descendant_constant to the nonempty branch fails because its initial polynomial must be constant. Proposed the unchanged cited Bränden–Huh consequence as prior input; introduced no helper or assumption.
 -/
