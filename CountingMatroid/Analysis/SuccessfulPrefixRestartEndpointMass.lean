@@ -1,5 +1,7 @@
 import CountingMatroid.Analysis.RecordedObservationTrajectory
 import CountingMatroid.Analysis.RestartPhaseTransversal
+import CountingMatroid.Analysis.PositiveTimeTraceKernel
+import CountingMatroid.Analysis.ScheduledTransversalTraceMixing
 
 set_option autoImplicit false
 
@@ -7,8 +9,10 @@ set_option autoImplicit false
 The finite-suffix restart endpoint sublaw needed for recorded-path domination.
 Successful restarts contribute their returned state; aborted restarts contribute
 zero. The stationary-law comparison and phase-zero finite-tape bound are
-proved. Positive-phase warm endpoint domination still needs the positive-time
-trace mixing and capped finite-suffix comparison.
+proved. A separate module constructs capped and uncapped positive-time return
+subkernels and proves their monotone comparison. The remaining positive-phase
+obligation is the finite-suffix coupling. The concrete trace spectral estimate
+and its scheduled pointwise factor-two mixing bound are proved in imported modules.
 -/
 namespace CountingMatroid.Analysis.SuccessfulPrefixRestartEndpointMass
 
@@ -29,6 +33,52 @@ noncomputable def restartSuffixMass {n : ℕ} (r : ℕ)
       (fun i => ((pref ++ suffix.val)[i]?).getD false)
       s current.tables j current.bitCursor).val).map Prod.fst = some state
     then 1 / (2 : ℝ) ^ t else 0
+
+/-- INTERNAL: The deterministic capped restart pushed forward from a finite
+fair suffix is a subprobability law supported on transversals. Aborts retain
+zero mass, and no independence or coverage assertion is needed here.
+TEXLINE: main.tex:1163-1176,1207-1212 -/
+theorem restart_suffix_mass_subprobability {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (s : AnnealingSchedule) (j : ℕ)
+    (current : AnnealingCursor n) (pref : List Bool) (t : ℕ) :
+    (∀ state, 0 ≤ restartSuffixMass r o₁ o₂ s j current pref t state) ∧
+    (∑ state, restartSuffixMass r o₁ o₂ s j current pref t state) ≤ 1 ∧
+    (∀ state, (classifyState state).val ≠ .transversal →
+      restartSuffixMass r o₁ o₂ s j current pref t state = 0) := by
+  classical
+  let R := fun suffix : List.Vector Bool t =>
+    (restartPhase r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false)
+      s current.tables j current.bitCursor).val
+  refine ⟨?_, ?_, ?_⟩
+  · intro state
+    unfold restartSuffixMass
+    exact Finset.sum_nonneg fun _ _ => by split_ifs <;> positivity
+  · unfold restartSuffixMass
+    rw [Finset.sum_comm]
+    calc
+      (∑ suffix : List.Vector Bool t, ∑ state : PairedSet n,
+        if (R suffix).map Prod.fst = some state then 1 / (2 : ℝ) ^ t else 0) ≤
+          ∑ _suffix : List.Vector Bool t, 1 / (2 : ℝ) ^ t := by
+        apply Finset.sum_le_sum
+        intro suffix _
+        cases hR : R suffix with
+        | none => simp
+        | some result => simp
+      _ = 1 := by
+        simp only [Finset.sum_const, Finset.card_univ, card_vector,
+          Fintype.card_bool, nsmul_eq_mul, Nat.cast_pow, Nat.cast_ofNat]
+        field_simp
+  · intro state hinvalid
+    unfold restartSuffixMass
+    apply Finset.sum_eq_zero
+    intro suffix _
+    apply if_neg
+    intro hstate
+    obtain ⟨start, hstart, heq⟩ := Option.map_eq_some_iff.mp hstate
+    change start.1 = state at heq
+    exact hinvalid (heq ▸ RestartPhaseTransversal.restartPhase_transversal
+      r o₁ o₂ _ _ _ _ _ start hstart)
 
 /-- INTERNAL: Convert a factor-two transversal endpoint bound to the
 paper's enlarged-chain domination factor, using its existing type-mass bound.
@@ -213,26 +263,72 @@ theorem successful_prefix_restart_endpoint_mass_domination (n r : ℕ)
       exact hfresh.trans (by
         have hnonneg : 0 ≤ 1 / (2 : ℝ) ^ n := by positivity
         linarith)
-    · -- The numerical enlarged-law comparison and the actual phase-zero
-      -- finite-tape law are proved above. The remaining goal is precisely
-      -- the paper's factor-two warm endpoint bound on transversals.
-      -- BLOCKER: no positive-time trace kernel or harmonic-extension energy
-      -- identity connects traceReturn to the transversal variance theorem
-      -- (main.tex:1029-1071). Generic arlib mixing requires such a kernel
-      -- and an absolute spectral bound; ideal_chain_stationary supplies
-      -- neither. The capped adaptive finite-suffix subkernel must also be
-      -- coupled to those trace transitions before the bound can be applied.
-      -- Needed pointwise bound: restartSuffixMass ≤ 2 * (stateWeight /
-      -- TransversalPartition.partitionSum), with the current phase parameter.
-      -- Direct exact? found no theorem discharging this bound; expanding
-      -- the finite-suffix sum leaves the adaptive restart event, rather than
-      -- a fixed trace transition to which the mixing estimates apply.
-      sorry
+    · let s := CountingMatroid.Interface.Pseudocode.setup n p
+      have hq : 0 < s.ρ ^ j :=
+        pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j
+      have hC : 0 < TransversalPartition.partitionSum r o₁ o₂ (s.ρ ^ j) :=
+        (AnnealingPartitionDrift.partition_step_bounds n r o₁ o₂ p hn j).1
+      have htable : ∀ index, 0 < current.tables j index := by
+        intro index
+        exact (div_pos (div_pos hC
+          (DefectPartitionPositive.defect_partition_pos r o₁ o₂ (s.ρ ^ j) hq index))
+          (by norm_num : (0 : ℚ) < 4)).trans_le (hgood.1 j le_rfl index).1
+      let P := IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
+        (current.tables j) hn hq htable
+      let A : Finset (PairedSet n) :=
+        Finset.univ.filter (fun x => (classifyState x).val = .transversal)
+      let t := CountingMatroid.Model.Run.blockLength n r p - pref.length
+      let ν := restartSuffixMass r o₁ o₂ s (j - 1) current pref t
+      let bound := 2 * ((stateWeight r o₁ o₂ (s.ρ ^ j)
+        current.currentWeights state : ℝ) /
+        (TransversalPartition.partitionSum r o₁ o₂ (s.ρ ^ j) : ℝ))
+      obtain ⟨hν, hνmass, hνsupport⟩ := restart_suffix_mass_subprobability
+        r o₁ o₂ s (j - 1) current pref t
+      have hbound : 0 ≤ bound := by
+        apply mul_nonneg (by norm_num)
+        apply div_nonneg
+        · exact_mod_cast IdealExchangeChain.state_weight_nonneg r o₁ o₂
+            (s.ρ ^ j) current.currentWeights hq hw state
+        · exact_mod_cast hC.le
+      suffices htrace :
+          restartSuffixMass r o₁ o₂ s j current pref t state ≤
+            ∑ x, ν x * (PositiveTimeTraceKernel.iterate
+              (PositiveTimeTraceKernel.returnWithin P A s.restartCap) s.τ).entry x state ∧
+          ∀ x ∈ A, (PositiveTimeTraceKernel.iterate
+            (PositiveTimeTraceKernel.uncappedReturn P A) s.τ).entry x state ≤ bound by
+        exact PositiveTimeTraceKernel.endpoint_mass_le_of_capped_trace P A
+          s.restartCap s.τ ν hν hνmass
+          (fun x hx => hνsupport x (by simpa only [A, Finset.mem_filter,
+            Finset.mem_univ, true_and] using hx)) _ bound hbound state htrace.1 htrace.2
+      refine ⟨?_, ?_⟩
+      · -- BLOCKER: stopped-prefix disintegration of the actual final stage
+        -- into covered positive-time return scans, retaining the adaptive
+        -- cursor and the phase-global attempt cap. The exact desired bound
+        -- is CappedRestartFinalTraceDomination.capped_restart_final_trace_domination;
+        -- that module currently imports this parent and its composition proof
+        -- is open. The spectral and schedule estimates are closed below.
+        sorry
+      · intro x hx
+        have hxA : x ∈ TransversalTraceSpectralGap.transversalSet n := hx
+        have hstateA : state ∈ TransversalTraceSpectralGap.transversalSet n := by
+          simpa only [TransversalTraceSpectralGap.transversalSet, Finset.mem_filter,
+            Finset.mem_univ, true_and] using htrans
+        have hmix := ScheduledTransversalTraceMixing.scheduled_transversal_trace_mixing
+          n r M₁ M₂ o₁ o₂ p j (current.tables j) hn hfull hr h₁ h₂ hj htable
+          (hgood.1 j le_rfl) x state hxA hstateA
+        simpa only [P, A, TransversalTraceSpectralGap.transversalSet, s, bound,
+          stateWeight, htrans, weightOfKind,
+          Arlib.Computation.Charged.val_bind, CountingMatroid.Model.Operations.natSub,
+          Arlib.Computation.Charged.val_op, Arlib.Computation.Charged.val_pure,
+          BoundedRunResourceEnvelope.ratPower_value, Option.getD_some,
+          Rat.cast_pow] using hmix
 
 end CountingMatroid.Analysis.SuccessfulPrefixRestartEndpointMass
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · reduced · proved ScheduledTransversalTraceMixing.scheduled_transversal_trace_mixing and used it to close the positive-phase analytical conjunct. Only capped finite-suffix final-stage coupling remains; its existing child imports this parent, so its definitions must be decoupled before that child can be applied here.
 
 * 2026-10-09 · reduced · proved the factor-two transversal-to-operational comparison and the covered phase-zero finite-suffix mass bound; the target now closes at phase zero as well as off transversals. Positive-phase trace mixing and its operational finite-suffix coupling remain in the original theorem; no new open helper.
 
