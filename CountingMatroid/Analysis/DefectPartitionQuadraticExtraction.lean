@@ -10,22 +10,16 @@ import CountingMatroid.Analysis.DefectPartitionQuadraticConstruction
 import CountingMatroid.Analysis.PairedRankValue
 import CountingMatroid.Analysis.ConditionalDefectExtractionCoefficients
 import CountingMatroid.Analysis.OmittedTutteNormalization
+import CountingMatroid.Analysis.ConditionalOperationalCoefficients
 
 set_option autoImplicit false
 
 /-!
-The concrete selected-element quadratic used in the three-pair inequality.
-It is constructed from the homogenized Tutte polynomial by the paper's
-actual derivative and substitution sequence. Its membership in the allowed
-closure operations is proved separately from its operational coefficients.
-Its last diagonal Hessian entry is proved to vanish directly from squarefree
-label exponents, without any operational coefficient identity.
-The remaining coefficient identities need the paired-rank correspondence
-and extraction calculation; it does not assume a signature theorem. The
-existing paired-rank correspondence and extraction-calculus lemmas live in
-modules that import this module. Reusing them here requires separating the
-construction declarations above the operational extraction theorem from
-that theorem, so those dependencies no longer import their consumer.
+The selected triple quadratic has the paper's exact operational Hessian.
+Construction provides homogeneity and the vanishing last diagonal entry.
+The remaining entries follow from the empty-assignment instance of the
+proved conditioned operational coefficient identities, with the ordinary
+pair extractions and final derivative multiplicity computed explicitly.
 -/
 
 namespace CountingMatroid.Analysis.DefectPartitionQuadraticExtraction
@@ -34,6 +28,46 @@ open CountingMatroid.Model
 open CountingMatroid.Analysis.RankWeightQuadraticSignature
 open CountingMatroid.Analysis.ThreePairSignatureSchur
 open CountingMatroid.Analysis.TwoLabelDerivativeNilpotence
+open CountingMatroid.Analysis.ConditionalDefectCoefficients
+open CountingMatroid.Analysis.ConditionalDefectQuadratics
+open CountingMatroid.Analysis.ConditionalDefectExtractionCoefficients
+
+/-- INTERNAL: Compute the selected triple coefficient before the operational
+occupancy conversion, including the final derivative multiplicity.
+TEXLINE: main.tex:412-417 -/
+theorem selected_triple_coefficient {n : ℕ} (M₁ M₂ : Matroid (Fin n)) (q : ℚ)
+    (i j k : Fin n) (hij : i ≠ j) (hjk : j ≠ k) (hik : i ≠ k)
+    (d : Fin 3 →₀ ℕ) :
+    (selectedTripleQuadratic M₁ M₂ q i j k).coeff d =
+      (q ^ n / (n.factorial : ℚ)) *
+        (linearSubstitution pairSubstitution
+          ((MvPolynomial.pderiv none)^[n] (tuttePolynomial (pairedMatroid M₁ M₂) q))).coeff
+          (d.mapDomain (![i, j, k] : Fin 3 → Fin n) + Finsupp.single k 1 +
+            ((((List.finRange n).filter (fun s => s ≠ i ∧ s ≠ j ∧ s ≠ k)).map
+              (fun s => Finsupp.single s 1)).sum)) * (d 2 + 1) := by
+  classical
+  have hf : Function.Injective (![i, j, k] : Fin 3 → Fin n) := by
+    intro s t h
+    fin_cases s <;> fin_cases t <;> simp_all
+  have hweights : tripleSubstitution i j k =
+      fun s t => if s = (![i, j, k] : Fin 3 → Fin n) t then 1 else 0 := by
+    funext s t
+    fin_cases t <;> by_cases hi : s = i <;> by_cases hj : s = j <;>
+      by_cases hk : s = k <;> simp_all [tripleSubstitution]
+  unfold selectedTripleQuadratic
+  rw [MvPolynomial.coeff_C_mul, hweights, restriction_coefficient _ hf,
+    MvPolynomial.coeff_pderiv]
+  have hkval : (d.mapDomain (![i, j, k] : Fin 3 → Fin n)) k = d 2 := by
+    simpa using Finsupp.mapDomain_apply hf d 2
+  rw [hkval, extract_list_coefficient _ ((List.nodup_finRange n).filter _)]
+  · ring
+  · intro s hs
+    simp only [List.mem_filter, List.mem_finRange, true_and, decide_eq_true_eq] at hs
+    have hzero : (d.mapDomain (![i, j, k] : Fin 3 → Fin n)) s = 0 := by
+      apply Finsupp.mapDomain_of_notMem_range
+      rintro ⟨t, ht⟩
+      fin_cases t <;> simp_all
+    simp [Finsupp.add_apply, hzero, hs.2.2]
 
 /-- PAPER: main.tex:403-417
 The selected quadratic is homogeneous of degree two, and its Hessian has
@@ -60,88 +94,41 @@ theorem defect_partition_quadratic_extraction (n r : ℕ)
   by_cases hlast : s = 2 ∧ u = 2
   · rcases hlast with ⟨rfl, rfl⟩
     simpa [threePairMatrix] using selected_triple_last_diagonal_zero M₁ M₂ q i t k
-  rw [hessian_coefficient]
-  -- This is now a coefficient calculation, with the repeated-variable
-  -- multiplicity handled by the proved `hessian_coefficient` identity.
-  -- BLOCKER (dependency cycle, main.tex:354-367,403-417): the existing
-  -- ConditionalDefectExtractionCoefficients.extract_list_coefficient and
-  -- ConditionalDefectExtractionCoefficients.restriction_coefficient compute
-  -- the ordinary-pair extraction and retained-coordinate substitution, but
-  -- their module imports ConditionalDefectQuadratics, which imports this
-  -- module. PairedRankValue.paired_rank_eq_eRk supplies the exact required
-  -- operational rank identity, but PairedRankValue also imports this module.
-  -- Neither dependency may be imported here without a cycle, and reproducing
-  -- these already-proved declarations would duplicate the existing proofs.
-  -- Separate the construction declarations above into a construction module
-  -- (preserving their fully qualified names), then make PairedRankValue and
-  -- ConditionalDefectQuadratics import that construction module. This module
-  -- can then import PairedRankValue and ConditionalDefectExtractionCoefficients.
-  -- OmittedTutteNormalization.normalized_tutte_polynomial already proves
-  -- the normalized homogenizer slice, but is also downstream via both
-  -- ConditionalDefectExtractionCoefficients and PairedRankValue.
-  -- Its additional import through OmittedSlotQuadratic must be redirected
-  -- to the construction module as well before normalization is importable.
-  -- After that structural repair, use the proved normalization and rank
-  -- identities, then group their n-element monomials by pair occupancy.
-  -- Precisely, put P = C(q^n/n!) * linearSubstitution pairSubstitution
-  -- ((pderiv none)^[n] (tuttePolynomial (pairedMatroid M₁ M₂) q)).
-  -- The remaining operational bridges are
-  --   P.coeff (∑ s : Fin n, Finsupp.single s 1) = partitionSum r o₁ o₂ q
-  -- and, for every ordered index a,
-  --   P.coeff (Finsupp.single a.fullPair 2 +
-  --     ∑ s ∈ Finset.univ \ {a.emptyPair, a.fullPair}, Finsupp.single s 1)
-  --     = defectPartition r o₁ o₂ q a.
-  -- The first occupancy selects exactly one label in each pair. The second
-  -- selects no label in a.emptyPair, both labels in a.fullPair, and exactly
-  -- one in every other pair. Identify them with transversalState and
-  -- classify_defect_iff. The final k derivative has multiplicity d 2 + 1;
-  -- hessian_coefficient supplies the diagonal multiplicity separately.
-  -- Positivity or a signature theorem cannot discharge this equality.
-  /- Verified diagnostic (lake env lean --stdin, 2026-10-09): this proof
-  checks when the two downstream modules are imported. It is retained here
-  as evidence for the structural refactor, rather than duplicating their
-  extraction lemmas or creating another open proof obligation.
-
-  example {n : ℕ} (M₁ M₂ : Matroid (Fin n)) (q : ℚ)
-      (i j k : Fin n) (hij : i ≠ j) (hjk : j ≠ k) (hik : i ≠ k)
-      (d : Fin 3 →₀ ℕ) :
-      (selectedTripleQuadratic M₁ M₂ q i j k).coeff d =
-        (q ^ n / (n.factorial : ℚ)) *
-          (linearSubstitution pairSubstitution
-            ((MvPolynomial.pderiv none)^[n] (tuttePolynomial (pairedMatroid M₁ M₂) q))).coeff
-            (d.mapDomain (![i, j, k] : Fin 3 → Fin n) + Finsupp.single k 1 +
-              ((((List.finRange n).filter (fun s => s ≠ i ∧ s ≠ j ∧ s ≠ k)).map
-                (fun s => Finsupp.single s 1)).sum)) * (d 2 + 1) := by
-    classical
-    have hf : Function.Injective (![i, j, k] : Fin 3 → Fin n) := by
-      intro s t h
-      fin_cases s <;> fin_cases t <;> simp_all
-    have hweights : tripleSubstitution i j k =
-        fun s t => if s = (![i, j, k] : Fin 3 → Fin n) t then 1 else 0 := by
-      funext s t
-      fin_cases t <;> by_cases hi : s = i <;> by_cases hj : s = j <;>
-        by_cases hk : s = k <;> simp_all [tripleSubstitution]
-    unfold selectedTripleQuadratic
-    rw [MvPolynomial.coeff_C_mul, hweights, restriction_coefficient _ hf,
-      MvPolynomial.coeff_pderiv]
-    have hkval : (d.mapDomain (![i, j, k] : Fin 3 → Fin n)) k = d 2 := by
-      simpa using Finsupp.mapDomain_apply hf d 2
-    rw [hkval, extract_list_coefficient _ ((List.nodup_finRange n).filter _)]
-    · ring
-    · intro s hs
-      simp only [List.mem_filter, List.mem_finRange, true_and, decide_eq_true_eq] at hs
-      have hzero : (d.mapDomain (![i, j, k] : Fin 3 → Fin n)) s = 0 := by
-        apply Finsupp.mapDomain_of_notMem_range
-        rintro ⟨t, ht⟩
-        fin_cases t <;> simp_all
-      simp [Finsupp.add_apply, hzero, hs.2.2]
-  -/
-  sorry
+  have hsub : conditionedPairSubstitution (fun _ : Fin n => none) =
+      pairSubstitution := by
+    funext e v
+    cases e <;> simp [conditionedPairSubstitution, pairSubstitution]
+  have hsource : conditionedPairPolynomial M₁ M₂ q (fun _ => none) =
+      MvPolynomial.C (q ^ n / (n.factorial : ℚ)) *
+        linearSubstitution pairSubstitution
+          ((MvPolynomial.pderiv none)^[n] (tuttePolynomial (pairedMatroid M₁ M₂) q)) := by
+    simp [conditionedPairPolynomial, assignedPairs, hsub]
+  let ordinary := (List.finRange n).filter (fun v => v ≠ i ∧ v ≠ t ∧ v ≠ k)
+  have hset : ordinary.toFinset = (Finset.univ : Finset (Fin n)) \ {i, t, k} := by
+    ext v
+    simp [ordinary]
+  have hexp : (ordinary.map (fun v => Finsupp.single v 1)).sum =
+      ordinaryExponent (fun _ => none) {i, t, k} := by
+    rw [← List.sum_toFinset _ ((List.nodup_finRange n).filter _), hset]
+    simp [ordinaryExponent, assignedPairs,
+      ← List.sum_toFinset _ (Finset.nodup_toList _)]
+  rw [hessian_coefficient, selected_triple_coefficient M₁ M₂ q i t k hit htk hik,
+    show ((((List.finRange n).filter (fun v => v ≠ i ∧ v ≠ t ∧ v ≠ k)).map
+      (fun v => Finsupp.single v 1)).sum) = ordinaryExponent (fun _ => none) {i, t, k}
+      from hexp]
+  have hcoeff :=
+    (CountingMatroid.Analysis.ConditionalOperationalCoefficients.conditional_operational_coefficients
+      n r M₁ M₂ o₁ o₂ q hfull hr h₁ h₂ hq (fun _ => none)).2
+      i t k hit htk hik rfl rfl rfl s u
+  rw [hsource, MvPolynomial.coeff_C_mul] at hcoeff
+  simpa only [defect_total_empty, transversal_total_empty] using hcoeff
 
 end CountingMatroid.Analysis.DefectPartitionQuadraticExtraction
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* r2026-10-09 · proved · closed the triple Hessian extraction using the now-importable proved conditional operational coefficients at the empty assignment; promoted the preserved coefficient calculation to selected_triple_coefficient.
 
 * r2026-10-09 · partially proved · proved and used the last diagonal Hessian entry from two-label squarefreeness; all new support lemmas are closed, while the other entries retain the operational-partition boundary.
 * r2026-10-09 · dependency refined · found proved normalization in OmittedTutteNormalization and its additional cycle through OmittedSlotQuadratic; the earlier two-import construction split would leave this cycle intact.
