@@ -1,14 +1,18 @@
 import CountingMatroid.Analysis.LorentzianDirectionalSignature
 import CountingMatroid.Analysis.BinaryRankWeightSignature
 import CountingMatroid.Analysis.RankWeightSupportExchange
+import CountingMatroid.Analysis.SquarefreeCoordinateHessian
+import CountingMatroid.Analysis.RankWeightResidualSignature
 
 set_option autoImplicit false
 
 /-! The matroid-specific coordinate Hessian bound, independently of the
 subset support exchange argument. Ground sizes at most two and derivatives
-beginning with two identical labels are verified. The general bound remains
-an open borrowed dependency: main.tex:334-348 invokes Brändén–Huh (2020),
-Theorem 4.10, Theorem 2.10 and Corollary 2.11 without proving them.
+beginning with two identical labels are verified. The general bound is reduced
+to a squarefree-polynomial Hessian identity and a matroid residual-matrix
+hyperplane bound; both imported obligations remain open. The paper instead
+invokes Brändén–Huh (2020), Theorem 4.10, Theorem 2.10 and Corollary 2.11
+at main.tex:334-348 without proving them.
 
 No independent rank-weight Lorentzian or Hessian-signature theorem was found
 in the pinned Mathlib or Arlib sources. The downstream
@@ -16,6 +20,7 @@ in the pinned Mathlib or Arlib sources. The downstream
 supply the missing input: it constructs its coordinate-signature field using
 this theorem. The generic coordinate and directional certificate APIs require
 that field as a hypothesis; they do not establish the matroid-specific bound.
+The new residual-matrix reduction does not use either certificate API.
 -/
 
 namespace CountingMatroid.Analysis.RankWeightCoordinateSignature
@@ -115,32 +120,23 @@ theorem rank_weight_coordinate_signature {α : Type} [Fintype α] [DecidableEq �
       | nil => simp only [List.length_nil] at hlength; omega
       | cons s xs =>
         simp only [List.foldr_cons]
-        -- BLOCKER (library name not found): the borrowed Brändén–Huh
-        -- rank-weight signature result has no independent declaration in the
-        -- pinned libraries. Applying CoordinateLorentzian.coordinate_signature
-        -- in a stdin probe leaves exactly CoordinateLorentzian p |α|, whose
-        -- signature field is the present obligation. The downstream
-        -- rank_weight_coordinate_lorentzian constructs that field with this
-        -- theorem, so importing it would be both cyclic and circular.
-        -- PRIOR-PROPOSAL: carry this unchanged coordinate-signature statement,
-        -- cited at main.tex:334-348, rather than a stronger certificate.
-        -- Earlier route diagnosis: list induction cannot apply this theorem to the tail:
-        -- its length plus two is |α|-1, whereas the tail polynomial still
-        -- has degree three. A derivative in a label must first be identified
-        -- with a contracted-matroid rank polynomial; a derivative in none
-        -- introduces cardinality-dependent falling factorials. Neither is
-        -- covered by the two-element theorem. The required general coordinate
-        -- signature bridge was not found in pinned Mathlib or Arlib by searches
-        -- for Lorentzian/M-convex, Tutte/rank-generating polynomial, and
-        -- matroid polynomial Hessian statements. Support exchange alone
-        -- does not give a common nonpositive hyperplane.
-        sorry
+        obtain ⟨S, k, c, hc, hsize, hform⟩ :=
+          SquarefreeCoordinateHessian.squarefree_coordinate_hessian
+            (fun A : Finset α => (q ^ (N.eRk (A : Set α)).toNat)⁻¹)
+            (s :: xs) hlength
+        have hsignature :=
+          (RankWeightResidualSignature.rank_weight_residual_signature
+            N hfull q hq hqone S k hsize).smul c hc
+        rw [← hform] at hsignature
+        exact hsignature.sigPos_le_one
 
 end CountingMatroid.Analysis.RankWeightCoordinateSignature
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · deferred handoff · the scheduler retained these children because CubicTensorContraction has an active writer in their build closure. Continued in the polynomial child: derivative commutation and excessive-count monomial annihilation are proved, closing every repeated-label normal-form branch. The two remaining boundaries are distinct-label factorial coefficient extraction and the residual matroid matrix sign bound.
+* 2026-10-09 · decomposed · replaced the general local hole by the explicit squarefree-coordinate Hessian normal form and residual rank-weight matrix hyperplane bound. This replaces the cited Lorentzian-certificate route by polynomial coefficient extraction and a parallel-class square decomposition. Both substantial child obligations remain open; all earlier binary, vacuous, and repeated-label proofs and imports are preserved.
 * 2026-10-09 · library dependency blocked · rechecked the target and its named dependencies; the file elaborates with its existing open signature warning. Searched 9,774 Mathlib and 385 Arlib Lean sources for Lorentzian, M-convex, Tutte/rank-generating, log-concavity, and matroid/polynomial/Hessian statements; found no applicable borrowed result. A stdin coordinate-certificate application exposes the missing certificate, and the downstream certificate explicitly calls this theorem. Proposed only the unchanged borrowed coordinate-signature statement as Prior input; preserved every proof and added no helper debt.
 * 2026-10-09 · partial · proved that iterated coordinate derivatives of a monomial decrease all exponents; consequently two repeated leading label derivatives annihilate the rank-weight polynomial after any tail. This closes an additional signature branch, without using positivity, full ground, or a Lorentzian assumption. The live handoff was deferred because LorentzianDirectionalSignature still had an active writer.
 * 2026-10-09 · open · separated the general coordinate signature from the independently proved subset support description; preserved the binary and vacuous cases. The nonempty-list route requires a degree-three derivative invariant or a contracted-rank-polynomial normal form, not the available two-element certificate.
