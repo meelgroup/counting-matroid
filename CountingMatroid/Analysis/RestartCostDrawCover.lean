@@ -1,4 +1,5 @@
 import CountingMatroid.Analysis.PhaseObservationExperiment
+import CountingMatroid.Analysis.SuccessfulPrefixCursor
 import CountingMatroid.Analysis.BoundedUniformAbortMass
 
 set_option autoImplicit false
@@ -45,6 +46,9 @@ theorem restart_cost_draw_cover (n r : ℕ)
           (restartPhase r o₁ o₂ (fun i => ((pref ++ suffix)[i]?).getD false)
             s current.tables j current.bitCursor).val = none},
         s.restartCap ≤ cost suffix ∨ ∃ k, (draws k).abortEvent suffix := by
+  obtain ⟨bits, current, hlen, hprevious, hhistory, hstored, hpref, hprefLength⟩ :=
+    SuccessfulPrefixAbortBound.successful_prefix_has_good_cursor
+      n r o₁ o₂ p j hj pref hprefix
   -- BLOCKER: instrument the actual capped restart to retain its underlying
   -- attempt count on abort, and construct its ordinal draw-site histories.
   -- Bound that stopped cost by the uncapped warm-restart expectation
