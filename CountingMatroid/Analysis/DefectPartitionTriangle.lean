@@ -1,13 +1,16 @@
 import CountingMatroid.Analysis.ExchangeFlowEnergy
 import CountingMatroid.Analysis.InitialMultipliersGood
+import CountingMatroid.Analysis.DefectPartitionQuadraticExtraction
 
 set_option autoImplicit false
 
 /-!
 The unconditional three-pair coefficient inequality used to bound the cost
-of the defect transport. The q=1 case and the numerical Schur-complement
-step are proved. For 0<q<1, the remaining obligation is the nonpositivity
-of the extracted rank-weight Hessian's Schur complement.
+of the defect transport. The q=1 case, the numerical Schur-complement
+step, and the real-signature-to-rational-Schur step are proved. The parent
+now uses a concrete homogeneous quadratic constructed by the paper's
+derivatives and substitutions. Its operational coefficient identity and
+the cited Bränden–Huh signature input remain open in their support files.
 -/
 
 namespace CountingMatroid.Analysis.DefectPartitionTriangle
@@ -68,20 +71,18 @@ theorem defect_partition_triangle (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
           (2 * D ⟨t, i, hit.symm⟩ * x ^ 2 +
             4 * D ⟨t, k, htk⟩ * x * y) ≤
           (Z * x + 2 * D ⟨i, k, hik⟩ * y) ^ 2 := by
-      intro x y
-      -- The selected-element polynomial, after identifying pair variables,
-      -- extracting exponent one at all pairs outside {i,t,k}, and
-      -- differentiating at k, has Hessian (in the order i,t,k):
-      --   [2 D(t,i), Z,        2 D(t,k)]
-      --   [Z,        2 D(i,t), 2 D(i,k)]
-      --   [2 D(t,k), 2 D(i,k), 0       ].
-      -- This goal is precisely its Schur-complement nonpositivity at t.
-      -- STILL OPEN: identify the operational rank weights with the paired
-      -- matroid's rank weights, carry out the polynomial coefficient
-      -- extraction, and obtain the one-positive-direction property from
-      -- the Bränden--Huh theorem cited at main.tex:332-348. No Lorentzian
-      -- theorem or closure API exists in the pinned Mathlib/Arlib sources.
-      sorry
+      have hextract := DefectPartitionQuadraticExtraction.defect_partition_quadratic_extraction
+        n r M₁ M₂ o₁ o₂ q hfull hr h₁ h₂ hq hqone i t k hit htk hik
+      have hsignature := RankWeightQuadraticSignature.branden_huh_quadratic_signature
+        (DefectPartitionQuadraticExtraction.pairedMatroid M₁ M₂)
+        (DefectPartitionQuadraticExtraction.paired_matroid_full_ground M₁ M₂ hfull)
+        q hq hqone (DefectPartitionQuadraticExtraction.selectedTripleQuadratic M₁ M₂ q i t k)
+        (DefectPartitionQuadraticExtraction.selected_triple_descendant M₁ M₂ q hq i t k)
+        hextract.1
+      rw [hextract.2] at hsignature
+      exact ThreePairSignatureSchur.three_pair_signature_schur
+        (D ⟨t, i, hit.symm⟩) (D ⟨i, t, hit⟩) (D ⟨t, k, htk⟩)
+        (D ⟨i, k, hik⟩) Z (hD _) hsignature
     exact three_pair_schur_bound
       (D ⟨t, i, hit.symm⟩) (D ⟨i, t, hit⟩) (D ⟨t, k, htk⟩)
       (D ⟨i, k, hik⟩) Z (hD _).le (hD _) (hD _) hZ hschur
@@ -91,5 +92,6 @@ end CountingMatroid.Analysis.DefectPartitionTriangle
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · decomposed · connected the parent to the concrete Tutte-polynomial derivative/substitution construction; proved its homogeneous degree and the real-signature-to-rational-Schur implication. The two remaining prerequisites are the operational Hessian coefficient identity and the explicitly cited Bränden–Huh quadratic signature theorem.
 * 2026-10-09 · partial · proved the q=1 branch, positivity of all needed operational totals, and `three_pair_schur_bound`; the sole remaining local gap is the explicit extracted-Hessian Schur-complement bound for 0<q<1. Direct finite-sum positivity does not compare the products; pinned Mathlib and Arlib contain no Lorentzian rank-weight signature or closure theorem.
 -/
