@@ -1,13 +1,15 @@
 import CountingMatroid.Analysis.ExchangeFlowEnergy
+import CountingMatroid.Analysis.DefectPartitionTriangle
+import CountingMatroid.Analysis.DefectTransportRaw
 
 set_option autoImplicit false
 
 /-!
-The signed exchange current needed for the paper's defect-mean transport.
-Its required source and sink are the actual conditional densities, and its
-cost uses the normalized ideal-exchange conductances. The dense product
-current below has the right divergence but cannot satisfy exchange support;
-the remaining construction must use the paper's recursive leaf cliques.
+The signed exchange-current bound for the paper's defect-mean transport.
+The numerical specialization of goodness and the large-event assumption is
+proved here. The remaining mathematical obligations are the three-pair
+coefficient inequality in `DefectPartitionTriangle` and the recursive
+flow construction in `DefectTransportRaw`; both are imported and used.
 -/
 
 namespace CountingMatroid.Analysis.DefectMeanExchangeFlow
@@ -45,6 +47,11 @@ theorem defect_mean_exchange_flow (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
   classical
   intro π κ
   let A := pairEvent i k a b
+  -- Previous concrete route, retained in DefectTransportRaw: the dense
+  -- source-sink product has the right divergence but fails exchange support.
+  -- At n=3 the defect {(1,false),(1,true),(2,false)} and transversal
+  -- {(0,false),(1,false),(2,true)} cannot be related by a single exchange.
+  -- The prior check is scratch/observable-poincare/NonexchangeProbe.lean.
   have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
   have htype := TypeMassLowerBounds.good_type_mass_bounds r o₁ o₂ q w hn hq hgood
   have hp₀lower : 1 / (5 * (n : ℝ) ^ 2) ≤ classMass π .transversal := by
@@ -64,51 +71,109 @@ theorem defect_mean_exchange_flow (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
   have hd : 0 < classMass π (.defect i k) :=
     (div_pos (by norm_num) (by positivity)).trans_le hdLower
   have hA : 0 < eventMass π A := (div_pos hp₀ (by norm_num)).trans_le hlarge
-  let source := fun state : PairedSet n =>
-    if (classifyState state).val = .defect i k then π state / classMass π (.defect i k) else 0
-  let sink := fun state : PairedSet n => if state ∈ A then π state / eventMass π A else 0
-  have hsource : (∑ state, source state) = 1 := by
-    have heq : (∑ state, source state) = classMass π (.defect i k) / classMass π (.defect i k) := by
-      change _ = (∑ state, if (classifyState state).val = .defect i k then π state else 0) / _
-      rw [Finset.sum_div]
-      apply Finset.sum_congr rfl
-      intro state _
-      dsimp only [source]
-      split_ifs <;> simp
-    exact heq.trans (div_self hd.ne')
-  have hsink : (∑ state, sink state) = 1 := by
-    calc
-      _ = ∑ state ∈ A, π state / eventMass π A := by
-        dsimp only [sink]
-        rw [← Finset.sum_filter]
-        simp
-      _ = eventMass π A / eventMass π A := by rw [← Finset.sum_div]; rfl
-      _ = 1 := div_self hA.ne'
-  let denseCurrent := fun state next : PairedSet n =>
-    source state * sink next - source next * sink state
-  have hanti : ∀ state next, denseCurrent state next = -denseCurrent next state := by
-    intro state next
-    dsimp only [denseCurrent]
-    ring
-  have hdiv : ∀ state, divergence denseCurrent state = conditionalMeanDemand π (.defect i k) A state := by
-    intro state
-    simp only [divergence, denseCurrent, Finset.sum_sub_distrib,
-      ← Finset.mul_sum, ← Finset.sum_mul, hsource, hsink, mul_one, one_mul]
+  let D := fun index : DefectIndex n =>
+    (FirstPhaseFailure.defectPartition r o₁ o₂ q index : ℝ)
+  let C : ℝ := TransversalPartition.partitionSum r o₁ o₂ q
+  let Z : ℝ := StationaryMeanIdentities.normalizer r o₁ o₂ q w
+  have hD (index : DefectIndex n) : 0 < D index := by
+    dsimp only [D]
+    exact_mod_cast DefectPartitionPositive.defect_partition_pos r o₁ o₂ q hq index
+  obtain ⟨hZq, hzero, _, hdefect⟩ :=
+    StationaryMeanIdentities.stationary_mean_identities r o₁ o₂ q 1 w hq hw
+  have hZ : 0 < Z := by
+    dsimp only [Z]
+    exact_mod_cast hZq
+  have hzeroReal : classMass π .transversal = C / Z := by
+    dsimp only [π]
+    rw [operational_class_mass, hzero]
+    simp only [Rat.cast_div]
     rfl
-  -- Concrete route: the dense source-sink product above is balanced and
-  -- has exactly the required divergence. Its support condition fails:
-  -- at n=3 the defect {(1,false),(1,true),(2,false)} and transversal
-  -- {(0,false),(1,false),(2,true)} cannot be related by a single exchange.
-  -- This failure is checked in scratch/observable-poincare/NonexchangeProbe.lean.
-  -- STILL OPEN: replace denseCurrent by the recursion at main.tex:511-709:
-  -- maintain balanced weighted hole demands, prove the quadratic split
-  -- bound and future-slot conservation, route demands in disjoint leaf
-  -- cliques, and specialize the resulting cost using 4-good multipliers
-  -- and the defect coefficient inequalities (main.tex:897-908).
-  -- The signature step refers to the cited Bränden--Huh theorem at
-  -- main.tex:332-348; no rank-weight signature API exists in the pinned
-  -- libraries. The recursion and coefficient extraction are same-paper
-  -- obligations, not assumptions to add to Prior.
-  sorry
+  have hdefectReal : classMass π (.defect i k) = (w ⟨i, k, hik⟩ : ℝ) * D ⟨i, k, hik⟩ / Z := by
+    dsimp only [π]
+    rw [operational_class_mass, hdefect ⟨i, k, hik⟩]
+    simp only [Rat.cast_div, Rat.cast_mul]
+    rfl
+  have hgoodReal (index : DefectIndex n) : C ≤ 4 * (w index : ℝ) * D index := by
+    have h : (C / D index) / 4 ≤ (w index : ℝ) := by
+      dsimp only [C, D]
+      exact_mod_cast (hgood index).1
+    have h' := (div_le_iff₀ (by norm_num : (0 : ℝ) < 4)).mp h
+    have h'' := (div_le_iff₀ (hD index)).mp h'
+    nlinarith
+  have hmass : classMass π .transversal / 4 ≤ classMass π (.defect i k) := by
+    rw [hzeroReal, hdefectReal]
+    calc
+      (C / Z) / 4 = (C / 4) / Z := by ring
+      _ ≤ (w ⟨i, k, hik⟩ : ℝ) * D ⟨i, k, hik⟩ / Z :=
+        div_le_div_of_nonneg_right (by nlinarith [hgoodReal ⟨i, k, hik⟩]) hZ.le
+  have hbase : 1 / classMass π (.defect i k) ≤ 4 / classMass π .transversal := by
+    apply (div_le_div_iff₀ hd hp₀).mpr
+    nlinarith [hmass]
+  have hevent : 1 / eventMass π A ≤ 4 / classMass π .transversal := by
+    apply (div_le_div_iff₀ hA hp₀).mpr
+    nlinarith [hlarge]
+  have hterm (t : Fin n) (h : t ≠ i ∧ t ≠ k) :
+      D ⟨i, t, Ne.symm h.1⟩ / (w ⟨t, k, h.2⟩ : ℝ) ≤ 4 * D ⟨i, k, hik⟩ := by
+    have hwreal : 0 < (w ⟨t, k, h.2⟩ : ℝ) := by exact_mod_cast hw ⟨t, k, h.2⟩
+    have htri : D ⟨i, t, Ne.symm h.1⟩ * D ⟨t, k, h.2⟩ ≤ C * D ⟨i, k, hik⟩ := by
+      dsimp only [D, C]
+      exact_mod_cast DefectPartitionTriangle.defect_partition_triangle
+        n r M₁ M₂ o₁ o₂ q hfull hr h₁ h₂ hq hqone i t k (Ne.symm h.1) h.2 hik
+    apply (div_le_iff₀ hwreal).mpr
+    apply le_of_mul_le_mul_right _ (hD ⟨t, k, h.2⟩)
+    calc
+      D ⟨i, t, Ne.symm h.1⟩ * D ⟨t, k, h.2⟩ ≤ C * D ⟨i, k, hik⟩ := htri
+      _ ≤ (4 * (w ⟨t, k, h.2⟩ : ℝ) * D ⟨t, k, h.2⟩) * D ⟨i, k, hik⟩ :=
+        mul_le_mul_of_nonneg_right (hgoodReal ⟨t, k, h.2⟩) (hD ⟨i, k, hik⟩).le
+      _ = (4 * D ⟨i, k, hik⟩ * (w ⟨t, k, h.2⟩ : ℝ)) * D ⟨t, k, h.2⟩ := by ring
+  have hsum : (∑ t : Fin n, if h : t ≠ i ∧ t ≠ k then
+      D ⟨i, t, Ne.symm h.1⟩ / (w ⟨t, k, h.2⟩ : ℝ) else 0) ≤
+        (n : ℝ) * (4 * D ⟨i, k, hik⟩) := by
+    calc
+      _ ≤ ∑ _t : Fin n, 4 * D ⟨i, k, hik⟩ := by
+        apply Finset.sum_le_sum
+        intro t _
+        split_ifs with h
+        · exact hterm t h
+        · exact mul_nonneg (by norm_num) (hD ⟨i, k, hik⟩).le
+      _ = _ := by simp
+  have hextra : (2 / (D ⟨i, k, hik⟩ * eventMass π A)) *
+      (∑ t : Fin n, if h : t ≠ i ∧ t ≠ k then
+        D ⟨i, t, Ne.symm h.1⟩ / (w ⟨t, k, h.2⟩ : ℝ) else 0) ≤
+          32 * (n : ℝ) / classMass π .transversal := by
+    calc
+      _ ≤ (2 / (D ⟨i, k, hik⟩ * eventMass π A)) *
+          ((n : ℝ) * (4 * D ⟨i, k, hik⟩)) :=
+        mul_le_mul_of_nonneg_left hsum
+          (div_nonneg (by norm_num) (mul_pos (hD ⟨i, k, hik⟩) hA).le)
+      _ = 8 * (n : ℝ) / eventMass π A := by
+        field_simp [(hD ⟨i, k, hik⟩).ne', hA.ne']
+        ring
+      _ ≤ 32 * (n : ℝ) / classMass π .transversal := by
+        apply (div_le_div_iff₀ hA hp₀).mpr
+        have h := mul_le_mul_of_nonneg_left hlarge
+          (by positivity : (0 : ℝ) ≤ 32 * (n : ℝ))
+        nlinarith
+  obtain ⟨flow, hflow⟩ := DefectTransportRaw.defect_transport_raw
+    n r M₁ M₂ o₁ o₂ q w hn hfull hr h₁ h₂ hq hqone hw i k hik a b hA
+  refine ⟨flow, hflow.trans ?_⟩
+  change (2 * (n : ℝ) ^ 2) *
+    (1 / classMass π (.defect i k) + 1 / eventMass π A +
+      (2 / (D ⟨i, k, hik⟩ * eventMass π A)) *
+        ∑ t : Fin n, if h : t ≠ i ∧ t ≠ k then
+          D ⟨i, t, Ne.symm h.1⟩ / (w ⟨t, k, h.2⟩ : ℝ) else 0) ≤ _
+  calc
+    _ ≤ (2 * (n : ℝ) ^ 2) *
+        (4 / classMass π .transversal + 4 / classMass π .transversal +
+          32 * (n : ℝ) / classMass π .transversal) :=
+      mul_le_mul_of_nonneg_left (add_le_add (add_le_add hbase hevent) hextra) (by positivity)
+    _ = _ := by ring
 
 end CountingMatroid.Analysis.DefectMeanExchangeFlow
+
+/-! ### Run record
+Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · handoff accepted · Lean validated semantic use of both children and the scheduler took ownership under request `defect-flow-split-20261009-01`; the parent numerical proof has no local gap, while both child proofs remain open.
+* 2026-10-09 · decomposed · proved the entire numerical specialization through two separately elaborated children: the unconditional three-pair coefficient inequality and the recursive transport bound before goodness. Retained the balanced product-current attempt in `DefectTransportRaw`; its exchange-support obstruction still requires the recursive leaf flow. Live handoff requested under OPEN guidance.
+-/
