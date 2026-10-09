@@ -1,5 +1,5 @@
 import CountingMatroid.Analysis.GreedyRankCorrect
-import CountingMatroid.Analysis.DefectPartitionQuadraticExtraction
+import CountingMatroid.Analysis.DefectPartitionQuadraticConstruction
 
 set_option autoImplicit false
 

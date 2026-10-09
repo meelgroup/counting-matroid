@@ -1,4 +1,4 @@
-import CountingMatroid.Analysis.DefectPartitionQuadraticExtraction
+import CountingMatroid.Analysis.DefectPartitionQuadraticConstruction
 import CountingMatroid.Analysis.ConditionalDefectCoefficients
 
 set_option autoImplicit false
