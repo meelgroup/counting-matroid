@@ -6,14 +6,18 @@ import CountingMatroid.Analysis.ObservePhaseIntervalReplay
 import CountingMatroid.Analysis.RestartPhaseIntervalReplay
 import CountingMatroid.Analysis.SinglePhaseIntervalReplay
 import CountingMatroid.Analysis.SuccessfulPhaseReplay
+import CountingMatroid.Analysis.ChainDrawSiteReplay
+import CountingMatroid.Analysis.ChainDrawAbortAttribution
 
 set_option autoImplicit false
 
 /-!
 The three stopped draw descriptors of one actual observation attempt. Each
 descriptor records an absolute bit cursor and the actual draw denominator.
-The operational locality and abort-attribution proof is open; trial coverage
-is deliberately a separate quantitative obligation.
+History, restart, and observation replay compose with the chain-level
+stopped-draw replay and abort-attribution invariants. The independent
+selector correctness proof is isolated in a child module; trial coverage remains
+a separate quantitative obligation.
 -/
 
 namespace CountingMatroid.Analysis.ObservationRoundDrawCover
@@ -49,65 +53,6 @@ namespace CountingMatroid.Analysis.ObservationRoundDrawSites
 open CountingMatroid.Model CountingMatroid.Program
 open CountingMatroid.Analysis.PhaseObservationExperiment
 open CountingMatroid.Analysis.ObservationRoundDrawCover
-
-/-- INTERNAL: Stop before one of the three actual capped draws in a chain
-attempt. No bits of the reported draw itself have been inspected.
-TEXLINE: main.tex:746-751,1392-1421 -/
-noncomputable def chainDrawSite {n : ℕ} (r : ℕ)
-    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool)
-    (s : AnnealingSchedule) (q : ℚ) (weights : Multipliers n)
-    (state : PairedSet n) (cursor : ℕ) (site : Fin 3) : Option (ℕ × ℕ) := do
-  if tape cursor then none else
-    let cursor := cursor + 1
-    if site.val = 0 then some (cursor, n) else
-      let selected := (boundedUniform tape s.drawTrials n cursor).val
-      let aIndex ← selected.1
-      if site.val = 1 then some (selected.2, n) else
-        let selectedOut := (boundedUniform tape s.drawTrials n selected.2).val
-        let bIndex ← selectedOut.1
-        let a ← (selectPaired state true aIndex).val
-        let b ← (selectPaired state false bIndex).val
-        let candidate := (Model.Operations.insertPaired
-          (Model.Operations.erasePaired state a).val b).val
-        let newKind := (classifyState candidate).val
-        if newKind = .invalid then none else
-          let oldKind := (classifyState state).val
-          let oldWeight ← (weightOfKind r o₁ o₂ q weights state oldKind).val
-          let newWeight ← (weightOfKind r o₁ o₂ q weights candidate newKind).val
-          let ratio := newWeight / oldWeight
-          if ratio < 1 then some (selectedOut.2, ratio.den) else none
-
-/-- INTERNAL: Every stopped draw descriptor has a positive denominator
-when the original ground is nonempty.
-TEXLINE: main.tex:1392-1421 -/
-theorem chainDrawSite_positive {n : ℕ} (r : ℕ)
-    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool)
-    (s : AnnealingSchedule) (q : ℚ) (weights : Multipliers n)
-    (state : PairedSet n) (cursor : ℕ) (site : Fin 3) (d : ℕ × ℕ)
-    (hn : 0 < n) (h : chainDrawSite r o₁ o₂ tape s q weights state cursor site = some d) :
-    0 < d.2 := by
-  have hden (a : ℚ) : 0 < a.den := Rat.den_pos a
-  unfold chainDrawSite at h
-  split at h
-  · cases h
-  · split at h
-    · cases Option.some.inj h
-      exact hn
-    · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-      obtain ⟨aIndex, ha, h⟩ := h
-      split at h
-      · cases Option.some.inj h
-        exact hn
-      · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-        obtain ⟨bIndex, hb, a, ha', b, hb', h⟩ := h
-        split at h
-        · cases h
-        · simp only [Option.bind_eq_bind, Option.bind_eq_some_iff] at h
-          obtain ⟨oldWeight, ho, newWeight, hn', h⟩ := h
-          split at h
-          · cases Option.some.inj h
-            exact hden _
-          · cases h
 
 /-- INTERNAL: Compose the stopped draw with the actual successful phase
 history, restart, and k-observation prefix, all on the given finite tape.
@@ -293,6 +238,30 @@ private theorem observation_next_abort_chain_none {n : ℕ} (r : ℕ)
               Arlib.Computation.Charged.val_pure, reduceCtorEq] at hf
           exact False.elim (hnext hkind)
 
+/-- INTERNAL: A shared list prefix and matching truncated suffix give
+agreement below the absolute stopping cursor, including defaulted bits
+beyond the common finite-tape length.
+TEXLINE: main.tex:1392-1421 -/
+theorem appended_tape_agreement (pref suffix other : List Bool) (stop : ℕ)
+    (hlen : suffix.length = other.length)
+    (hp : suffix.take (stop - pref.length) <+: other) :
+    ∀ i < stop, ((pref ++ suffix)[i]?).getD false =
+      ((pref ++ other)[i]?).getD false := by
+  intro i hi
+  by_cases hpre : i < pref.length
+  · rw [List.getElem?_append_left hpre, List.getElem?_append_left hpre]
+  · rw [List.getElem?_append_right (by omega),
+      List.getElem?_append_right (by omega)]
+    by_cases hsuf : i - pref.length < suffix.length
+    · have htake : i - pref.length < (suffix.take (stop - pref.length)).length := by
+        simp only [List.length_take]
+        omega
+      have heq := List.prefix_iff_getElem?.mp hp (i - pref.length) htake
+      have hget := List.getElem?_eq_getElem htake
+      rw [List.getElem?_take_of_lt (by omega)] at hget
+      rw [heq, hget]
+    · rw [List.getElem?_eq_none (by omega), List.getElem?_eq_none (by omega)]
+
 /-- INTERNAL: Actual stopped draw sites are local in their consumed prefixes,
 and a reached round abort is attributable to one of those three capped draws.
 Trial widths and the finite-block bound are not conclusions of this lemma.
@@ -338,7 +307,30 @@ theorem observation_round_draw_sites (n r : ℕ)
     have hobserveReplay := ObservePhaseIntervalReplay.observePhase_success_interval
       r o₁ o₂ {s with observations := k} (s.ρ ^ j) current.currentWeights start
       (fun i => ((pref ++ suffix)[i]?).getD false) reached hobserve
-    sorry
+    split at hdraw
+    · cases hdraw
+    · rename_i hkzero
+      have hdrawReplay := chainDrawSite_success_interval r o₁ o₂ s
+        (s.ρ ^ j) current.currentWeights reached.state reached.bitCursor site
+        (fun i => ((pref ++ suffix)[i]?).getD false) d hdraw
+      have hagree := appended_tape_agreement pref suffix other d.1
+        (hlen.trans hother.symm) htake
+      have hcurr : current.bitCursor ≤ d.1 :=
+        hrestartReplay.1.trans (hobserveReplay.1.trans hdrawReplay.1)
+      have hh := hhistoryReplay (fun i hi => hagree i (hi.trans_le hcurr))
+      have hs := hrestartReplay.2 (fun i => ((pref ++ other)[i]?).getD false)
+        (fun i _ hi => hagree i
+          (hi.trans_le (hobserveReplay.1.trans hdrawReplay.1)))
+      have ho := hobserveReplay.2 (fun i => ((pref ++ other)[i]?).getD false)
+        (fun i _ hi => hagree i (hi.trans_le hdrawReplay.1))
+      have hd := hdrawReplay.2 (fun i => ((pref ++ other)[i]?).getD false)
+        (fun i _ hi => hagree i hi)
+      dsimp only [s] at hh hs ho hd
+      unfold observationDrawSite
+      simp only [Option.bind_eq_bind, hh, hs, ho, Option.bind_some,
+        hkzero, ite_false]
+      exact hd
+
   · intro suffix hlen hbad
     obtain ⟨hprevious, current, hhistory, start, hrestart, reached, hobserve, hfail⟩ := hbad
     have hrestartInterval :=
@@ -363,17 +355,22 @@ theorem observation_round_draw_sites (n r : ℕ)
       have hchain := observation_next_abort_chain_none r o₁ o₂
         (fun i => ((pref ++ suffix)[i]?).getD false) s (s.ρ ^ j)
         current.currentWeights start k reached hkzero hvalid hobserve hfail
-      -- Excluding selectPaired = none additionally needs the n-element-state
-      -- invariant and the boundedUniform output-range theorem. The successful
-      -- endpoint replay facts above alone do not prove those two invariants.
-      unfold chainStep at hchain
-      simp only [Arlib.Computation.Charged.val_bind] at hchain
-      sorry
+      obtain ⟨site, d, hsite, hdrawfail⟩ := chain_abort_draw_site r o₁ o₂
+        (fun i => ((pref ++ suffix)[i]?).getD false) s (s.ρ ^ j)
+        current.currentWeights reached.state reached.bitCursor hvalid hchain
+      refine ⟨site, d, ?_, hdrawfail⟩
+      unfold observationDrawSite
+      simp only [Option.bind_eq_bind, hhistory, hrestart, hobserve,
+        Option.bind_some, hkzero, ite_false]
+      exact hsite
 
 end CountingMatroid.Analysis.ObservationRoundDrawSites
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r28 · proved · closed observation_round_draw_sites with proved stopped-draw replay, sampler range, classifier weight, and selector correctness helpers; preserved the statement and every original import. Both live handoffs were mechanically rejected without diagnostic, so all child proofs were completed vertically.
+* r28 · narrowed · after mechanical rejection of r28-observation-draw-sites-1 without diagnostic, proved the chain replay and abort-attribution children; isolated the remaining classifier-valid selection population/count bridge in ClassifiedStateSelection.
+* r28 · composed · removed the parent’s local proof gaps by composing history, restart, observation and stopped-chain replay; attributed reached aborts using the independent chain abort helper. Both child statements elaborate; their chain-level proofs are prepared for the live OPEN handoff.
 * r27 · decomposed · defined the three pre-draw stopping descriptors; attempted prefix replay and abort attribution, exposing the n-element-state/selection and stopping-locality obligations separately from trial coverage.
 -/
