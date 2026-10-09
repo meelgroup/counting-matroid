@@ -1,6 +1,10 @@
 import CountingMatroid.Analysis.SuccessfulPrefixRestartEndpointMass
 import CountingMatroid.Analysis.ExchangeProposalGeometry
 import CountingMatroid.Analysis.CoveredChainStepSubkernel
+import CountingMatroid.Analysis.PhaseObservationBitCoverage
+import CountingMatroid.Analysis.StoppedRecordedTraceSubkernel
+import CountingMatroid.Analysis.SuccessfulPrefixCursor
+import CountingMatroid.Analysis.RestartPhaseIntervalReplay
 
 set_option autoImplicit false
 
@@ -10,8 +14,9 @@ The reference path begins with the actual capped restart endpoint sublaw,
 so this obligation does not require a warm restart estimate. Its proof must
 retain adaptive consumption and rejection-cap failures. The covered one-step
 comparison is isolated in CoveredChainStepSubkernel. Both restart-result
-fiber identities and the aborted-restart case are proved; the remaining parent
-obligation composes the one-step law over stopped observation prefixes.
+fiber identities and the aborted-restart case are proved. The parent composes
+the deterministic finite-block coverage with the stopped-prefix composition
+obligation in StoppedRecordedTraceSubkernel; the latter remains open.
 -/
 namespace CountingMatroid.Analysis.SuccessfulPrefixRecordedTraceSubkernel
 
@@ -244,23 +249,70 @@ theorem successful_prefix_recorded_trace_subkernel (n r : ℕ)
         and_false, if_false, Finset.sum_const_zero, mul_zero]
       exact le_rfl
   | some start =>
-    -- Concrete route: the two exact fiber identities retain the returned
-    -- state and cursor. A single such outcome can still arise from several
-    -- consumed bit prefixes, so disintegrate further at those prefixes and
-    -- induct over recordedObservationTrace using hstep on each fresh suffix.
-    -- observation_round_draw_site_covered is proved and supplies trial-interval
-    -- coverage; restart/observation success replay supplies prefix locality.
-    -- A compiled probe applying hstep directly to this fiber inequality fails:
-    -- hstep bounds one covered chainStep, whereas this goal bounds the joint
-    -- restart cell and the complete observation trace by its ideal path factor.
-    -- BLOCKER: exact stopping-prefix cylinder disintegration followed by trace
-    -- induction, transferring hstep without renormalising the restart sublaw.
-    sorry
+    let s := CountingMatroid.Interface.Pseudocode.setup n p
+    let m := CountingMatroid.Model.Run.blockLength n r p
+    let t := m - pref.length
+    let initialRun := fun tape : ℕ → Bool =>
+      (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val
+    obtain ⟨bits, original, hbits, _, horiginal, _, hpref, hprefLength⟩ :=
+      SuccessfulPrefixAbortBound.successful_prefix_has_good_cursor
+        n r o₁ o₂ p j hj pref hprefix
+    have hp : pref <+: bits := hpref ▸ List.take_prefix _ _
+    have hconcat : pref ++ bits.drop pref.length = bits :=
+      (List.prefix_append_drop hp).symm
+    let originalSuffix : List.Vector Bool t :=
+      ⟨bits.drop pref.length, by simpa only [List.length_drop, hbits]⟩
+    have hsame := hfixed originalSuffix
+    change BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+      (fun i => ((pref ++ bits.drop pref.length)[i]?).getD false) s j = some current at hsame
+    rw [hconcat, horiginal] at hsame
+    have heq : original = current := Option.some.inj hsame
+    have hstart : pref.length ≤ current.bitCursor := by
+      rw [hprefLength, ← heq]
+      exact Nat.min_le_left _ _
+    have hlen : pref.length ≤ m := by
+      rw [hprefLength]
+      exact Nat.min_le_right _ _
+    have hreplay : ChainStepIntervalReplay.SuccessReplay initialRun Prod.snd pref.length := by
+      intro tape result hrun
+      have hrp := RestartPhaseIntervalReplay.restartPhase_success_interval
+        r o₁ o₂ s current.tables j current.bitCursor tape result hrun
+      refine ⟨hstart.trans hrp.1, ?_⟩
+      intro other hagree
+      exact hrp.2 other (fun i hlo hhi => hagree i (hstart.trans hlo) hhi)
+    have htrans : ∀ tape result, initialRun tape = some result →
+        (classifyState result.1).val = .transversal := by
+      intro tape result hrun
+      exact RestartPhaseTransversal.restartPhase_transversal
+        r o₁ o₂ tape s current.tables j current.bitCursor result hrun
+    have hcovered : ∀ (suffix : List.Vector Bool t) result observed recorded,
+        initialRun (fun i => ((pref ++ suffix.val)[i]?).getD false) = some result →
+        observePhaseTrace r o₁ o₂ (fun i => ((pref ++ suffix.val)[i]?).getD false)
+          s (s.ρ ^ j) current.currentWeights result = some (observed, recorded) →
+        observed.bitCursor ≤ pref.length + t := by
+      intro suffix result observed recorded hrestart htrace
+      have hobserve := recorded_trace_observePhase r o₁ o₂
+        (fun i => ((pref ++ suffix.val)[i]?).getD false) s
+        (s.ρ ^ j) current.currentWeights result
+      rw [htrace] at hobserve
+      have hbound := PhaseObservationBitCoverage.phase_observation_cursor_le_block
+        n r o₁ o₂ p hn (fun i => ((pref ++ suffix.val)[i]?).getD false)
+        j hj current result observed (hfixed suffix) hrestart hobserve.symm
+      simpa only [t, Nat.add_sub_of_le hlen] using hbound
+    have hbound := StoppedRecordedTraceSubkernel.stopped_recorded_trace_subkernel
+      r o₁ o₂ s (s.ρ ^ j) current.currentWeights pref t initialRun
+      hreplay htrans hcovered
+      (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j) current.currentWeights
+        hn (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j) hw)
+      hstep start states
+    simpa only [Option.bind_some, Option.map_some, Option.some.injEq] using hbound
 
 end CountingMatroid.Analysis.SuccessfulPrefixRecordedTraceSubkernel
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · reduced · proved deterministic full observation bit coverage in PhaseObservationBitCoverage; instantiated the generic stopped recorded-trace comparison with exact restart replay, transversal return, and original-history cursor extraction. The remaining positive-length stochastic composition is in StoppedRecordedTraceSubkernel; this moves, rather than closes, that proof obligation.
 
 * 2026-10-09 · deferred handoff · fresh wave2 was deferred for the active TransversalVarianceBound writer in the producer build closure; statements and parent/child source checks are verified, but no child ownership has transferred. Preserve the decomposition for automatic settled-boundary revalidation.
 
