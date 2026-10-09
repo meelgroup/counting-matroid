@@ -9,6 +9,13 @@ support of a homogeneous cubic. The coordinate slices have at most one
 positive direction; the remaining obligation is to propagate that bound to
 every nonnegative contraction. Arbitrary sums of such slices have no such
 closure property without the tensor and support hypotheses.
+
+The remaining obligation is the degree-three instance of the nonnegative
+directional-derivative closure cited in the paper. Brändén–Huh, Corollary
+2.11, states this closure for the recursively defined classes of polynomials
+with M-convex support and Lorentzian quadratic derivatives. Neither Mathlib
+nor Arlib in the pinned dependencies provides this closure theorem. Its
+status here is a pending Prior proposal, not a proved spectral bound.
 -/
 
 namespace CountingMatroid.Analysis.CubicTensorContraction
@@ -23,10 +30,17 @@ def cubicTensorSupport {σ : Type} [DecidableEq σ] (T : σ → σ → σ → �
   {m | ∃ s i j, T s i j ≠ 0 ∧
     m = Finsupp.single i 1 + Finsupp.single j 1 + Finsupp.single s 1}
 
-/-- INTERNAL: The polynomial-independent spectral obligation for cubic mixing.
+/-- PAPER: main.tex:340-347
+BORROWED: Brändén–Huh, Lorentzian polynomials (2020), Corollary 2.11
+(nonnegative directional derivatives), following Theorem 2.10.
+The degree-three tensor formulation of the cited closure statement.
 Symmetry, nonnegativity, and exchange support are essential compatibility
 hypotheses; the statement does not assert closure of arbitrary sums.
-TEXLINE: main.tex:340-348 -/
+For the cubic `(1 / 6) * ∑ s i j, T s i j * z s * z i * z j`,
+the coordinate derivatives are one half of the displayed slice forms, and
+the directional derivative is one half of their displayed weighted sum.
+This normalization does not change a nonpositive-hyperplane witness.
+The paper cites this closure rather than proving it. -/
 theorem cubic_tensor_contraction_hyperplane {σ : Type} [Fintype σ] [DecidableEq σ]
     (T : σ → σ → σ → ℚ) (hT : ∀ s i j, 0 ≤ T s i j)
     (hswap : ∀ s i j, T s i j = T i s j)
@@ -87,9 +101,21 @@ theorem cubic_tensor_contraction_hyperplane {σ : Type} [Fintype σ] [DecidableE
   -- The proved hreverse above is the resulting local Rayleigh inequality.
   -- Summing its right-hand sides still requires the global spectral step;
   -- the slice hyperplanes need not agree.
-  -- BLOCKER: the local-to-global spectral argument using exchange support
-  -- to exclude disconnected positive components; it must also handle zero
-  -- tensor rows and directions with at least two positive entries.
+  -- BLOCKER: no project or pinned-library declaration supplies the
+  -- nonnegative directional-derivative closure in Brändén–Huh, Corollary
+  -- 2.11, cited at main.tex:346-347. It is exactly the remaining cubic
+  -- contraction bound, once the symmetric tensor is read as the cubic in
+  -- the docstring. The signature-to-hyperplane conversion is available;
+  -- the missing input is the aggregate signature bound, not its conversion.
+  -- The alternative direct spectral route still needs connectedness of
+  -- the positive contraction on active coordinates from hex, simplicity
+  -- of its normalized eigenvalue 1, and passage to directions with zeros.
+  -- The proved slice estimate alone gives no common kernel for the sum.
+  -- PRIOR-PROPOSAL:
+  -- CountingMatroid.Analysis.CubicTensorContraction.cubic_tensor_contraction_hyperplane,
+  -- the degree-three
+  -- specialization of the closure explicitly cited by the paper. Prior
+  -- remains unchanged pending the round-end citation review.
   sorry
 
 end CountingMatroid.Analysis.CubicTensorContraction
@@ -97,6 +123,7 @@ end CountingMatroid.Analysis.CubicTensorContraction
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · prior proposal · identified the remaining contraction bound as the cubic specialization of Brändén–Huh Corollary 2.11, explicitly cited at main.tex:346-347; no Lorentzian closure API was found in the pinned dependencies. Preserved all existing proofs and the unchanged open statement.
 * 2026-10-09 · partial · proved each slice's reverse Cauchy–Schwarz estimate from its nonpositive hyperplane. Handoff agent2-cubic-tensor-20261009-1 was deferred at the validation deadline; ownership remains local pending settled-boundary revalidation.
 * 2026-10-09 · decomposed · stated the tensor-only contraction boundary; proved zero-direction and single-coordinate-direction cases. The general compatible-tensor spectral step remains open.
 -/
