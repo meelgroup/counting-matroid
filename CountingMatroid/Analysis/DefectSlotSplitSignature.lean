@@ -1,13 +1,21 @@
 import CountingMatroid.Analysis.OmittedRankWeightPolynomial
+import CountingMatroid.Analysis.SlotBlockSignature
+import CountingMatroid.Analysis.OmittedSlotQuadratic
+import CountingMatroid.Analysis.OmittedTutteNormalization
+import CountingMatroid.Analysis.OmittedSlotCoefficientFormula
 
 set_option autoImplicit false
 
 /-!
 The omitted-element quadratic input to the recursive slot transport. The
 slot totals and old-hole matrix below follow main.tex:516-601. The numerical
-split estimate is proved from orthogonal-complement nonpositivity. Establishing
-that nonpositivity from the operational rank-weight polynomial remains open;
-no signature or rank-weight inequality is assumed by the parent theorem.
+split estimate and the real signature-to-orthogonal-nonpositivity implication
+are proved. The explicit block matrix is assembled on the old holes and two
+new coordinates. The dual-matroid omitted-label extraction is constructed;
+its descendant, homogeneous degree, and exact normalization to the operational
+omitted-rank polynomial are proved. Identifying the surviving omitted-label
+patterns with the final Hessian completion totals remains open; no signature
+or rank-weight inequality is assumed by the parent theorem.
 -/
 
 namespace CountingMatroid.Analysis.DefectSlotSplitSignature
@@ -143,23 +151,70 @@ theorem slot_split_signature (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
   classical
   intro sₐ sᵦ u h x y horth
   have hu : 0 < u := slot_total_pos r o₁ o₂ q hq B _ _ _
-  let Fvee := OmittedRankWeightPolynomial.omittedRankPolynomial r o₁ o₂ q
-  have hmulti : ∀ e, Fvee.degreeOf e ≤ 1 :=
-    OmittedRankWeightPolynomial.omitted_rank_multiaffine r o₁ o₂ q
-  have hcoeff (hole : PairedGround n) (hhole : hole ∈ R) :=
-    slot_coefficient_sum r o₁ o₂ q B R U hBR hU hsize hole hhole
-  -- Concrete route: the polynomial coefficients are now explicit in Fvee.
-  -- Differentiate in the fixed omitted labels, set fixed labels to zero,
-  -- identify the two labels at each pair in U.erase t, and extract exponent
-  -- one. The resulting quadratic has the four blocks displayed above.
-  -- Applying coefficient positivity termwise does not prove this goal:
-  -- signed hole values create mixed terms, and the entire quadratic is not
-  -- nonpositive. It is nonpositive only under horth.
-  -- STILL OPEN: construct the paired matroid / operational rank bridge,
-  -- prove the derivative/substitution coefficient extraction, and transfer
-  -- the quadratic signature of Fvee to its e_a+e_b orthogonal complement.
-  -- The paper proves this extraction; it is not a Prior assumption.
-  sorry
+  let V : R → R → ℝ := fun i j => futureMatrix r o₁ o₂ q B R U t i j
+  let a : R → ℝ := fun i => sₐ i
+  let b : R → ℝ := fun i => sᵦ i
+  have hsig : sigPos (SlotBlockSignature.slotBlockMatrix V a b u).toQuadraticForm' ≤ 1 := by
+    let N := (DefectPartitionQuadraticExtraction.pairedMatroid M₁ M₂)✶
+    let G := OmittedSlotQuadratic.omittedSlotQuadratic N q B R U t
+    have hN : N.E = Set.univ := by
+      simpa only [N, Matroid.dual_ground] using
+        DefectPartitionQuadraticExtraction.paired_matroid_full_ground M₁ M₂ hfull
+    have hdesc := OmittedSlotQuadratic.omitted_slot_descendant N q hq B R U t
+    have hdegree := OmittedSlotQuadratic.omitted_slot_homogeneous
+      N q B R U hBR hU hsize t ht
+    have hentries : RankWeightQuadraticSignature.hessian G =
+        SlotBlockSignature.slotBlockMatrix V a b u := by
+      ext i j
+      rw [RankWeightQuadraticSignature.hessian_coefficient]
+      change ((MvPolynomial.coeff (Finsupp.single i 1 + Finsupp.single j 1)
+        (OmittedSlotQuadratic.omittedSlotQuadratic N q B R U t) *
+        (if i = j then 2 else 1) : ℚ) : ℝ) = _
+      rw [OmittedTutteNormalization.normalized_omitted_slot
+        r M₁ M₂ o₁ o₂ q hfull hr h₁ h₂ hq]
+      rw [OmittedSlotCoefficientFormula.slot_quadratic_state_sum
+        r o₁ o₂ q B R U hU t ht]
+      -- STILL OPEN: the exact coefficient identity for this constructed
+      -- omitted-label descendant. Its four blocks must be futureMatrix,
+      -- the two opposite child slotTotals, and u (with zero diagonals).
+      -- BUILD BLOCKER (2026-10-09): a later permitted rebuild failed in
+      -- the concurrently edited RankWeightQuadraticSignature.lean:460:
+      -- Unknown constant List.length_eq_zero.mp. Its .olean is absent, so
+      -- further parent/probe elaboration cannot run until that dependency
+      -- is repaired by its owner. Both new support modules were checked
+      -- and built successfully before this independent dependency change.
+      -- The descendant and degree-two obligations are now proved. What
+      -- remains is the purely combinatorial equivalence between
+      -- SlotOmissionPattern at single i 1 + single j 1 and the completion
+      -- predicates in the four blocks (including impossibility of the
+      -- diagonal patterns). The complete derivative/substitution calculus
+      -- now reduces the coefficient to an explicit finite state sum.
+      -- Normalization, oracle ranks, dual rank, and all extraction
+      -- multiplicities are proved in the two imported support modules.
+      -- The existing selected-triple extraction has type Fin 3 and uses
+      -- selected labels; it cannot rewrite a coefficient indexed by R⊕Bool.
+      -- This is a same-paper bridge, not a proposed Prior assumption.
+      sorry
+    rw [← hentries]
+    exact RankWeightQuadraticSignature.branden_huh_quadratic_signature
+      N hN q hq hqone G hdesc hdegree
+  have hbalance : (∑ i : R, (a i + b i) * h i) + u * (x + y) = 0 := by
+    change (∑ i : R, (sₐ i + sᵦ i) * h i) + u * (x + y) = 0
+    rw [Finset.sum_coe_sort R (fun i => (sₐ i + sᵦ i) * h i)]
+    exact horth
+  have hnonpos := SlotBlockSignature.slot_block_nonpositive V a b u hu hsig
+    (fun i => h i) x y hbalance
+  dsimp only [V, a, b] at hnonpos
+  have hinner (i : PairedGround n) :
+      (∑ j : R, futureMatrix r o₁ o₂ q B R U t i j * h i * h j) =
+      ∑ j ∈ R, futureMatrix r o₁ o₂ q B R U t i j * h i * h j :=
+    Finset.sum_coe_sort R (fun j => futureMatrix r o₁ o₂ q B R U t i j * h i * h j)
+  simp_rw [hinner] at hnonpos
+  rw [Finset.sum_coe_sort R (fun i => ∑ j ∈ R,
+      futureMatrix r o₁ o₂ q B R U t i j * h i * h j),
+    Finset.sum_coe_sort R (fun i => sᵦ i * h i),
+    Finset.sum_coe_sort R (fun i => sₐ i * h i)] at hnonpos
+  exact hnonpos
 
 /-- INTERNAL: The numerical completion-of-the-square step on a balanced
 old-hole vector. It needs nonpositivity only on the indicated orthogonal
@@ -223,3 +278,10 @@ theorem slot_split_control (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
     B R U hBR hU hsize t ht h
 
 end CountingMatroid.Analysis.DefectSlotSplitSignature
+
+/-! ### Run record
+Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · partial, dependency blocked · proved exact dual-Tutte normalization, paired rank n, complement dual-rank identity, extraction multiplicities, and the finite-state omitted-slot coefficient formula in two new support modules; the parent uses both and still needs omission-pattern/completion equivalence. Both targeted builds and the parent elaboration passed before a concurrent RankWeightQuadraticSignature edit removed its object and failed a later permitted rebuild at List.length_eq_zero.mp.
+* 2026-10-09 · partial · proved the real signature-to-orthogonal-nonpositivity step and exact block-vector expansion in two support modules; the original open theorem now has only the explicit operational block-matrix sigPos bound open. Its all-slot omitted-polynomial descendant and coefficient extraction remain unavailable; no new open declaration or Prior assumption was introduced.
+-/
