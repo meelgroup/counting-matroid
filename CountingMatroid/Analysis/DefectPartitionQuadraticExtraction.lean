@@ -2,6 +2,7 @@ import CountingMatroid.Analysis.RankWeightQuadraticSignature
 import CountingMatroid.Analysis.ThreePairSignatureSchur
 import CountingMatroid.Analysis.InitialMultipliersGood
 import CountingMatroid.Analysis.GreedyRankCorrect
+import CountingMatroid.Analysis.TwoLabelDerivativeNilpotence
 import Mathlib.Combinatorics.Matroid.Sum
 import Mathlib.RingTheory.MvPolynomial.EulerIdentity
 
@@ -12,7 +13,9 @@ The concrete selected-element quadratic used in the three-pair inequality.
 It is constructed from the homogenized Tutte polynomial by the paper's
 actual derivative and substitution sequence. Its membership in the allowed
 closure operations is proved separately from its operational coefficients.
-The remaining coefficient identity needs the paired-rank correspondence
+Its last diagonal Hessian entry is proved to vanish directly from squarefree
+label exponents, without any operational coefficient identity.
+The remaining coefficient identities need the paired-rank correspondence
 and extraction calculation; it does not assume a signature theorem. The
 existing paired-rank correspondence and extraction-calculus lemmas live in
 modules that import this module. Reusing them here requires separating the
@@ -25,6 +28,7 @@ namespace CountingMatroid.Analysis.DefectPartitionQuadraticExtraction
 open CountingMatroid.Model
 open CountingMatroid.Analysis.RankWeightQuadraticSignature
 open CountingMatroid.Analysis.ThreePairSignatureSchur
+open CountingMatroid.Analysis.TwoLabelDerivativeNilpotence
 
 /-- PAPER: main.tex:262-272
 The direct sum of the first matroid and the second matroid's dual, on the
@@ -199,6 +203,85 @@ theorem selected_triple_homogeneous {n : ℕ} (M₁ M₂ : Matroid (Fin n))
     (hcubic.pderiv (i := k))
   exact hquad.C_mul _
 
+/-- INTERNAL: Differentiating a merged pair sums the two label derivatives.
+TEXLINE: main.tex:403-407 -/
+theorem pair_substitution_derivative {n : ℕ} (j : Fin n)
+    (p : MvPolynomial (Option (PairedGround n)) ℚ) :
+    MvPolynomial.pderiv j (linearSubstitution pairSubstitution p) =
+      linearSubstitution pairSubstitution
+        (MvPolynomial.pderiv (some (j, false)) p +
+          MvPolynomial.pderiv (some (j, true)) p) := by
+  classical
+  unfold linearSubstitution
+  rw [CountingMatroid.Analysis.LinearPolynomialChainRule.linear_aeval_pderiv]
+  congr 1
+  simp [pairSubstitution, Fintype.sum_prod_type, Finset.sum_add_distrib, add_comm]
+
+/-- INTERNAL: Extraction at an ordinary pair commutes with differentiation
+at a distinct retained pair.
+TEXLINE: main.tex:408-417 -/
+theorem extract_one_derivative_commute {n : ℕ} (j k : Fin n) (hjk : j ≠ k)
+    (p : MvPolynomial (Fin n) ℚ) :
+    MvPolynomial.pderiv k (extractOne j p) = extractOne j (MvPolynomial.pderiv k p) := by
+  classical
+  unfold extractOne
+  rw [linear_substitution_derivative_single _ k k]
+  · rw [derivative_commute k j]
+  · intro s
+    by_cases hs : s = j
+    · subst s; simp [hjk]
+    · simp [hs]
+
+/-- INTERNAL: The last diagonal Hessian entry vanishes: the merged pair k
+has at most two selected labels, and this entry takes three k derivatives.
+TEXLINE: main.tex:412-417 -/
+theorem selected_triple_last_diagonal_zero {n : ℕ} (M₁ M₂ : Matroid (Fin n))
+    (q : ℚ) (i j k : Fin n) :
+    hessian (selectedTripleQuadratic M₁ M₂ q i j k) 2 2 = 0 := by
+  classical
+  let f := linearSubstitution pairSubstitution
+    ((MvPolynomial.pderiv none)^[n] (tuttePolynomial (pairedMatroid M₁ M₂) q))
+  let ordinary := (List.finRange n).filter (fun s => s ≠ i ∧ s ≠ j ∧ s ≠ k)
+  let cubic := ordinary.foldl (fun g s => extractOne s g) f
+  have hf : MvPolynomial.pderiv k (MvPolynomial.pderiv k (MvPolynomial.pderiv k f)) = 0 := by
+    dsimp only [f]
+    rw [pair_substitution_derivative, pair_substitution_derivative, pair_substitution_derivative]
+    have hnil := tutte_two_label_derivative_cube (pairedMatroid M₁ M₂) q
+      (k, false) (k, true) n
+    dsimp only at hnil
+    rw [hnil]
+    simp [linearSubstitution]
+  have hfold (l : List (Fin n)) (hl : ∀ s ∈ l, s ≠ k)
+      (g : MvPolynomial (Fin n) ℚ)
+      (hg : MvPolynomial.pderiv k (MvPolynomial.pderiv k (MvPolynomial.pderiv k g)) = 0) :
+      MvPolynomial.pderiv k (MvPolynomial.pderiv k (MvPolynomial.pderiv k
+        (l.foldl (fun p s => extractOne s p) g))) = 0 := by
+    induction l generalizing g with
+    | nil => exact hg
+    | cons s l ih =>
+      apply ih (fun t ht => hl t (by simp [ht]))
+      rw [extract_one_derivative_commute s k (hl s (by simp)),
+        extract_one_derivative_commute s k (hl s (by simp)),
+        extract_one_derivative_commute s k (hl s (by simp)), hg]
+      simp [extractOne, linearSubstitution]
+  have hc : MvPolynomial.pderiv k (MvPolynomial.pderiv k (MvPolynomial.pderiv k cubic)) = 0 :=
+    hfold ordinary (by
+      intro s hs
+      simp only [ordinary, List.mem_filter, List.mem_finRange, true_and, decide_eq_true_eq] at hs
+      exact hs.2.2) f hf
+  have hcolumn : ∀ s, tripleSubstitution i j k s 2 = if s = k then 1 else 0 := by
+    intro s
+    simp [tripleSubstitution, show (2 : Fin 3) ≠ 0 by decide, show (2 : Fin 3) ≠ 1 by decide]
+  have hrestrict := linear_substitution_derivative_single
+    (tripleSubstitution i j k) k (2 : Fin 3) hcolumn
+  change ((MvPolynomial.constantCoeff
+    (MvPolynomial.pderiv 2 (MvPolynomial.pderiv 2
+      (MvPolynomial.C (q ^ n / (n.factorial : ℚ)) *
+        linearSubstitution (tripleSubstitution i j k) (MvPolynomial.pderiv k cubic)))) : ℚ) : ℝ) = 0
+  simp only [MvPolynomial.pderiv_C_mul]
+  rw [hrestrict, hrestrict, hc]
+  simp [linearSubstitution]
+
 /-- PAPER: main.tex:403-417
 The selected quadratic is homogeneous of degree two, and its Hessian has
 exactly the operational transversal and ordered-defect totals. The n-set
@@ -221,6 +304,9 @@ theorem defect_partition_quadratic_extraction (n r : ℕ)
   classical
   refine ⟨selected_triple_homogeneous M₁ M₂ q i t k hit htk hik, ?_⟩
   ext s u
+  by_cases hlast : s = 2 ∧ u = 2
+  · rcases hlast with ⟨rfl, rfl⟩
+    simpa [threePairMatrix] using selected_triple_last_diagonal_zero M₁ M₂ q i t k
   rw [hessian_coefficient]
   -- This is now a coefficient calculation, with the repeated-variable
   -- multiplicity handled by the proved `hessian_coefficient` identity.
@@ -237,12 +323,25 @@ theorem defect_partition_quadratic_extraction (n r : ℕ)
   -- (preserving their fully qualified names), then make PairedRankValue and
   -- ConditionalDefectQuadratics import that construction module. This module
   -- can then import PairedRankValue and ConditionalDefectExtractionCoefficients.
-  -- After that structural repair, the mathematical work still needed is the
-  -- normalized Tutte-sum coefficient identity: the homogenizing derivative
-  -- and deletion retain exactly the n-element paired subsets, each weighted
-  -- by q^(n-rank). Group their monomials by pair occupancy, identify defect
-  -- occupancy with classify_defect_iff, and identify transversal occupancy
-  -- with transversalState. The final k derivative has multiplicity d 2 + 1;
+  -- OmittedTutteNormalization.normalized_tutte_polynomial already proves
+  -- the normalized homogenizer slice, but is also downstream via both
+  -- ConditionalDefectExtractionCoefficients and PairedRankValue.
+  -- Its additional import through OmittedSlotQuadratic must be redirected
+  -- to the construction module as well before normalization is importable.
+  -- After that structural repair, use the proved normalization and rank
+  -- identities, then group their n-element monomials by pair occupancy.
+  -- Precisely, put P = C(q^n/n!) * linearSubstitution pairSubstitution
+  -- ((pderiv none)^[n] (tuttePolynomial (pairedMatroid M₁ M₂) q)).
+  -- The remaining operational bridges are
+  --   P.coeff (∑ s : Fin n, Finsupp.single s 1) = partitionSum r o₁ o₂ q
+  -- and, for every ordered index a,
+  --   P.coeff (Finsupp.single a.fullPair 2 +
+  --     ∑ s ∈ Finset.univ \ {a.emptyPair, a.fullPair}, Finsupp.single s 1)
+  --     = defectPartition r o₁ o₂ q a.
+  -- The first occupancy selects exactly one label in each pair. The second
+  -- selects no label in a.emptyPair, both labels in a.fullPair, and exactly
+  -- one in every other pair. Identify them with transversalState and
+  -- classify_defect_iff. The final k derivative has multiplicity d 2 + 1;
   -- hessian_coefficient supplies the diagonal multiplicity separately.
   -- Positivity or a signature theorem cannot discharge this equality.
   /- Verified diagnostic (lake env lean --stdin, 2026-10-09): this proof
@@ -291,6 +390,8 @@ end CountingMatroid.Analysis.DefectPartitionQuadraticExtraction
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* r2026-10-09 · partially proved · proved and used the last diagonal Hessian entry from two-label squarefreeness; all new support lemmas are closed, while the other entries retain the operational-partition boundary.
+* r2026-10-09 · dependency refined · found proved normalization in OmittedTutteNormalization and its additional cycle through OmittedSlotQuadratic; the earlier two-import construction split would leave this cycle intact.
 * r2026-10-09 · diagnostic verified · a complete selected-quadratic coefficient calculation checks on stdin using the existing downstream extraction lemmas; retained the proof above the remaining boundary.
 * r2026-10-09 · blocked · confirmed extraction-calculus and paired-rank dependencies import this module; recorded the construction split needed to reuse them without duplicating proofs.
 -/
