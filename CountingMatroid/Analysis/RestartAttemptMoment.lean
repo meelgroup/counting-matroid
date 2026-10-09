@@ -11,14 +11,180 @@ set_option autoImplicit false
 The stochastic half of the restart certificate now bounds a fixed,
 value-preserving stopped attempt counter. The zero-stage case is proved.
 Finite stationary excursion occupation budgets and their numerical bounds
-are proved. Positive stages require only the operational occupation comparison
-with those fixed budgets, including warm stage propagation. Constructing
+are proved. Stage accumulators, nonnegative stage increments, and the exact finite-suffix
+mean decomposition are proved. Positive stages require a single-stage
+operational occupation bound, including stopped-prefix warm propagation. Constructing
 covered integer-draw histories is a separate deterministic obligation.
 -/
 namespace CountingMatroid.Analysis.RestartAttemptMoment
 
 open CountingMatroid.Model CountingMatroid.Program
 open CountingMatroid.Analysis.RestartAttemptAccounting
+
+/-- INTERNAL: The actual stopped restart accumulator after k stored stages,
+using the same fresh initializer and suffix throughout. The count is retained
+when the cursor becomes none, including the last draw-abort token.
+TEXLINE: main.tex:1163-1176,1226-1234 -/
+noncomputable def prefixRestartState {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (suffix : List Bool)
+    (k : ℕ) : Option (RestartCursor n) × ℕ :=
+  let tape := fun i => ((pref ++ suffix)[i]?).getD false
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  let initial := (freshTransversal n tape history.current.bitCursor).val
+  (Arlib.Computation.Charged.repeatFor
+    (fun index acc => countedStage r o₁ o₂ tape s history.current.tables index acc)
+    k (some ⟨initial.1, initial.2, 0⟩, 0)).val
+
+/-- INTERNAL: A stage's retained count increment, formed in the reals so
+that its exact telescoping identity needs no truncated-subtraction premise.
+TEXLINE: main.tex:1226-1234 -/
+noncomputable def prefixStageAttempts {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (suffix : List Bool)
+    (k : ℕ) : ℝ :=
+  ((prefixRestartState history suffix (k + 1)).2 : ℝ) -
+    ((prefixRestartState history suffix k).2 : ℝ)
+
+/-- INTERNAL: Split the charged stage fold without dropping an abort count. -/
+private theorem attempt_fold_append {α β : Type}
+    (f : β → α → Arlib.Computation.Charged CountingMatroid.Model.Operations.Op
+      CountingMatroid.Model.Operations.Cell β)
+    (xs ys : List α) (b : β) :
+    (Arlib.Computation.Charged.foldl f (xs ++ ys) b).val =
+      (Arlib.Computation.Charged.foldl f ys
+        (Arlib.Computation.Charged.foldl f xs b).val).val := by
+  induction xs generalizing b with
+  | nil => rfl
+  | cons x xs ih =>
+      simpa only [List.cons_append, Arlib.Computation.Charged.val_foldl_cons]
+        using ih (f b x).val
+
+/-- INTERNAL: Each stage increment is evaluated from the actual earlier
+stopped accumulator, rather than from a separately chosen starting law.
+TEXLINE: main.tex:1226-1234 -/
+theorem restart_stage_state_succ {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (suffix : List Bool)
+    (k : ℕ) :
+    prefixRestartState history suffix (k + 1) =
+      (countedStage r o₁ o₂ (fun i => ((pref ++ suffix)[i]?).getD false)
+        (CountingMatroid.Interface.Pseudocode.setup n p) history.current.tables k
+        (prefixRestartState history suffix k)).val := by
+  unfold prefixRestartState Arlib.Computation.Charged.repeatFor
+  rw [List.range_succ, attempt_fold_append]
+  rfl
+
+/-- INTERNAL: An early-break fold preserves any natural-valued score
+that each continuing body result increases. Refusing continuation keeps it. -/
+private theorem attempt_while_mono {α β : Type}
+    (f : β → α → Arlib.Computation.Charged CountingMatroid.Model.Operations.Op
+      CountingMatroid.Model.Operations.Cell (Option β)) (score : β → ℕ)
+    (h : ∀ b a next, (f b a).val = some next → score b ≤ score next)
+    (xs : List α) (b : β) :
+    score b ≤ score (Arlib.Computation.Charged.foldlWhile f xs b).val := by
+  induction xs generalizing b with
+  | nil => exact le_rfl
+  | cons a xs ih =>
+      cases hf : (f b a).val with
+      | none =>
+          simp only [Arlib.Computation.Charged.val] at hf ⊢
+          simp only [Arlib.Computation.Charged.foldlWhile, hf]
+          exact le_rfl
+      | some next =>
+          have hn := (h b a next hf).trans (ih next)
+          simp only [Arlib.Computation.Charged.val] at hf hn ⊢
+          simpa only [Arlib.Computation.Charged.foldlWhile, hf] using hn
+
+/-- INTERNAL: A fixed fold preserves a score increased by each body. -/
+private theorem attempt_fold_mono {α β : Type}
+    (f : β → α → Arlib.Computation.Charged CountingMatroid.Model.Operations.Op
+      CountingMatroid.Model.Operations.Cell β) (score : β → ℕ)
+    (h : ∀ b a, score b ≤ score (f b a).val) (xs : List α) (b : β) :
+    score b ≤ score (Arlib.Computation.Charged.foldl f xs b).val := by
+  induction xs generalizing b with
+  | nil => exact le_rfl
+  | cons a xs ih =>
+      rw [Arlib.Computation.Charged.val_foldl_cons]
+      exact (h b a).trans (ih (f b a).val)
+
+/-- INTERNAL: The return's auxiliary count increases even if its cursor
+is discarded by a draw abort or the attempt cap.
+TEXLINE: main.tex:1163-1176 -/
+private theorem counted_return_count_mono {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool) (s : AnnealingSchedule)
+    (q : ℚ) (w : Multipliers n) (start : RestartCursor n) (count : ℕ) :
+    count ≤ (countedReturn r o₁ o₂ tape s q w start count).val.2 := by
+  apply attempt_while_mono
+    (fun acc (_ : ℕ) => countedBody r o₁ o₂ tape s q w acc) Prod.snd
+    _ (List.range s.restartCap) ((some start, false), count)
+  intro b a next hnext
+  simp only [countedBody, Arlib.Computation.Charged.val_bind,
+    Arlib.Computation.Charged.val_pure] at hnext
+  cases ht : (traceBody r o₁ o₂ tape s q w b.1).val with
+  | none => simp only [ht, Option.map_none] at hnext; contradiction
+  | some result =>
+      simp only [ht, Option.map_some, Option.some.injEq] at hnext
+      rw [← hnext]
+      exact Nat.le_add_right _ _
+
+/-- INTERNAL: One stored stage never loses tokens, including when its
+stopped cursor is already none.
+TEXLINE: main.tex:1163-1176,1226-1234 -/
+theorem counted_stage_count_mono {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool) (s : AnnealingSchedule)
+    (tables : LearnedWeights n) (k : ℕ) (acc : Option (RestartCursor n) × ℕ) :
+    acc.2 ≤ (countedStage r o₁ o₂ tape s tables k acc).val.2 := by
+  simp only [countedStage, Arlib.Computation.Charged.val_bind]
+  apply attempt_fold_mono _ Prod.snd _ (List.range s.τ) acc
+  intro b a
+  cases hb : b.1 with
+  | none => simp only [countedTransition, hb, Arlib.Computation.Charged.val_pure]; exact le_rfl
+  | some current =>
+      simp only [countedTransition, hb]
+      exact counted_return_count_mono r o₁ o₂ tape s _ _ current b.2
+
+/-- INTERNAL: The exact real-valued stage difference is a nonnegative
+attempt cost on every tape, with no successful-return conditioning.
+TEXLINE: main.tex:1230-1234 -/
+theorem prefix_stage_attempts_nonneg {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (suffix : List Bool)
+    (k : ℕ) : 0 ≤ prefixStageAttempts history suffix k := by
+  unfold prefixStageAttempts
+  rw [sub_nonneg, restart_stage_state_succ]
+  exact_mod_cast counted_stage_count_mono r o₁ o₂
+    (fun i => ((pref ++ suffix)[i]?).getD false)
+    (CountingMatroid.Interface.Pseudocode.setup n p) history.current.tables k
+    (prefixRestartState history suffix k)
+
+/-- INTERNAL: Stage increments telescope to the original stopped attempt
+counter on every suffix, including executions ending in a draw abort.
+TEXLINE: main.tex:1230-1234 -/
+theorem prefix_stage_attempts_sum {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (suffix : List Bool) :
+    (∑ i : Fin j, prefixStageAttempts history suffix i.val) =
+      (prefixAttemptCost history suffix : ℝ) := by
+  rw [Fin.sum_univ_eq_sum_range]
+  unfold prefixStageAttempts
+  rw [Finset.sum_range_sub (fun k => ((prefixRestartState history suffix k).2 : ℝ))]
+  have hz : (prefixRestartState history suffix 0).2 = 0 := rfl
+  rw [hz, Nat.cast_zero, sub_zero]
+  rfl
+
+/-- INTERNAL: The finite-suffix mean is exactly the sum of stage means;
+no conditioning on completion removes the last attempt of an abort.
+TEXLINE: main.tex:1230-1234,1392-1421 -/
+theorem prefix_stage_attempt_mean_sum {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (t : ℕ) :
+    (∑ bits : List.Vector Bool t, (prefixAttemptCost history bits.val : ℝ)) /
+      (2 : ℝ) ^ t =
+    ∑ i : Fin j, (∑ bits : List.Vector Bool t,
+      prefixStageAttempts history bits.val i.val) / (2 : ℝ) ^ t := by
+  simp_rw [← prefix_stage_attempts_sum history]
+  rw [Finset.sum_comm, Finset.sum_div]
 
 /-- INTERNAL: Transfer the paper's uncapped restart mean to the fixed counted
 restart on the actual suffix, retaining attempts made before a draw abort.
@@ -99,30 +265,46 @@ theorem restart_attempt_moment (n r : ℕ)
           s.restartCap 4 (5 * (n : ℝ) ^ 2) (by norm_num) hmass hB
         change budget i ≤ 4 * (5 * (n : ℝ) ^ 2) at hb
         nlinarith
+      have hstage (i : Fin (a + 1)) :
+          (∑ bits : List.Vector Bool t,
+            prefixStageAttempts history bits.val i.val) / (2 : ℝ) ^ t ≤
+              (s.τ : ℝ) * budget i := by
+        /- PARKED: Recovery now asks for one stage's mean, not the entire
+        restart occupation comparison. prefix_stage_attempts_nonneg proves
+        this is a nonnegative actual cost, and restart_stage_state_succ
+        identifies its input with the preceding stopped operational fold.
+        prefix_stage_attempt_mean_sum proves the exact sum used below.
+
+        Executable next step: at stage i, disintegrate prefixRestartState
+        history bits.val i.val over stopped cursor/state fibers. Split the
+        s.τ calls of countedTransition in countedStage into count increments.
+        For each return, keep the indicator that the pre-step guard permits
+        chainStep even when that draw returns none; subsequent indicators
+        require successful off-target transitions. Show their finite-suffix
+        masses are bounded by the first target mass and the positive-time
+        survival terms in returnOccupation (P i) A (μ i) s.restartCap.
+        The necessary starting sublaw is <= 4 / mass i * μ i on A.
+        The first stage needs the freshTransversal law and parameter drift;
+        subsequent stages need stopped-prefix composition plus scheduled
+        trace mixing to propagate this domination. Do not normalize away
+        missing mass on capped or draw-aborted executions.
+
+        Concrete missing facts: a covered stopping-prefix survival bound
+        for attempted (not just completed) returns, and the above warm
+        starting-sublaw bound at each operational stage/trace-step cursor.
+        No finite-tape coverage premise may be assumed: history.consumed
+        alone does not imply current.bitCursor = pref.length.
+        Existing endpoint subkernels omit the terminal abort attempt;
+        expanding the folds alone gives a counter, not its fiber masses.
+        The deterministic recurrence and telescoping replace that failed
+        expansion route and are proved; the stochastic debt stays here.
+        -/
+        sorry
       have hcomparison :
           (∑ bits : List.Vector Bool t, (prefixAttemptCost history bits.val : ℝ)) /
             (2 : ℝ) ^ t ≤ (s.τ : ℝ) * ∑ i : Fin (a + 1), budget i := by
-        /- PARKED: Recovery boundary is now the actual finite-tape occupation
-        comparison displayed above, not Kac's bound or arithmetic. All stage
-        kernels, stationary laws, horizons and budgets are fixed from the
-        actual history; hbudget proves each budget <= 20*n^2.
-        Next step: split countedStage/countedReturn into attempted-transition
-        indicators on stopped adaptive bit prefixes, including the indicator
-        for a chainStep whose draw aborts. Dominate each indicator by the
-        corresponding uncapped positive-time survival tail with starting
-        sublaw <= 4 times the normalized transversal law. Propagate that
-        sublaw at stage boundaries by scheduled trace mixing and partition
-        drift. H = restartCap overcounts one possible tail and is safe.
-        Failed routes: (1) expanding the charged fold exposes only its final
-        counter, with no prefix disintegration; (2) endpoint subkernel
-        domination controls completed returns only, and discards the final
-        attempt on a draw abort. Neither proves this occupation comparison.
-        Required unavailable bridge: a stopped attempt-prefix subkernel (or
-        finite-tape survival comparison), preserving aborted draw tokens.
-        RestartAttemptDrawCover constructs draw sites but does not supply
-        their stopped occupation masses. No new unproved child is introduced.
-        -/
-        sorry
+        rw [prefix_stage_attempt_mean_sum history t, Finset.mul_sum]
+        exact Finset.sum_le_sum fun i _ => hstage i
       have htotal :
           (∑ bits : List.Vector Bool t, (prefixAttemptCost history bits.val : ℝ)) /
             (2 : ℝ) ^ t ≤ 20 * (n : ℝ) ^ 2 * (s.L : ℝ) * (s.τ : ℝ) := by
@@ -144,6 +326,8 @@ end CountingMatroid.Analysis.RestartAttemptMoment
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · recovered stage decomposition · proved actual stage recurrence, nonnegative retained increments, and exact mean telescoping; replaced the whole-restart occupation gap by the one-stage mean bound, retaining the original theorem and one open proof.
 
 * 2026-10-09 · repaired decomposition · proved finite stationary return occupation telescoping and its warm budget, instantiated every actual stored stage, and isolated the stopped finite-tape occupation comparison; preserved the theorem statement and its single open proof.
 
