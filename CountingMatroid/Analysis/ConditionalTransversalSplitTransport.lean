@@ -2,6 +2,10 @@ import CountingMatroid.Analysis.ConditionalDefectCoefficients
 import CountingMatroid.Analysis.ExchangeFlowEnergy
 import CountingMatroid.Analysis.OnePairObservablePoincare
 import CountingMatroid.Analysis.BalancedCliqueEnergy
+import CountingMatroid.Analysis.ConditionalTransversalSlots
+import CountingMatroid.Analysis.SlotTransportFlow
+import CountingMatroid.Analysis.LeafExchangeProposal
+import CountingMatroid.Analysis.ConditionalLeafClassifier
 
 set_option autoImplicit false
 
@@ -10,7 +14,12 @@ The slot-transport specialization for a conditioning-tree split. Its
 finite conditional means and restricted energy are defined here. Clearing
 the two positive child totals reduces the node estimate to the paper's
 singleton-slot transport inequality. The one-pair branch is proved using
-the balanced leaf-clique estimate. The general recursion remains open.
+the balanced leaf-clique estimate. The general branch now specializes the
+proved balanced-demand recursion and disjoint leaf-flow assembly, with exact
+root coefficients and assignment-respecting energy. Its remaining obligation
+is the operational classifier on the terminal leaf vertices, isolated in
+ConditionalLeafClassifier; its general forward transversal-classifier bridge
+is currently downstream.
 -/
 
 namespace CountingMatroid.Analysis.ConditionalTransversalSplitTransport
@@ -48,6 +57,62 @@ noncomputable def nodeEnergy {n : ℕ} (κ : PairedSet n → PairedSet n → ℝ
   exact (1 / 2 : ℝ) * ∑ state, ∑ next,
     if Respects σ state ∧ Respects σ next then
       κ state next * (H state - H next) ^ 2 else 0
+
+/-- INTERNAL: Pair the assembled pointwise completion demand with a
+potential by summing the same completion moments.
+TEXLINE: main.tex:499-507,684-692 -/
+theorem completion_demand_pairing {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (q : ℚ) (B : PairedSet n)
+    (U : Finset (Fin n)) (node : SlotDemandRecursion.DemandNode n)
+    (H : PairedSet n → ℝ) :
+    (∑ state, SlotTransportFlow.completionDemand r o₁ o₂ q B U node state * H state) =
+      SlotDemandPairing.nodePairing B U node (fun state =>
+        ((q ^ (n - (CountingMatroid.Model.Subroutines.pairedRank r o₁ o₂ state).val) : ℚ) : ℝ) *
+          H state) := by
+  classical
+  unfold SlotTransportFlow.completionDemand SlotDemandPairing.nodePairing
+    SlotDemandPairing.completionMoment
+  simp only [Finset.sum_mul]
+  rw [Finset.sum_comm]
+  apply Finset.sum_congr rfl
+  intro hole _
+  simp only [mul_assoc, Finset.mul_sum, Finset.sum_mul, mul_ite, ite_mul,
+    mul_zero, zero_mul]
+  rw [Finset.sum_comm]
+  simp only [Finset.sum_ite_irrel, Finset.sum_ite_eq,
+    Finset.mem_univ, if_true, Finset.sum_const_zero]
+
+/-- INTERNAL: The two-hole root pairing is the difference of the
+conditional transversal means, with the missing singleton selecting its mate.
+TEXLINE: main.tex:810-817 -/
+theorem root_conditional_pairing {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (q : ℚ) (σ : Assignment n)
+    (k : Fin n) (hk : σ k = none) (H : PairedSet n → ℝ) :
+    let B := ConditionalTransversalSlots.fixedLabels σ
+    let U := ConditionalTransversalSlots.ordinarySlots σ k
+    let root := SlotDemandRecursion.twoHoleRoot r o₁ o₂ q B U (k, false) (k, true)
+    SlotDemandPairing.nodePairing B U root (fun state =>
+      ((q ^ (n - (CountingMatroid.Model.Subroutines.pairedRank r o₁ o₂ state).val) : ℚ) : ℝ) * H state) =
+      conditionalMean r o₁ o₂ q (Function.update σ k (some true)) H -
+        conditionalMean r o₁ o₂ q (Function.update σ k (some false)) H := by
+  classical
+  intro B U root
+  unfold SlotDemandPairing.nodePairing
+  dsimp only [root, SlotDemandRecursion.twoHoleRoot]
+  rw [Finset.sum_insert (by simp), Finset.sum_singleton]
+  simp only [ite_true, Prod.mk.injEq, Bool.true_eq_false, and_false, if_false]
+  dsimp only [SlotDemandPairing.completionMoment, B, U]
+  have hm₁ := ConditionalTransversalSlots.root_completion_sum σ k hk true
+    (fun state => ((q ^ (n - (CountingMatroid.Model.Subroutines.pairedRank r o₁ o₂ state).val) : ℚ) : ℝ) * H state)
+  have hm₀ := ConditionalTransversalSlots.root_completion_sum σ k hk false
+    (fun state => ((q ^ (n - (CountingMatroid.Model.Subroutines.pairedRank r o₁ o₂ state).val) : ℚ) : ℝ) * H state)
+  have ht₁ := ConditionalTransversalSlots.root_transversal_total r o₁ o₂ q σ k hk true
+  have ht₀ := ConditionalTransversalSlots.root_transversal_total r o₁ o₂ q σ k hk false
+  simp only [Bool.not_true, Bool.not_false] at hm₁ hm₀ ht₁ ht₀
+  rw [hm₁, hm₀, ht₁, ht₀]
+  unfold conditionalMean
+  dsimp only [transversalDeficiency]
+  ring
 
 /-- PAPER: main.tex:455-709,815-829
 Specialize slot transport to the two elements of the branching pair. Every
@@ -223,34 +288,168 @@ theorem conditional_transversal_split_transport (n r : ℕ)
     rw [heq]
     exact hclique
   have hn2 : 2 ≤ n := by omega
-  -- Concrete route: main.tex:490-492, with singleton multipliers 1 and
-  -- ordinary-slot multipliers w_(t,k). The coefficient cancellation and
-  -- the one-pair case above are proved. BalancedCliqueEnergy supplies the
-  -- potential estimate for every balanced leaf clique.
-  -- STILL OPEN (missing local lemma): assemble the balanced-hole recursion
-  -- across all ordinary slots. Its invariant must preserve old-hole values,
-  -- introduce opposite new-hole values, bound the total leaf demand cost
-  -- by 1/s₀ + 1/s₁ + 2*V/(s₀*s₁), and identify the summed leaf pairing with
-  -- the two conditional means. The final energy comparison must prove
-  -- that leaf exchange edges are disjoint and respect σ.
-  -- DefectSlotSplitSignature.slot_split_control gives the local split input;
-  -- DefectSlotConservation.future_form_conserved gives future-form
-  -- conservation in the companion transport development. Neither supplies
-  -- the all-stage recursion or its conditional-transversal specialization.
-  -- Abandoned route 1: the direct product of the two endpoint laws has the
-  -- right divergence but is nonzero on nonexchange pairs. A Lean stdin
-  -- probe verified proposal zero from {(0,false),(1,false)} to
-  -- {(0,true),(1,true)} on n=2, so the flow support condition fails.
-  -- Abandoned route 2: applying the leaf bound independently while keeping
-  -- new-hole demand zero fails child balance. Root totals (3,3), demands
-  -- (1/3,-1/3), and child totals (2,1) give child demand 1/3, not zero.
-  -- The paper's recursively introduced hole demands are essential.
-  sorry
+  let base := ConditionalTransversalSlots.fixedLabels σ
+  let U := ConditionalTransversalSlots.ordinarySlots σ k
+  let root := SlotDemandRecursion.twoHoleRoot r o₁ o₂ q base U (k, false) (k, true)
+  let W : PairedGround n → ℝ := fun hole =>
+    if h : hole.1 = k then 1 else (w ⟨hole.1, k, h⟩ : ℝ)
+  let Z : ℝ := StationaryMeanIdentities.normalizer r o₁ o₂ q w
+  let C := Z * (2 * (n : ℝ) ^ 2)
+  let restricted := fun state next : PairedSet n =>
+    if Respects σ state ∧ Respects σ next then κ state next else 0
+  have hZ : 0 < Z := by
+    dsimp only [Z]
+    exact_mod_cast (StationaryMeanIdentities.stationary_mean_identities
+      r o₁ o₂ q 1 w hq hw).1
+  have hC : 0 < C := by dsimp [C]; positivity
+  have hrestricted : ∀ state next, 0 ≤ restricted state next := by
+    intro state next
+    dsimp only [restricted]
+    split_ifs
+    · exact mul_nonneg ((exchangeProposal n hn).coe_nonneg state next)
+        (le_min (π.coe_nonneg state) (π.coe_nonneg next))
+    · exact le_rfl
+  have hsym : ∀ state next, restricted state next = restricted next state := by
+    intro state next
+    dsimp only [restricted, κ]
+    simp only [and_comm, exchange_proposal_symmetric, min_comm]
+  have hW : ∀ hole, 0 < W hole := by
+    intro hole
+    dsimp only [W]
+    split_ifs
+    · norm_num
+    · exact_mod_cast hw _
+  have hroot : root.holes = {(k, false), (k, true)} := rfl
+  have hpd : (k, false) ≠ (k, true) := by simp
+  obtain ⟨hBR, hfree, hsize⟩ := ConditionalTransversalSlots.root_admissible σ k hk
+  change Disjoint base root.holes at hBR
+  change (∀ t ∈ U, ∀ b : Bool, (t, b) ∉ base ∧ (t, b) ∉ root.holes) at hfree
+  change base.card + root.holes.card + U.card = n + 1 at hsize
+  have hbalance : SlotDemandRecursion.Balanced r o₁ o₂ q base U root :=
+    SlotDemandRecursion.two_hole_root_balanced r o₁ o₂ q hq base U _ _ hpd
+  have hWslots : ∀ t ∈ U.toList, W (t, false) = W (t, true) ∧ 0 < W (t, false) := by
+    intro t _
+    exact ⟨rfl, hW _⟩
+  have hsp : DefectSlotSplitSignature.slotTotal r o₁ o₂ q base root.holes U (k, false) = s₁ := by
+    simpa only [Bool.not_true, base, U, root, SlotDemandRecursion.twoHoleRoot, s₁] using
+      ConditionalTransversalSlots.root_transversal_total r o₁ o₂ q σ k hk true
+  have hsd : DefectSlotSplitSignature.slotTotal r o₁ o₂ q base root.holes U (k, true) = s₀ := by
+    simpa only [Bool.not_false, base, U, root, SlotDemandRecursion.twoHoleRoot, s₀] using
+      ConditionalTransversalSlots.root_transversal_total r o₁ o₂ q σ k hk false
+  have hpotential : SlotDemandRecursion.nodePotential r o₁ o₂ q base U W root =
+      1 / s₀ + 1 / s₁ := by
+    rw [SlotTransportFlow.two_hole_potential r o₁ o₂ q hq base U _ _ hpd W]
+    simp only [W, dif_pos rfl, mul_one]
+    change 1 / DefectSlotSplitSignature.slotTotal r o₁ o₂ q base root.holes U (k, false) +
+      1 / DefectSlotSplitSignature.slotTotal r o₁ o₂ q base root.holes U (k, true) = _
+    rw [hsp, hsd, add_comm]
+  have hfuture : (∑ t ∈ U,
+      SlotDemandRecursion.nodeFuture r o₁ o₂ q base U root t / W (t, false)) =
+      -(2 / (s₀ * s₁) * V) := by
+    have hV : V = ∑ t ∈ U, if h : σ t = none ∧ t ≠ k then
+        (defectTotal r o₁ o₂ q σ ⟨k, t, h.2.symm⟩ : ℝ) /
+          (w ⟨t, k, h.2⟩ : ℝ) else 0 := by
+      dsimp only [V, U, ConditionalTransversalSlots.ordinarySlots]
+      rw [Finset.sum_filter]
+      apply Finset.sum_congr rfl
+      intro t _
+      split_ifs <;> rfl
+    rw [hV, Finset.mul_sum, ← Finset.sum_neg_distrib]
+    apply Finset.sum_congr rfl
+    intro t ht
+    have hguard := (ConditionalTransversalSlots.mem_ordinary_slots σ k t).mp ht
+    rw [dif_pos hguard, SlotTransportFlow.two_hole_future r o₁ o₂ q base U _ _ hpd t]
+    change -(2 * DefectSlotSplitSignature.futureMatrix r o₁ o₂ q base root.holes U t
+      (k, false) (k, true) /
+      (DefectSlotSplitSignature.slotTotal r o₁ o₂ q base root.holes U (k, false) *
+        DefectSlotSplitSignature.slotTotal r o₁ o₂ q base root.holes U (k, true))) /
+      W (t, false) = _
+    rw [hsp, hsd]
+    have hdef := ConditionalTransversalSlots.root_future_defect_total r o₁ o₂ q σ k hk t ht
+    change DefectSlotSplitSignature.futureMatrix r o₁ o₂ q base root.holes U t
+      (k, false) (k, true) = _ at hdef
+    rw [hdef]
+    simp only [W, dif_neg hguard.2]
+    ring
+  suffices hcap : ∀ leaf ∈ SlotDemandRecursion.leafNodes r o₁ o₂ q base U.toList root,
+      ∀ x y : leaf.holes, x ≠ y →
+        min (W x * DefectSlotSplitSignature.slotTotal r o₁ o₂ q base leaf.holes ∅ x)
+          (W y * DefectSlotSplitSignature.slotTotal r o₁ o₂ q base leaf.holes ∅ y) ≤
+            C * restricted (LeafCliqueFlow.leafVertex base leaf.holes x)
+              (LeafCliqueFlow.leafVertex base leaf.holes y) by
+    have hflow := SlotTransportFlow.slot_transport_flow r o₁ o₂ q hq base
+      U.toList U.nodup_toList root (by rw [hroot]; simp) hBR
+      (by simpa only [Finset.mem_toList] using hfree)
+      (by simpa only [Finset.toList_toFinset] using hsize)
+      (by simpa only [Finset.toList_toFinset] using hbalance) W hWslots
+      (DefectSlotSplitSignature.slot_split_control n r M₁ M₂ o₁ o₂ q hfull hr h₁ h₂ hq hqone)
+      restricted C hC hsym (fun leaf _ i _ => hW i) hcap
+    simp only [Finset.toList_toFinset] at hflow
+    obtain ⟨flow, hcost⟩ := hflow
+    rw [hpotential, hfuture] at hcost
+    have hpairing := flow.pairing_sq_le hrestricted
+      (C * (1 / s₀ + 1 / s₁ + 2 / (s₀ * s₁) * V))
+      (by simpa only [sub_neg_eq_add] using hcost) H
+    simp only [Finset.toList_toFinset] at hpairing
+    rw [completion_demand_pairing r o₁ o₂ q base U root H,
+      root_conditional_pairing r o₁ o₂ q σ k hk H, sub_sq_comm] at hpairing
+    have henergy : potentialEnergy restricted H = nodeEnergy κ H σ := by
+      unfold potentialEnergy nodeEnergy restricted
+      simp only [ite_mul, zero_mul]
+    rw [henergy] at hpairing
+    dsimp only [B, C, Z]
+    exact hpairing.trans_eq (by ring)
+  intro leaf hleaf x y hxy
+  obtain ⟨choices, hshape⟩ := ConditionalTransversalSlots.leaf_holes_shape
+    r o₁ o₂ q base U.toList U.nodup_toList root leaf hleaf
+  simp only [Finset.toList_toFinset, hroot] at hshape
+  have hleafBR : Disjoint base leaf.holes :=
+    SlotLeafGeometry.leaf_holes_disjoint r o₁ o₂ q base U.toList root hBR
+      (fun t ht c => (hfree t (Finset.mem_toList.mp ht) c).1) leaf hleaf
+  have hrespect (hole : leaf.holes) :
+      Respects σ (LeafCliqueFlow.leafVertex base leaf.holes hole) :=
+    ConditionalTransversalSlots.conditional_leaf_respects σ k hk choices leaf.holes hshape hole
+  have hvertex : ∀ hole : leaf.holes,
+      W hole * DefectSlotSplitSignature.slotTotal r o₁ o₂ q base leaf.holes ∅ hole =
+        Z * π (LeafCliqueFlow.leafVertex base leaf.holes hole) := by
+    intro hole
+    suffices hkind : (classifyState (LeafCliqueFlow.leafVertex base leaf.holes hole)).val =
+        if hole.val.1 = k then .transversal else .defect hole.val.1 k by
+      have hterminal : DefectSlotSplitSignature.slotTotal r o₁ o₂ q base leaf.holes ∅ hole =
+          ((q ^ (n - (CountingMatroid.Model.Subroutines.pairedRank r o₁ o₂
+            (LeafCliqueFlow.leafVertex base leaf.holes hole)).val) : ℚ) : ℝ) := by
+        simp [DefectSlotSplitSignature.slotTotal, DefectSlotSplitSignature.SlotCompletion,
+          LeafCliqueFlow.leafVertex]
+      have hweight : (StationaryMeanIdentities.stateWeight r o₁ o₂ q w
+          (LeafCliqueFlow.leafVertex base leaf.holes hole) : ℝ) =
+          W hole * DefectSlotSplitSignature.slotTotal r o₁ o₂ q base leaf.holes ∅ hole := by
+        rw [hterminal]
+        by_cases hi : hole.val.1 = k
+        · simp [StationaryMeanIdentities.stateWeight, hkind, hi, W, weightOfKind,
+            CountingMatroid.Model.Operations.natSub, BoundedRunResourceEnvelope.ratPower_value]
+        · simp [StationaryMeanIdentities.stateWeight, hkind, hi, W, weightOfKind,
+            CountingMatroid.Model.Operations.natSub, BoundedRunResourceEnvelope.ratPower_value,
+            CountingMatroid.Model.Operations.multiplierRead, CountingMatroid.Model.Operations.ratMul]
+      rw [← hweight]
+      change _ = Z * ((StationaryMeanIdentities.stateWeight r o₁ o₂ q w
+        (LeafCliqueFlow.leafVertex base leaf.holes hole) : ℝ) / Z)
+      rw [mul_div_cancel₀ _ hZ.ne']
+    exact ConditionalLeafClassifier.conditional_leaf_classifier σ k hk choices leaf.holes hshape hole
+  have hscaled := LeafExchangeProposal.scaled_leaf_conductance_lower n hn
+    base leaf.holes hleafBR π (fun state => π.coe_nonneg state) Z hZ
+    (fun hole => W hole * DefectSlotSplitSignature.slotTotal r o₁ o₂ q base leaf.holes ∅ hole)
+    hvertex x y hxy
+  dsimp only [restricted]
+  rw [if_pos ⟨hrespect x, hrespect y⟩]
+  dsimp only [C, κ]
+  exact hscaled.trans_eq (by ring)
 
 end CountingMatroid.Analysis.ConditionalTransversalSplitTransport
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · handoff requested · parent body uses ConditionalLeafClassifier.conditional_leaf_classifier; its ordinary-hole defect case is proved and its branching-hole case reduces to the existing downstream forward classifier. The new child and the fully proved ConditionalTransversalSlots support are prepared for live scheduler capture; this reorganizes the remaining classifier proof debt and does not complete the theorem.
+* 2026-10-09 · partial · assembled the general transport reduction using SlotTransportFlow and LeafExchangeProposal; proved and used root completion/total, doubled-slot defect coefficient, root admissibility, leaf-shape, assignment-respect, and completion-pairing bridges. The sole remaining local goal is terminal vertex classification (transversal at k, ordered defect otherwise); its general transversal bridge is downstream, while the upstream characterization is private. No open child lemma was introduced.
 * 2026-10-09 · partial · proved the n = 1 branch through the separately proved balanced leaf-clique pairing bound; retained the exact theorem interface and positive-total coefficient cancellation. The n ≥ 2 branch needs the all-stage balanced-demand recursion, ordinary-hole cancellation, and disjoint leaf-edge charge. Verified the zero-proposal obstruction to product currents and the child-balance obstruction to zero new-hole demands in Lean stdin probes; no new open helper was introduced.
 -/
