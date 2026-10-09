@@ -1,5 +1,6 @@
 import CountingMatroid.Analysis.SuccessfulPrefixRestartEndpointMass
 import CountingMatroid.Analysis.ExchangeProposalGeometry
+import CountingMatroid.Analysis.CoveredChainStepSubkernel
 
 set_option autoImplicit false
 
@@ -7,7 +8,10 @@ set_option autoImplicit false
 The successful-path subkernel comparison for the actual finite suffix.
 The reference path begins with the actual capped restart endpoint sublaw,
 so this obligation does not require a warm restart estimate. Its proof must
-retain adaptive consumption and rejection-cap failures; it remains open.
+retain adaptive consumption and rejection-cap failures. The covered one-step
+comparison is isolated in CoveredChainStepSubkernel. Both restart-result
+fiber identities and the aborted-restart case are proved; the remaining parent
+obligation composes the one-step law over stopped observation prefixes.
 -/
 namespace CountingMatroid.Analysis.SuccessfulPrefixRecordedTraceSubkernel
 
@@ -49,6 +53,126 @@ noncomputable def restartRecordedMass {n : ℕ} (r : ℕ)
       restartSuffixMass r o₁ o₂ s j current pref t (path 0) *
         ∏ i : Fin s.observations, P (path i.castSucc) (path i.succ) else 0
 
+/-- INTERNAL: Disintegrate the actual completed-trace event by its complete
+restart result, retaining the returned cursor as well as the state.
+This finite regrouping is exact and makes no stochastic assertion.
+TEXLINE: main.tex:1181-1187,1207-1212,1392-1421 -/
+theorem capped_recorded_trace_mass_restart_fibers {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (s : AnnealingSchedule) (j : ℕ)
+    (current : AnnealingCursor n) (pref : List Bool) (t : ℕ)
+    (states : List.Vector (PairedSet n) s.observations) :
+    by
+    classical
+    let R := fun suffix : List.Vector Bool t =>
+      (restartPhase r o₁ o₂ (fun i => ((pref ++ suffix.val)[i]?).getD false)
+        s current.tables j current.bitCursor).val
+    exact cappedRecordedTraceMass r o₁ o₂ s j current pref t states =
+      ∑ outcome ∈ Finset.univ.image R, ∑ suffix : List.Vector Bool t,
+        if R suffix = outcome ∧ ∃ observed : ObservationCursor n,
+          outcome.bind (observePhaseTrace r o₁ o₂
+            (fun i => ((pref ++ suffix.val)[i]?).getD false)
+            s (s.ρ ^ j) current.currentWeights) = some (observed, states.val)
+        then 1 / (2 : ℝ) ^ t else 0 := by
+  classical
+  dsimp only
+  unfold cappedRecordedTraceMass
+  let R := fun bits : List.Vector Bool t =>
+    (restartPhase r o₁ o₂ (fun i => ((pref ++ bits.val)[i]?).getD false)
+      s current.tables j current.bitCursor).val
+  let E := fun (bits : List.Vector Bool t) (outcome : Option (PairedSet n × ℕ)) =>
+    ∃ observed : ObservationCursor n,
+      outcome.bind (observePhaseTrace r o₁ o₂
+        (fun i => ((pref ++ bits.val)[i]?).getD false)
+        s (s.ρ ^ j) current.currentWeights) = some (observed, states.val)
+  change (∑ suffix : List.Vector Bool t, if E suffix (R suffix) then 1 / (2 : ℝ) ^ t else 0) =
+    ∑ outcome ∈ Finset.univ.image R, ∑ suffix : List.Vector Bool t,
+      if R suffix = outcome ∧ E suffix outcome then 1 / (2 : ℝ) ^ t else 0
+  rw [Finset.sum_comm]
+  apply Finset.sum_congr rfl
+  intro suffix _
+  have hmem : R suffix ∈ Finset.univ.image R :=
+    Finset.mem_image_of_mem _ (Finset.mem_univ suffix)
+  have hterm (outcome : Option (PairedSet n × ℕ)) :
+      (if R suffix = outcome ∧ E suffix outcome then 1 / (2 : ℝ) ^ t else 0) =
+      if R suffix = outcome then
+        (if E suffix (R suffix) then 1 / (2 : ℝ) ^ t else 0) else 0 := by
+    by_cases heq : R suffix = outcome
+    · subst outcome
+      simp only [true_and, if_true]
+    · simp only [heq, false_and, if_false]
+  simp_rw [hterm]
+  simp only [Finset.sum_ite_eq, hmem, if_true]
+
+/-- INTERNAL: The ideal path mixture has the same restart-result fibers as
+the actual trace event. Its path factor depends only on the returned state;
+the restart marginal still retains the full result and its adaptive cursor.
+TEXLINE: main.tex:1181-1187,1207-1212,1392-1421 -/
+theorem restart_recorded_mass_restart_fibers {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (s : AnnealingSchedule) (j : ℕ)
+    (current : AnnealingCursor n) (pref : List Bool) (t : ℕ)
+    (P : Arlib.MarkovChains.FinChain (PairedSet n))
+    (states : List.Vector (PairedSet n) s.observations) :
+    by
+    classical
+    let R := fun suffix : List.Vector Bool t =>
+      (restartPhase r o₁ o₂ (fun i => ((pref ++ suffix.val)[i]?).getD false)
+        s current.tables j current.bitCursor).val
+    exact restartRecordedMass r o₁ o₂ s j current pref t P states =
+      ∑ outcome ∈ Finset.univ.image R,
+        (∑ suffix : List.Vector Bool t,
+          if R suffix = outcome then 1 / (2 : ℝ) ^ t else 0) *
+        ∑ path : Fin (s.observations + 1) → PairedSet n,
+          if List.ofFn (fun i : Fin s.observations => path i.castSucc) = states.val ∧
+            outcome.map Prod.fst = some (path 0)
+          then ∏ i : Fin s.observations, P (path i.castSucc) (path i.succ) else 0 := by
+  classical
+  dsimp only
+  let R := fun bits : List.Vector Bool t =>
+    (restartPhase r o₁ o₂ (fun i => ((pref ++ bits.val)[i]?).getD false)
+      s current.tables j current.bitCursor).val
+  let C := fun path : Fin (s.observations + 1) → PairedSet n =>
+    List.ofFn (fun i : Fin s.observations => path i.castSucc) = states.val
+  let G := fun path : Fin (s.observations + 1) → PairedSet n =>
+    ∏ i : Fin s.observations, P (path i.castSucc) (path i.succ)
+  let Q := fun outcome : Option (PairedSet n × ℕ) =>
+    ∑ path : Fin (s.observations + 1) → PairedSet n,
+      if C path ∧ outcome.map Prod.fst = some (path 0) then G path else 0
+  have hpath : restartRecordedMass r o₁ o₂ s j current pref t P states =
+      ∑ suffix : List.Vector Bool t, (1 / (2 : ℝ) ^ t) * Q (R suffix) := by
+    unfold restartRecordedMass restartSuffixMass
+    change (∑ path : Fin (s.observations + 1) → PairedSet n,
+      if C path then
+        (∑ suffix : List.Vector Bool t,
+          if (R suffix).map Prod.fst = some (path 0) then 1 / (2 : ℝ) ^ t else 0) *
+        G path else 0) = _
+    have hterm (path : Fin (s.observations + 1) → PairedSet n) :
+        (if C path then
+          (∑ suffix : List.Vector Bool t,
+            if (R suffix).map Prod.fst = some (path 0) then 1 / (2 : ℝ) ^ t else 0) *
+          G path else 0) =
+        ∑ suffix : List.Vector Bool t, (1 / (2 : ℝ) ^ t) *
+          (if C path ∧ (R suffix).map Prod.fst = some (path 0) then G path else 0) := by
+      by_cases hc : C path
+      · simp only [hc, true_and, Finset.sum_mul]
+        apply Finset.sum_congr rfl
+        intro suffix _
+        split_ifs <;> simp only [mul_zero, zero_mul]
+      · simp only [hc, false_and, if_false, mul_zero, Finset.sum_const_zero]
+    simp_rw [hterm]
+    rw [Finset.sum_comm]
+    simp only [Q, Finset.mul_sum]
+  rw [hpath]
+  change _ = ∑ outcome ∈ Finset.univ.image R,
+    (∑ suffix : List.Vector Bool t, if R suffix = outcome then 1 / (2 : ℝ) ^ t else 0) * Q outcome
+  symm
+  simp_rw [Finset.sum_mul, ite_mul, zero_mul]
+  rw [Finset.sum_comm]
+  apply Finset.sum_congr rfl
+  intro suffix _
+  have hmem : R suffix ∈ Finset.univ.image R :=
+    Finset.mem_image_of_mem _ (Finset.mem_univ suffix)
+  simp only [Finset.sum_ite_eq, hmem, if_true]
+
 /-- INTERNAL: The actual completed finite-suffix observation sublaw is
 bounded by ideal transitions from the actual restart endpoint marginal.
 This statement contains no warm-law hypothesis; that independent estimate
@@ -78,25 +202,71 @@ theorem successful_prefix_recorded_trace_subkernel (n r : ℕ)
           current.currentWeights hn hq hw) states := by
   classical
   dsimp only
-  unfold cappedRecordedTraceMass restartRecordedMass
-  -- Concrete route: disintegrate the suffix at successful restart stopping
-  -- prefixes, then induct over the recordedObservationTrace loop. The
-  -- sibling observation_round_draw_site_covered supplies coverage once
-  -- its owner publishes it (its imported DrawSites object is missing). The remaining
-  -- bridge must give the joint successful value/cursor law for each
-  -- boundedUniform call and chainStep, retaining stopping-prefix locality.
-  -- A sum_le_sum comparison of individual suffix atoms cannot work:
-  -- an individual deterministic transition need not have probability one
-  -- under idealChain. The atom family must first be grouped by consumed
-  -- prefixes. BoundedUniformAbortMass bounds failures, not successful values.
-  -- BLOCKER: successful adaptive boundedUniform value/cursor sublaws and
-  -- their chainStep/recordedObservationTrace finite-suffix composition.
-  sorry
+  suffices hcompose :
+      (∀ (head : List Bool) (u : ℕ) (state next : PairedSet n),
+        state.card = n → (classifyState state).val ≠ .invalid →
+        CoveredChainStepSubkernel.coveredChainStepMass r o₁ o₂
+          (CountingMatroid.Interface.Pseudocode.setup n p).drawTrials
+          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
+          current.currentWeights head u state next ≤
+        IdealExchangeChain.idealChain r o₁ o₂
+          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
+          current.currentWeights hn
+          (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
+          hw state next) →
+      cappedRecordedTraceMass r o₁ o₂
+        (CountingMatroid.Interface.Pseudocode.setup n p) j current pref
+        (CountingMatroid.Model.Run.blockLength n r p - pref.length) states ≤
+      restartRecordedMass r o₁ o₂
+        (CountingMatroid.Interface.Pseudocode.setup n p) j current pref
+        (CountingMatroid.Model.Run.blockLength n r p - pref.length)
+        (IdealExchangeChain.idealChain r o₁ o₂
+          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
+          current.currentWeights hn
+          (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
+          hw) states by
+    apply hcompose
+    intro head u state next hcard hvalid
+    exact CoveredChainStepSubkernel.covered_chain_step_subkernel r o₁ o₂
+      (CountingMatroid.Interface.Pseudocode.setup n p).drawTrials
+      ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
+      current.currentWeights hn
+      (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
+      hw head u state next hcard hvalid
+  intro hstep
+  rw [capped_recorded_trace_mass_restart_fibers,
+    restart_recorded_mass_restart_fibers]
+  apply Finset.sum_le_sum
+  intro outcome _
+  cases outcome with
+  | none =>
+      simp only [Option.bind_none, Option.map_none, reduceCtorEq, exists_false,
+        and_false, if_false, Finset.sum_const_zero, mul_zero]
+      exact le_rfl
+  | some start =>
+    -- Concrete route: the two exact fiber identities retain the returned
+    -- state and cursor. A single such outcome can still arise from several
+    -- consumed bit prefixes, so disintegrate further at those prefixes and
+    -- induct over recordedObservationTrace using hstep on each fresh suffix.
+    -- observation_round_draw_site_covered is proved and supplies trial-interval
+    -- coverage; restart/observation success replay supplies prefix locality.
+    -- A compiled probe applying hstep directly to this fiber inequality fails:
+    -- hstep bounds one covered chainStep, whereas this goal bounds the joint
+    -- restart cell and the complete observation trace by its ideal path factor.
+    -- BLOCKER: exact stopping-prefix cylinder disintegration followed by trace
+    -- induction, transferring hstep without renormalising the restart sublaw.
+    sorry
 
 end CountingMatroid.Analysis.SuccessfulPrefixRecordedTraceSubkernel
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · deferred handoff · fresh wave2 was deferred for the active TransversalVarianceBound writer in the producer build closure; statements and parent/child source checks are verified, but no child ownership has transferred. Preserve the decomposition for automatic settled-boundary revalidation.
+
+* 2026-10-09 · proved reduction · both exact restart-result fiber identities check, and the aborted-restart fiber closes at zero. Direct hstep application to a successful restart fiber fails because the goal is a whole-trace joint bound; stopped-prefix disintegration and trace induction remain. Live child handoff wave1 was deferred for the active SuccessfulPrefixRestartEndpointMass writer; ownership retained.
+
+* 2026-10-09 · decomposed · parent applies the covered one-step subkernel child through its continuation invariant; remaining parent proof is stopping-prefix disintegration and trace induction. Rechecked that observation draw coverage is proved; the earlier missing-object note no longer applies.
 
 * 2026-10-08 · retained · live handoff recorded-path-domination-20261008-wave1 was mechanically rejected. An independent stdin probe of Finset.sum_le_sum failed to unify the suffix-indexed and ideal-path-indexed sums; direct atom comparison requires regrouping at stopping prefixes first.
 
