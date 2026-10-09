@@ -1,4 +1,6 @@
 import CountingMatroid.Analysis.QuadraticSignatureHyperplane
+import CountingMatroid.Analysis.CubicExchangeCut
+import CountingMatroid.Analysis.CubicTensorRayleighContraction
 
 set_option autoImplicit false
 
@@ -13,9 +15,11 @@ closure property without the tensor and support hypotheses.
 The remaining obligation is the degree-three instance of the nonnegative
 directional-derivative closure cited in the paper. Brändén–Huh, Corollary
 2.11, states this closure for the recursively defined classes of polynomials
-with M-convex support and Lorentzian quadratic derivatives. Neither Mathlib
-nor Arlib in the pinned dependencies provides this closure theorem. Its
-status here is a pending Prior proposal, not a proved spectral bound.
+with M-convex support and Lorentzian quadratic derivatives. The proof here
+separates the proved exchange-to-connectivity argument from the analytic
+Rayleigh contraction lemma, whose normalized spectral and boundary steps
+remain open. The parent reduction does not assume an aggregate signature
+bound or alter the theorem hypotheses.
 -/
 
 namespace CountingMatroid.Analysis.CubicTensorContraction
@@ -94,35 +98,22 @@ theorem cubic_tensor_contraction_hyperplane {σ : Type} [Fintype σ] [DecidableE
     have hprod : Q v * Q e - (Q.associated e v) ^ 2 ≤ 0 :=
       (mul_le_mul_iff_right₀ he).mp (by simpa using hw)
     linarith
-  -- Concrete route: each slice is nonpositive on the associated orthogonal
-  -- complement of a positive vector (the imported
-  -- HasNonpositiveHyperplane.nonpos_of_associated_eq_zero). Tensor symmetry
-  -- identifies the slice pairings with coordinates of the contraction.
-  -- The proved hreverse above is the resulting local Rayleigh inequality.
-  -- Summing its right-hand sides still requires the global spectral step;
-  -- the slice hyperplanes need not agree.
-  -- BLOCKER: no project or pinned-library declaration supplies the
-  -- nonnegative directional-derivative closure in Brändén–Huh, Corollary
-  -- 2.11, cited at main.tex:346-347. It is exactly the remaining cubic
-  -- contraction bound, once the symmetric tensor is read as the cubic in
-  -- the docstring. The signature-to-hyperplane conversion is available;
-  -- the missing input is the aggregate signature bound, not its conversion.
-  -- The alternative direct spectral route still needs connectedness of
-  -- the positive contraction on active coordinates from hex, simplicity
-  -- of its normalized eigenvalue 1, and passage to directions with zeros.
-  -- The proved slice estimate alone gives no common kernel for the sum.
-  -- PRIOR-PROPOSAL:
-  -- CountingMatroid.Analysis.CubicTensorContraction.cubic_tensor_contraction_hyperplane,
-  -- the degree-three
-  -- specialization of the closure explicitly cited by the paper. Prior
-  -- remains unchanged pending the round-end citation review.
-  sorry
+  have hcross (U : Set σ)
+      (hin : ∃ s i j, T s i j ≠ 0 ∧ s ∈ U)
+      (hout : ∃ s i j, T s i j ≠ 0 ∧ s ∉ U) :
+      ∃ s i j, T s i j ≠ 0 ∧ i ∈ U ∧ j ∉ U := by
+    exact CubicExchangeCut.cubic_exchange_crosses_cut T hswap hlast
+      (cubicTensorSupport T) (fun _ => Iff.rfl) hex U hin hout
+  exact CubicTensorRayleighContraction.cubic_tensor_rayleigh_contraction
+    T hT hswap hlast hcross hreverse d hd
 
 end CountingMatroid.Analysis.CubicTensorContraction
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · verified handoff · agent5-cubic-rayleigh-20261009-1 was accepted after semantic-use validation; ownership of CubicExchangeCut and CubicTensorRayleighContraction transferred to the scheduler. The parent reduction elaborates; the analytic child remains the proof obligation.
+* 2026-10-09 · decomposed · proved exchange forces connectivity across every active-coordinate cut in CubicExchangeCut; the parent now supplies that proved invariant and its existing slice Rayleigh estimates to CubicTensorRayleighContraction. The analytic spectral and boundary obligation remains open.
 * 2026-10-09 · prior proposal · identified the remaining contraction bound as the cubic specialization of Brändén–Huh Corollary 2.11, explicitly cited at main.tex:346-347; no Lorentzian closure API was found in the pinned dependencies. Preserved all existing proofs and the unchanged open statement.
 * 2026-10-09 · partial · proved each slice's reverse Cauchy–Schwarz estimate from its nonpositive hyperplane. Handoff agent2-cubic-tensor-20261009-1 was deferred at the validation deadline; ownership remains local pending settled-boundary revalidation.
 * 2026-10-09 · decomposed · stated the tensor-only contraction boundary; proved zero-direction and single-coordinate-direction cases. The general compatible-tensor spectral step remains open.
