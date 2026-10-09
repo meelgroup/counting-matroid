@@ -1,4 +1,6 @@
 import CountingMatroid.Analysis.RecordedObservationTrajectory
+import CountingMatroid.Analysis.SuccessfulPrefixRecordedTraceSubkernel
+import CountingMatroid.Analysis.SuccessfulPrefixRestartEndpointMass
 
 set_option autoImplicit false
 
@@ -8,7 +10,8 @@ law is pushed forward to the list of states actually recorded by observePhase.
 Abort executions have no path. The comparison law projects the ideal stationary
 path onto its first N vertices, summing out the final unused transition.
 The operational projection and accumulator identities are proved. Pointwise
-mass domination remains open in the final declaration.
+mass domination reduces to the independent capped observation subkernel and
+warm restart endpoint comparisons; both are explicit child obligations.
 -/
 namespace CountingMatroid.Analysis.SuccessfulPrefixRecordedPathMass
 
@@ -201,36 +204,70 @@ theorem successful_prefix_recorded_path_mass_domination (n r : ℕ)
         s.observations states := by
   classical
   dsimp only
-  by_cases hnone : ∀ suffix : List.Vector Bool
-      (CountingMatroid.Model.Run.blockLength n r p - pref.length),
-      realizedObservationPath r o₁ o₂
-        (fun i => ((pref ++ suffix.val)[i]?).getD false)
-        (CountingMatroid.Interface.Pseudocode.setup n p) j current ≠ some states
-  · have hzero : recordedSuffixMass r o₁ o₂
-        (CountingMatroid.Interface.Pseudocode.setup n p) j current pref
-        (CountingMatroid.Model.Run.blockLength n r p - pref.length) states = 0 := by
-      unfold recordedSuffixMass
-      simp only [if_neg (hnone _), Finset.sum_const_zero]
-    rw [hzero]
-    exact mul_nonneg (by positivity) (stationary_recorded_mass_nonneg _ _ _ _)
-  · unfold recordedSuffixMass
-    simp only [realizedObservationPath]
-    -- Concrete route: compare the completed capped path sublaw with the
-    -- uncapped restart law followed by idealChain transitions. The trace
-    -- object and exact counter/path identities above supply the operational
-    -- side, but the finite-bit subkernel and warm restart endpoint comparison
-    -- are still needed. A bound on each suffix atom alone cannot suffice:
-    -- several adaptive suffixes can realize the same state path.
-    -- BLOCKER: prove the finite-block capped-draw-to-idealChain subkernel
-    -- comparison and the trace restart endpoint bound 2*mu_j from
-    -- main.tex:1020-1087,1214-1240. No trace kernel or its 18*n^4 inverse-gap
-    -- certificate is currently supplied by the imported declarations.
-    sorry
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  let t := CountingMatroid.Model.Run.blockLength n r p - pref.length
+  let hq := pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j
+  let P := IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j)
+    current.currentWeights hn hq hw
+  have hmass : recordedSuffixMass r o₁ o₂ s j current pref t states =
+      SuccessfulPrefixRecordedTraceSubkernel.cappedRecordedTraceMass
+        r o₁ o₂ s j current pref t states := by
+    unfold recordedSuffixMass SuccessfulPrefixRecordedTraceSubkernel.cappedRecordedTraceMass
+    apply Finset.sum_congr rfl
+    intro suffix _
+    change (if realizedObservationPath r o₁ o₂ _ s j current = some states then _ else _) =
+      (if ∃ observed, fixedObservationTrace r o₁ o₂ _ s j current =
+        some (observed, states.val) then _ else _)
+    cases ht : fixedObservationTrace r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false) s j current with
+    | none => simp [realizedObservationPath, ht]
+    | some result =>
+      rcases result with ⟨observed, recorded⟩
+      have hlength := (fixed_trace_values r o₁ o₂ _ s j current observed recorded ht).1
+      simp [realizedObservationPath, ht, hlength]
+      congr 1
+      apply propext
+      constructor
+      · intro heq
+        exact congrArg Subtype.val (Option.some.inj heq)
+      · intro heq
+        exact congrArg some (Subtype.ext heq)
+  calc
+    _ = SuccessfulPrefixRecordedTraceSubkernel.cappedRecordedTraceMass
+        r o₁ o₂ s j current pref t states := hmass
+    _ ≤ SuccessfulPrefixRecordedTraceSubkernel.restartRecordedMass
+        r o₁ o₂ s j current pref t P states :=
+      SuccessfulPrefixRecordedTraceSubkernel.successful_prefix_recorded_trace_subkernel
+        n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive j hj pref hprefix
+        current hw hfixed states
+    _ ≤ (10 * (n : ℝ) ^ 2) * stationaryRecordedMass
+        (IdealExchangeChain.operationalLaw r o₁ o₂ (s.ρ ^ j)
+          current.currentWeights hq hw) P s.observations states := by
+      unfold SuccessfulPrefixRecordedTraceSubkernel.restartRecordedMass stationaryRecordedMass
+      rw [Finset.mul_sum]
+      apply Finset.sum_le_sum
+      intro path _
+      have hproj : stationaryPathProjection s.observations path = states ↔
+          List.ofFn (fun i : Fin s.observations => path i.castSucc) = states.val :=
+        Subtype.ext_iff
+      by_cases heq : List.ofFn (fun i : Fin s.observations => path i.castSucc) = states.val
+      · rw [if_pos heq, if_pos (hproj.mpr heq)]
+        have hwarm :=
+          SuccessfulPrefixRestartEndpointMass.successful_prefix_restart_endpoint_mass_domination
+            n r M₁ M₂ o₁ o₂ p hn hfull hr h₁ h₂ hpositive j hj pref hprefix
+            current hw hgood hfixed (path 0)
+        exact (mul_le_mul_of_nonneg_right hwarm
+          (Finset.prod_nonneg (fun i _ => P.coe_nonneg _ _))).trans_eq (mul_assoc _ _ _)
+      · rw [if_neg heq, if_neg (fun h => heq (hproj.mp h)), mul_zero]
 
 end CountingMatroid.Analysis.SuccessfulPrefixRecordedPathMass
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-08 · retained · live handoff recorded-path-domination-20261008-wave1 was mechanically rejected without diagnostic; retain both support files. The parent assembly elaborates, but both operational child comparisons remain open, so the theorem is not proved outright.
+
+* 2026-10-08 · decomposed · proved the parent finite-sum assembly and exact trace/vector event identity using two independent operational child comparisons. Both children elaborate and are Lake-published; their warm endpoint and adaptive successful-path laws remain open for live handoff.
 
 * 2026-10-08 · retained · live handoff recorded-path-mass-20261008-a2 was mechanically rejected; retain this file. Source-only elaboration checks every statement and all helper proofs; only successful_prefix_recorded_path_mass_domination has an open proof. The requested Lake publication did not receive a grant.
 
