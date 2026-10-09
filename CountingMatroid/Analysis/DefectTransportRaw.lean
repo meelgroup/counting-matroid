@@ -2,22 +2,28 @@ import CountingMatroid.Analysis.ExchangeFlowEnergy
 import CountingMatroid.Analysis.DefectTransportTwoPairs
 import CountingMatroid.Analysis.OmittedRankWeightPolynomial
 import CountingMatroid.Analysis.DefectSlotSplitSignature
+import CountingMatroid.Analysis.DefectSlotConservation
+import CountingMatroid.Analysis.SlotDemandRecursion
+import CountingMatroid.Analysis.SlotTransportFlow
+import CountingMatroid.Analysis.DefectSlotRoot
+import CountingMatroid.Analysis.LeafExchangeProposal
+import CountingMatroid.Analysis.DefectSlotBudget
+import CountingMatroid.Analysis.DefectLeafClassifier
 
 set_option autoImplicit false
 
 /-!
-The recursive transport specialized to one ordered defect fiber and a
-fixed two-pair transversal event, before applying goodness and the
-three-pair coefficient inequality. Its remaining construction must route
-balanced hole demands through the paper's leaf cliques. The case n = 2,
-with no ordinary slots, is proved by its actual one-edge current. The
-remaining n ≥ 3 construction needs the omitted-element quadratic signature
-and the recursively conserved future-slot forms. The signature input is
-exposed independently in DefectSlotSplitSignature and semantically used
-through SlotSplitControl. The operational omitted polynomial is now defined, and its squarefree coefficient sums are identified
-with the defect totals used to initialize the source.
+The defect/event transport bound before applying goodness or the three-pair
+coefficient inequality. The n = 2 branch uses its actual one-edge current.
+For n ≥ 3, the balanced demand tree is realized by the leaf stars in
+SlotTransportFlow. Shared-state demands cancel by first-moment conservation,
+and distinct leaves use disjoint edges, so their flow energies add.
+DefectSlotRoot identifies the exact source and event demands; DefectLeafClassifier
+and LeafExchangeProposal identify the operational vertex and edge capacities;
+DefectSlotFutureBound and DefectSlotBudget give the final partition-sum bound.
+The all-node quadratic signature input is supplied by
+DefectSlotSplitSignature.slot_split_control, whose proof obligations live there.
 -/
-
 namespace CountingMatroid.Analysis.DefectTransportRaw
 
 open CountingMatroid.Model CountingMatroid.Program
@@ -162,6 +168,8 @@ theorem defect_transport_raw (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
       rfl
     suffices hassembly :
         DefectSlotSplitSignature.SlotSplitControl n r o₁ o₂ q →
+        DefectSlotConservation.SlotConservationControl n r o₁ o₂ q →
+        SlotDemandRecursion.DemandRecursionControl n r o₁ o₂ q →
           ∃ flow : FlowCertificate κ
               (conditionalMeanDemand π (.defect i k) (pairEvent i k a b)),
             flowEnergy κ flow.current ≤ (2 * (n : ℝ) ^ 2) *
@@ -169,9 +177,12 @@ theorem defect_transport_raw (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
                 (2 / ((D ⟨i, k, hik⟩ : ℝ) * eventMass π (pairEvent i k a b))) *
                   ∑ t : Fin n, if h : t ≠ i ∧ t ≠ k then
                     (D ⟨i, t, Ne.symm h.1⟩ : ℝ) / (w ⟨t, k, h.2⟩ : ℝ) else 0) by
-      exact hassembly (DefectSlotSplitSignature.slot_split_control n r M₁ M₂ o₁ o₂ q
-        hfull hr h₁ h₂ hq hqone)
-    intro hsplitControl
+      have hsplit := DefectSlotSplitSignature.slot_split_control n r M₁ M₂ o₁ o₂ q
+        hfull hr h₁ h₂ hq hqone
+      exact hassembly hsplit
+        (DefectSlotConservation.slot_conservation_control n r o₁ o₂ q)
+        (SlotDemandRecursion.demand_recursion_control n r o₁ o₂ q hq hsplit)
+    intro hsplitControl hconservation hrecursion
     -- INTERNAL: Realize the paper's new-hole values at every admissible
     -- node and bound their cost using the supplied all-node split control.
     have controlledSplit (B R : PairedSet n) (U : Finset (Fin n))
@@ -185,7 +196,7 @@ theorem defect_transport_raw (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
           (insert (t, true) R) (U.erase t) hole
         let u := DefectSlotSplitSignature.slotTotal r o₁ o₂ q B
           (insert (t, false) R) (U.erase t) (t, false)
-        (∑ hole ∈ R, (sₐ hole + sᵦ hole) * h hole) = 0 →
+        (∑ hole ∈ R, DefectSlotSplitSignature.slotTotal r o₁ o₂ q B R U hole * h hole) = 0 →
         ∃ hₐ hᵦ : ℝ,
           (∑ hole ∈ R, sₐ hole * h hole) + u * hₐ = 0 ∧
           (∑ hole ∈ R, sᵦ hole * h hole) + u * hᵦ = 0 ∧
@@ -195,29 +206,163 @@ theorem defect_transport_raw (n r : ℕ) (M₁ M₂ : Matroid (Fin n))
               DefectSlotSplitSignature.futureMatrix r o₁ o₂ q B R U t hole other *
                 h hole * h other) := by
       intro sₐ sᵦ u hbalance
+      have hchildBalance : (∑ hole ∈ R, (sₐ hole + sᵦ hole) * h hole) = 0 := by
+        calc
+          _ = ∑ hole ∈ R, DefectSlotSplitSignature.slotTotal r o₁ o₂ q B R U hole *
+              h hole := by
+            apply Finset.sum_congr rfl
+            intro hole hhole
+            rw [hconservation.old_hole B R U t ht (hU t ht) hole hhole]
+          _ = 0 := hbalance
       have hu : 0 < u := DefectSlotSplitSignature.slot_total_pos r o₁ o₂ q hq B _ _ _
-      obtain ⟨hbalₐ, hbalᵦ, hopp, hcost⟩ := balanced_hole_split R sₐ sᵦ h u hu hbalance
+      obtain ⟨hbalₐ, hbalᵦ, hopp, hcost⟩ := balanced_hole_split R sₐ sᵦ h u hu hchildBalance
       refine ⟨-(∑ hole ∈ R, sₐ hole * h hole) / u,
         -(∑ hole ∈ R, sᵦ hole * h hole) / u, hbalₐ, hbalᵦ, hopp, ?_⟩
       rw [hcost]
-      exact hsplitControl B R U hBR hU hsize t ht h hbalance
-    -- Concrete route: the product current J above has the exact divergence
-    -- and is antisymmetric. Trying to make it a FlowCertificate leaves
-    -- supported: κ state next = 0 → J state next = 0. This fails for
-    -- nonneighboring source/sink states (the n=3 example in the parent).
-    -- STILL OPEN: replace J by the recursive balanced-hole assignment;
-    -- use hsplitControl for each node's split cost, conserve future-slot
-    -- forms, iterate controlledSplit to assign leaf demands, route within
-    -- leaf cliques, and prove
-    -- leaf edge disjointness and shared-vertex divergence cancellation.
-    -- Then use v_t ≤ D(i,t) and rescale energy by 2n² times the normalizer.
-    sorry
+      exact hsplitControl B R U hBR hU hsize t ht h hchildBalance
+    -- Instantiate the proved demand recursion at the paper's defect/event
+    -- slots: B={a_k}, p=a_i, d=b_k, with every other original pair ordinary.
+    let p : PairedGround n := (i, !a)
+    let d : PairedGround n := (k, b)
+    let B : PairedSet n := {(k, !b)}
+    let U : Finset (Fin n) := (Finset.univ.erase i).erase k
+    let root := SlotDemandRecursion.twoHoleRoot r o₁ o₂ q B U p d
+    have hpd : p ≠ d := fun he => hik (congrArg Prod.fst he)
+    have hrootBalance : SlotDemandRecursion.Balanced r o₁ o₂ q B U root :=
+      hrecursion.root_balanced B U p d hpd
+    have hrootHoles : root.holes = {p, d} := rfl
+    have hBR : Disjoint B root.holes := by
+      rw [hrootHoles, Finset.disjoint_left]
+      intro e he hf
+      have heq : e = (k, !b) := Finset.mem_singleton.mp he
+      subst e
+      rcases Finset.mem_insert.mp hf with hp | hd
+      · exact hik ((congrArg Prod.fst hp).symm)
+      · have hmate : (!b) = b := congrArg Prod.snd (Finset.mem_singleton.mp hd)
+        exact Bool.not_ne_self b hmate
+    have hfree : ∀ t ∈ U, ∀ c : Bool, (t, c) ∉ B ∧ (t, c) ∉ root.holes := by
+      intro t ht c
+      obtain ⟨htk, hti, _⟩ := Finset.mem_erase.mp ht |>.imp_right Finset.mem_erase.mp
+      constructor
+      · intro hm
+        exact htk (congrArg Prod.fst (Finset.mem_singleton.mp hm))
+      · rw [hrootHoles]
+        intro hm
+        rcases Finset.mem_insert.mp hm with hp | hd
+        · exact hti (congrArg Prod.fst hp)
+        · exact htk (congrArg Prod.fst (Finset.mem_singleton.mp hd))
+    have hcardU : U.card = n - 2 := by
+      dsimp only [U]
+      rw [Finset.card_erase_of_mem (by simp [Ne.symm hik]),
+        Finset.card_erase_of_mem (Finset.mem_univ i), Finset.card_univ, Fintype.card_fin]
+      omega
+    have hsize : B.card + root.holes.card + U.card = n + 1 := by
+      rw [hrootHoles, Finset.card_insert_of_notMem (by simpa using hpd),
+        Finset.card_singleton, hcardU]
+      have hBcard : B.card = 1 := Finset.card_singleton _
+      simp only [Finset.card_singleton]
+      omega
+    let W : PairedGround n → ℝ := fun hole =>
+      if hole.1 = i then (w ⟨i, k, hik⟩ : ℝ)
+      else if h : hole.1 = k then 1 else (w ⟨hole.1, k, h⟩ : ℝ)
+    have hW : ∀ t ∈ U.toList,
+        W (t, false) = W (t, true) ∧ 0 < W (t, false) := by
+      intro t _
+      refine ⟨rfl, ?_⟩
+      dsimp only [W]
+      split_ifs
+      · exact_mod_cast hw ⟨i, k, hik⟩
+      · exact zero_lt_one
+      · exact_mod_cast hw _
+    obtain ⟨leaves, hnonempty, hleafBalance, hrootKeep, hleafPotential⟩ :=
+      hrecursion.tree B U.toList U.nodup_toList root hBR
+        (fun t ht c => hfree t (Finset.mem_toList.mp ht) c)
+        (by simpa only [Finset.toList_toFinset] using hsize)
+        (by simpa only [Finset.toList_toFinset] using hrootBalance) W hW
+    let C : ℝ := (2 * (n : ℝ) ^ 2) * (StationaryMeanIdentities.normalizer r o₁ o₂ q w : ℝ)
+    have hC : 0 < C := by
+      have hnreal : (0 : ℝ) < n := by exact_mod_cast hn
+      have hZreal : (0 : ℝ) < (StationaryMeanIdentities.normalizer r o₁ o₂ q w : ℝ) := by exact_mod_cast hZ
+      exact mul_pos (mul_pos (by norm_num) (pow_pos hnreal _)) hZreal
+    have hWall : ∀ hole, 0 < W hole := by
+      intro hole
+      dsimp only [W]
+      split_ifs
+      · exact_mod_cast hw ⟨i, k, hik⟩
+      · exact zero_lt_one
+      · exact_mod_cast hw _
+    have hκsym : ∀ state next, κ state next = κ next state := by
+      intro state next
+      dsimp only [κ]
+      rw [exchange_proposal_symmetric, min_comm]
+    suffices hoperational :
+        SlotTransportFlow.completionDemand r o₁ o₂ q B U root =
+          conditionalMeanDemand π (.defect i k) (pairEvent i k a b) ∧
+        (∀ leaf ∈ SlotDemandRecursion.leafNodes r o₁ o₂ q B U.toList root,
+          ∀ x y : leaf.holes, x ≠ y →
+            min (W x * DefectSlotSplitSignature.slotTotal r o₁ o₂ q B leaf.holes ∅ x)
+              (W y * DefectSlotSplitSignature.slotTotal r o₁ o₂ q B leaf.holes ∅ y) ≤
+                C * κ (LeafCliqueFlow.leafVertex B leaf.holes x)
+                  (LeafCliqueFlow.leafVertex B leaf.holes y)) ∧
+        C * (SlotDemandRecursion.nodePotential r o₁ o₂ q B U W root -
+          ∑ t ∈ U, SlotDemandRecursion.nodeFuture r o₁ o₂ q B U root t / W (t, false)) ≤
+          (2 * (n : ℝ) ^ 2) *
+            (1 / classMass π (.defect i k) + 1 / eventMass π (pairEvent i k a b) +
+              (2 / ((D ⟨i, k, hik⟩ : ℝ) * eventMass π (pairEvent i k a b))) *
+                ∑ t : Fin n, if h : t ≠ i ∧ t ≠ k then
+                  (D ⟨i, t, Ne.symm h.1⟩ : ℝ) / (w ⟨t, k, h.2⟩ : ℝ) else 0) by
+      obtain ⟨hdemand, hcapacity, hbudget⟩ := hoperational
+      obtain ⟨flow, hflow⟩ := SlotTransportFlow.slot_transport_flow r o₁ o₂ q hq B
+        U.toList U.nodup_toList root ⟨p, by rw [hrootHoles]; simp⟩ hBR
+        (fun t ht c => hfree t (Finset.mem_toList.mp ht) c)
+        (by simpa only [Finset.toList_toFinset] using hsize)
+        (by simpa only [Finset.toList_toFinset] using hrootBalance) W hW hsplitControl
+        κ C hC hκsym (fun leaf _ hole _ => hWall hole) hcapacity
+      let adjusted : FlowCertificate κ
+          (conditionalMeanDemand π (.defect i k) (pairEvent i k a b)) :=
+        { current := flow.current
+          antisymmetric := flow.antisymmetric
+          supported := flow.supported
+          divergence_eq := fun state => (flow.divergence_eq state).trans (by
+            simpa only [Finset.toList_toFinset] using congrFun hdemand state) }
+      refine ⟨adjusted, hflow.trans ?_⟩
+      simpa only [Finset.toList_toFinset] using hbudget
+    refine ⟨DefectSlotRoot.root_demand_eq r o₁ o₂ q w hq hw i k hik a b hA, ?_⟩
+    suffices hremaining :
+        (∀ leaf ∈ SlotDemandRecursion.leafNodes r o₁ o₂ q B U.toList root,
+          ∀ hole : leaf.holes,
+            W hole * DefectSlotSplitSignature.slotTotal r o₁ o₂ q B leaf.holes ∅ hole =
+              (StationaryMeanIdentities.normalizer r o₁ o₂ q w : ℝ) *
+                π (LeafCliqueFlow.leafVertex B leaf.holes hole)) ∧
+        C * (SlotDemandRecursion.nodePotential r o₁ o₂ q B U W root -
+          ∑ t ∈ U, SlotDemandRecursion.nodeFuture r o₁ o₂ q B U root t / W (t, false)) ≤
+          (2 * (n : ℝ) ^ 2) *
+            (1 / classMass π (.defect i k) + 1 / eventMass π (pairEvent i k a b) +
+              (2 / ((D ⟨i, k, hik⟩ : ℝ) * eventMass π (pairEvent i k a b))) *
+                ∑ t : Fin n, if h : t ≠ i ∧ t ≠ k then
+                  (D ⟨i, t, Ne.symm h.1⟩ : ℝ) / (w ⟨t, k, h.2⟩ : ℝ) else 0) by
+      refine ⟨?_, hremaining.2⟩
+      intro leaf hl x y hxy
+      have hleafBR := SlotLeafGeometry.leaf_holes_disjoint r o₁ o₂ q B U.toList root hBR
+        (fun t ht c => (hfree t (Finset.mem_toList.mp ht) c).1) leaf hl
+      exact LeafExchangeProposal.scaled_leaf_conductance_lower n hn B leaf.holes hleafBR
+        π π.p_nonneg (StationaryMeanIdentities.normalizer r o₁ o₂ q w : ℝ)
+        (by exact_mod_cast hZ) _ (hremaining.1 leaf hl) x y hxy
+    refine ⟨?_, DefectSlotBudget.defect_slot_budget r o₁ o₂ q w hq hw i k hik a b hA⟩
+    intro leaf hl hole
+    obtain ⟨choices, hshape⟩ := SlotLeafGeometry.leaf_holes_shape r o₁ o₂ q B U.toList
+      U.nodup_toList root leaf hl
+    simp only [Finset.toList_toFinset] at hshape
+    exact DefectLeafClassifier.defect_leaf_operational_weight r o₁ o₂ q w hq hw
+      i k hik a b leaf.holes choices hshape hole
+
 end CountingMatroid.Analysis.DefectTransportRaw
 
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
 
+* 2026-10-09 · proved · closed the general branch through certified leaf stars, injective embedding, disjoint-edge flow summation, conserved root demand, operational leaf classification and proposal capacities, and the normalized root budget. All new helper obligations are proved; the imported all-node signature prerequisite remains with its separate owner.
 * 2026-10-09 · partial · defined the operational omitted-element polynomial and proved its squarefree coefficient recovery, multiaffinity, and defect-total bridge; proved the numerical orthogonal-complement split bound, slot-completion coefficient bridge, and balanced new-hole equations with their exact cost. The parent now consumes the all-node SlotSplitControl invariant; its signature proof and recursive conservation/leaf-flow assembly remain open.
 * 2026-10-09 · partial · proved and used the n = 2 no-ordinary-slot transport via the actual singleton defect/event states and a supported unit-edge current; the surviving branch has n ≥ 3. Located the recursive construction at main.tex:493-709 and its specialization at 868-898. The first split still needs the omitted-rank-weight Hessian signature, absent from the project and pinned libraries; positivity and balanced demands alone do not supply it.
 -/
