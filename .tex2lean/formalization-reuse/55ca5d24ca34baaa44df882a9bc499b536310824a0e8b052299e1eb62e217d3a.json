@@ -1,0 +1,2104 @@
+{
+  "schema": "tex2lean.formalization-reuse/1",
+  "localFingerprint": "c2d0a003d0ccdb515c527993e698bf86575ab8f3fcbf774d0955661b72babc34",
+  "localContracts": [
+    {
+      "name": "CountingMatroid.countingmatroid_main",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"f758847feb22c3f6ca0c704fc64f03fac50543dca2d688ce675ef891aeaa0a02\\\",null]\",\"lean-type-v1:941f0f42289e4bb6bb65bdb55a86e2a1dfc426c1cf3aac1c4d604a83923fd127\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"81caf2ad0e1178db2318fe4fba6f00bf08f9517343d9a626cedabcfe32befa1f\\\"]\",\"lean-type-v1:81caf2ad0e1178db2318fe4fba6f00bf08f9517343d9a626cedabcfe32befa1f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.bδ",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"c1061410c571a61ed8ee73de8180796fb925456d44bab8624ed5a0e10b8dda3f\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.bε",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"3069923c3bff572256a374b5f24f8c89e0d8d1c39d2c695a66ac10199c7dfb87\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.drawCalls",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"9a81d56937892a702d4df3ae6b94bdb70d69f37e79be42992e798f642d9a6df0\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.drawTrials",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"74902eb8a1c6fadac4ad61b3daa5a6a6b2a9671cd855da2994a5db872bbac25a\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.L",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"3529ced2af4468c504227773486ec3274745056a870d1481345110b20ce88398\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"766cb0accb9e9e915610c6559bab43ee2a403cb7bb3ff24b8ba36f43ad95c54f\\\",\\\"a777cdf9d220dbd5ad41b8ead7c5ecbfc90f358f48fc6002a89e8d0985466aae\\\"]\",\"lean-type-v1:2ef3da38f695bfcec0de09639f4468717ce13a2c4f255c4bed1a59bbca4ad134\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.observations",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"cebd8adbca654b2d42f6e9abd8cdb2e1ea17d483deeb28bf63eff5ff24caaa11\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.repetitions",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"6c0ae0e9cc90724ad55958e425028bcfe18a74e3543f890dc9a9df2c58be57d2\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.restartCap",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"4cff55fdeb5774bc5c9336c8e813217e470e07aa8a15fdeed19bed05f2eb3c4c\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.η",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f8a750ee9a5cef6f70efc3bc20b8a2abfb0c2f34650c8e61cbeb54389b2f6397\\\",\\\"2cc737fe889a6312290217017bcbba6032bc4616627b40d8767b8eae8e889758\\\"]\",\"lean-type-v1:fac3912169df8df91ca170ab84925f84a6dd081731ae422db0e5cf54967aec8e\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.ρ",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f8a750ee9a5cef6f70efc3bc20b8a2abfb0c2f34650c8e61cbeb54389b2f6397\\\",\\\"e3a9bf587c8fb8ecd6841b08539fe1c46f1f4d514dcb961e12c258e9f5630dbc\\\"]\",\"lean-type-v1:fac3912169df8df91ca170ab84925f84a6dd081731ae422db0e5cf54967aec8e\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.AnnealingSchedule.τ",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ef86a913d1a8924b12c64501da1bc5770a16984221f6336e7881ecf793d444b6\\\",\\\"de7465eb4f61fc92ec4cde4644f3110ffa9222e526cca9b8188c4c3040ce40ee\\\"]\",\"lean-type-v1:bd15cd1e60eb937dd847302f774d958b9e6c95eda4abdfa2aa62ff9cd9f5888d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.binaryInputLength",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f976acf62731a9d3109c6e21d75e8a7b77e229d674e52979185b3c896e8af1bb\\\",\\\"25df916c9a6d20fa51c73a3fad1b61b83671e861b26334a098223cba9dc36951\\\"]\",\"lean-type-v1:a18f71b2afe81ddc7350b3397151930b938575f3f67654c2745d4f4d30e957bd\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.binaryNatLength",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"e5da5168dcffe7bc3447ac96459dcc60b7a76f765ff1b1e36281f2933ed33e05\\\",\\\"92e5f642dda76a5c0ef697691a3678235da0298fa6433e2ec90c00e9c348770d\\\"]\",\"lean-type-v1:91ffeffe0170497df99645685a5ec29c59febbd03899c6d524030c33ff089000\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.binaryRatLength",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"422a4c38abe4c1eee0ab9159712e58b2b1f3fb5cb9e5d9ef81dc04223b1c0b6e\\\",\\\"82529c3f752a8f169a1a6aa4ec29eb3a8a1bf8af07e4233874f745fc8098d662\\\"]\",\"lean-type-v1:1abbab68a6a547162f432cbb519a0fd4c47cb4b50f505119db1e386ecd1c8837\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.commonBaseCount",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"1d3036aa76f4b843e2ed037196284419db2b1e2a2027619f705d68b8297b4e2f\\\",\\\"1d72153b5611dcdb7c409a1fad290f073fa5ffe1198294f59aade714b68d4533\\\"]\",\"lean-type-v1:673589804bd37cd20b4fd5b6a8c42e867055a6e95ae16b5f5644350545258f19\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.commonBases",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"7369e34deb29e3b9089aa95dc087f02796ddaa41d4e3004319961aac3acc5262\\\",\\\"f8d577edaf85e9302b88a41ca6f986783d8ef381e38bb920993522dbb9620530\\\"]\",\"lean-type-v1:9e3352d80bd5d23c5221474fce944c77733c1152b35c7d317fa866aec59efb16\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.CommonRank",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"8d8bd94fedb74a9895182cdfecd6ac075332baa9d9b49fd8ed56029bbdbaa041\\\",\\\"67a0859795c54dca10f5ecc5b3c3bf9cbe5441624e4659ce0c5247656e705036\\\"]\",\"lean-type-v1:85c3ebffe4ff9866d6ad588226a4a14e1dcea251a3d39ed2ad3ba8e9807b0855\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.decode",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"db35fb77d9a3d8352e76ba7e8538d20f244ea4ef4debe45b119619fce0f16d7c\\\",\\\"df9d490f589515602efb35732b46551d40d4aa2adff2bf1ac04fc203cbc29d05\\\"]\",\"lean-type-v1:4622ab516093506c5dd1f7865a7c9f4a1a814fc3d26bbff20797752baee8c2e1\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.DefectIndex",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"500973a4fba26da3cb2f161482ba01cf3120b94413f966bb85235a4668ad7ad9\\\"]\",\"lean-type-v1:500973a4fba26da3cb2f161482ba01cf3120b94413f966bb85235a4668ad7ad9\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.DefectIndex.distinct",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"a9b99366969d1ddf640a96555ee5948fa8f6869fb5ef7ca3d42776c4dfdd13c4\\\",null]\",\"lean-type-v1:65e35b0b20e1780262776dd7b0fd4f9347e02fd47afec02c42f8c9be5277e28e\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.DefectIndex.emptyPair",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"3071cf38d909ec8ca86aec144155535b1e2a3c9f604925c764cefc15c1187d01\\\",\\\"b04c0fa7a34fe3e34f49838c1424f1e7982f1cdcd6e00f2183f4632f8f8b033f\\\"]\",\"lean-type-v1:76b600be2ba52257be56a36edb8f3360c48e239fbbf7eb2111b760c7b92916e6\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.DefectIndex.fullPair",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"3071cf38d909ec8ca86aec144155535b1e2a3c9f604925c764cefc15c1187d01\\\",\\\"6036290432ebfeabb1926368a1cf2ee1d1024d902afb560b6ef02e536a51aa81\\\"]\",\"lean-type-v1:76b600be2ba52257be56a36edb8f3360c48e239fbbf7eb2111b760c7b92916e6\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.DefectIndex.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"75eb6d13e19fffd025e370e0db1336c72907438a5cd17eb293f27f5f98f96acd\\\",\\\"6bf9db144000beee45a53db7b1f0009247aaadd0498e8339f30568ca67a7073d\\\"]\",\"lean-type-v1:a23887e79f5a5950aca7508e9fc22cb69aed67c7ed338a36fd145a8a457eda77\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExactOracle",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"d6b3a52f0c7c486ff92e1060690ce95b485d1100c6563082759901f96bada0f0\\\",\\\"0016466b4ad448a7f303526547f58347dc096b7d9f5296a1bbd9d7bbcce797a4\\\"]\",\"lean-type-v1:dab0cb62a2bfe98122883fd97614a838f3f1c4a7de3ffd4b8b054e14bbf2feef\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionCost",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"a84dea196a57649be6a7284fd942952ef6ead605d6dfc1e1a71a38ee0a0679b4\\\"]\",\"lean-type-v1:a84dea196a57649be6a7284fd942952ef6ead605d6dfc1e1a71a38ee0a0679b4\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionCost.bitOps",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"e5422c8d2c67d88dca12bc6ce1eb8929cbda0caa166411b18e50ea1bba337846\\\",\\\"9f018a1e327339b454239e98536b5bb73574f9d9acf2c7472f9b5489bedeefff\\\"]\",\"lean-type-v1:69c7d83b68bb27a1e01ad12cadb392cacea056d19c8dc62574c9382c569ae92c\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionCost.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"e50de707f8f28c36f494a4d0b5f86f7f4837d04af7809ce8681a1e457a257f07\\\",\\\"670af52f7df959fdd7481c5bb9b8ca3a623b8a360fd182e1f959f2ba2c0e26a4\\\"]\",\"lean-type-v1:9cea64b80d3ef7b53745c4ac77340fdb098bca5bc8e029f6b7cada32f04e6a7b\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionCost.oracleCalls",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"e5422c8d2c67d88dca12bc6ce1eb8929cbda0caa166411b18e50ea1bba337846\\\",\\\"e20cd2d103c7cc737e12ca52ffb87e8765be9baddea664ef995292f7548d7f16\\\"]\",\"lean-type-v1:69c7d83b68bb27a1e01ad12cadb392cacea056d19c8dc62574c9382c569ae92c\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionCost.randomBits",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"e5422c8d2c67d88dca12bc6ce1eb8929cbda0caa166411b18e50ea1bba337846\\\",\\\"be276d6b8b27f34f41390bc92053397b29d2881c3e8f1a380f3dac1a9dd665e4\\\"]\",\"lean-type-v1:69c7d83b68bb27a1e01ad12cadb392cacea056d19c8dc62574c9382c569ae92c\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionResult",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"3331dad2327e012012e7c80acfdc6b5fb4d38e3e0174b91c72e4234ad919fae5\\\"]\",\"lean-type-v1:597b3dd7288bf9e82953f92d9660539da73c9ef1b3cedb2035f4d7842775f395\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionResult.cost",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"c3fa6d5cd2cebf14a762714a3d35bfa8f279fbf5708b7ba8823fe36bfa8dc82c\\\",\\\"a311bdfbc9f826f2825cd10aa3075326a8555ebb9694d3e280c76a01123f2288\\\"]\",\"lean-type-v1:598c4a681e27114093e63cb8fb98b4705986e9870bcf34d1b62229d0d17ac217\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionResult.estimate",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"d990a6df413def4002d0beb4efcaaf7442d21888aaab394fabae7a24ed26d07a\\\",\\\"1a1425b14ecbd01374797f3d50857eaac1eac37749b5f7104e7848212b769cfd\\\"]\",\"lean-type-v1:067dcfeb16bf215efaf185d4839bf248bc08b51b2994b4cea4a92cb737408989\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionResult.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"15d4f941fa9d2897a9a5748e105445dab82dec81822e2dddd4cdd4fdadba7df3\\\",\\\"60c18be4f4c4c319f44fdf1d21c31ea23513263a828d9a392a64418e1685b93b\\\"]\",\"lean-type-v1:57345922d6d207a9a500f24180425a0807bcac1c685722024544fe4eb286f3a7\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.ExecutionResult.nonnegative",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"f1ad104f107fb5f7064429f53d91c4af9bcb3c4b175e0d5ddafc36ccc238f0ac\\\",null]\",\"lean-type-v1:09ae14f075662852f180dd29ead90a083b76fa1c571112b11f13e7b4fd50666a\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.FullGround",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"aa223485994667881282173dc4747645437583bf102e96a3d796efb3dec83416\\\",\\\"cad8ec5bf2c454259156938d88e23ca7c68043338529321563cce92d8c96d3e0\\\"]\",\"lean-type-v1:ddb46fae05eca7a4c7e73a0e17ff68f2f04a92c4bd0156bb897f3fda37b7f59b\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.IndependenceOracle",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"ab619c522ceb78839616fa3dfad710e4b3e0570894392e1a03f229b19c82d1f0\\\"]\",\"lean-type-v1:34f305bfec45cdfbc2d2bf9b067af573da5d94f07df8277d47ae0f46876f024f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"d29093d10609b64094edd96afc2137c4836346aa83744da4593ca725e6bf43d3\\\"]\",\"lean-type-v1:d29093d10609b64094edd96afc2137c4836346aa83744da4593ca725e6bf43d3\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"06708ef50d2eab5886cfc470594d01d70841f01678098067bb7337962636be98\\\",\\\"b8984ce7b935f164de3a771bd6492991b4e068f2cc6c4b470060e561d9ef2948\\\"]\",\"lean-type-v1:9b52c4e57c557c682f091dbd7e73137e60c4f0083b651c53eca4a3bf489d5356\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams.δ",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0fba412ddecceea8992bc34a840bff6f007c062c3c66e7e953a14d8ecf6c609c\\\",\\\"2028ca6ff410fb41a5ef16ce35da05e90a2c8d00dfe49b2e43492c2826d27e28\\\"]\",\"lean-type-v1:44214898d973d59886e48e578fc0bed5fc659472c2bf6fdb19ae1805a5bf99b7\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams.δ_lt_one",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"6a0c321f242d91c585700d0f05d21fa2292d3527c0ee3aae5f9606a2a33b81a1\\\",null]\",\"lean-type-v1:c0a475e1e00251f5b0ad448b1f5ccb78389a1a86765abea6957670706b65b0f2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams.δ_pos",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"800b570d45847cd7ae7d8a19b943b5b3b62c7ac3a59f391b08867a2d5b2537c6\\\",null]\",\"lean-type-v1:883c9c13519a42327eed311fc37ec1af977b0dfc860742c384e66e88dd672492\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams.ε",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0fba412ddecceea8992bc34a840bff6f007c062c3c66e7e953a14d8ecf6c609c\\\",\\\"b9172fc02fd3dd0cd8216fd1a69cf7665e3655a9fdfc78619dd0813c6e2e7c41\\\"]\",\"lean-type-v1:44214898d973d59886e48e578fc0bed5fc659472c2bf6fdb19ae1805a5bf99b7\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams.ε_lt_one",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"fb8a1b1f90335cc3de26d7a882ee413cb815f78946d45f3e350297aa2ab698c2\\\",null]\",\"lean-type-v1:2cab88c3fc1694515ea773803392cd1a8eca022499591b516ab8b84cc9a58d49\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.InputParams.ε_pos",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"919fbe67f6f88fbb769c6b8385c7357a372be91fecbef676c85d13cbb8010b49\\\",null]\",\"lean-type-v1:f721a25a3ce4dc122a89b123d3845c153466c588b3a37a236dd26c6600941ab6\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.instDecidableEqDefectIndex",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"c42546466d57ceff212e0c20a3406487b51c44093817237fed797fa663d2d1e8\\\",\\\"4b64b42bb86bd2ac8c6296a7c45139b11663e9bd78ac57fe4a5ec3bd5458f0f0\\\"]\",\"lean-type-v1:dadc8cb8987e6e846390b7c77978383d2cbf13a85c55e3ec2313f58ff1e8ba85\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.instDecidableEqStateKind",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"b06e91c92bbea158f73bbe02d1d865f38735b3d255e9ecf44a1185cc6b446f90\\\",\\\"4047e1b8bd272e6e98bd118e6652bbc3f912b6f3487f9e806b8b2771e4575b92\\\"]\",\"lean-type-v1:884fe4ce7038c079c6ea6ab11e3bf859bc2e2d52b2fc31a8a74f0d17d0867cd2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.LearnedWeights",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"348cf70f5a6baa7d903b83a9740f32c73395f8ddd6cb0630387957c69dc52faf\\\"]\",\"lean-type-v1:34f305bfec45cdfbc2d2bf9b067af573da5d94f07df8277d47ae0f46876f024f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Multipliers",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"e63b0ac22737542a76660d5edd4662585ca11c4cac086af3359a4ac75fa0c0b8\\\"]\",\"lean-type-v1:34f305bfec45cdfbc2d2bf9b067af573da5d94f07df8277d47ae0f46876f024f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.allocateCounts",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"2590c8fc88f1d6412c76805f1a2fb420e325c5ebfb0f84679831708ab25d8590\\\",\\\"ac6ff88eb0c18c7f68a26250a868b8124c6bf3079823fd1279e315e6c1c66d6c\\\"]\",\"lean-type-v1:8b6ae5b4c93655b3555de6c0c1b05ad981e936ed4e9ccf606b22fe7534ed4508\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.allocateLearnedWeights",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"59137064ca90646464681798e1c8cb8d5584eec5e4a0da51c638d925695b26f9\\\",\\\"5f5c22c264f417382494466cee2c9bfbeea7e01cff544f2c6cf577763e5414dd\\\"]\",\"lean-type-v1:7a69688668a9b5e5d81ad373ddde3f0d045638a6f86ec7ad1d2b78b61fd1b59f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.appendBit",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5f380efadbd56c8a829388b04cd2364abe7f0b1cbf73ac6ed5a720663a185d60\\\",\\\"0c88a317400c202c9987cddd7492c39969d4fa86f2dcce8c2a3de96d64255916\\\"]\",\"lean-type-v1:7512d91c217c480f166d35edcf33e4bbe20efad5ce1a87be4202c03b5bac62c3\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.binaryLoopBound",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5a289c1658c5b8b340d4cd8617201e1967da39ee802c468c8f3cb9d15917053e\\\",\\\"ff12e0464194b22b470adcbc7c9da4069364cc0e67d9b5a6a91ba0315dbcd48b\\\"]\",\"lean-type-v1:66e253702b1e33cf579b2477cce3ccb7ede125ff9db5157682719288bfc79742\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.Cell",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"269408ac3d89b79de508339b0d43e793a19a83a129b73b8f67e100e41f1d3649\\\"]\",\"lean-type-v1:269408ac3d89b79de508339b0d43e793a19a83a129b73b8f67e100e41f1d3649\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.consRational",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"d6c829e82a29630d54ae55ec81cf7f33c38dc5af402243cf106f1a353d1e54f8\\\",\\\"9151698e704edea97bd3e11dbedcaf0e0eebf006cae7fb5caca5d3ad90179527\\\"]\",\"lean-type-v1:dbb77fa2d90fd7c6b097572e4be6e2777286a8d4b2f23fb1ddd5a7f24718b6be\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.containsElement",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"1eaed51f8193394454297165492d36786c72d5fb068ae5d21c83f042899f3ff6\\\",\\\"a741793c5f2953f69ae07834af200a3779ccc69aabced36407c39d4ef8d48f35\\\"]\",\"lean-type-v1:0ed61a73e86b050b6ef94c12ba66b8d8b25b21fac01cdb3fed9a6fa0bb394540\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.containsPaired",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"d97499fac43917012a9dabb7a6b756d3e2cd96506ea22bf9def66878f9565e9d\\\",\\\"e1a8630f62e77c071f54eadcd9f648ddc508a53ce71e5cd873e6c32d3104ad22\\\"]\",\"lean-type-v1:7d4fa111b43a2f1ba077902b563f6ac979eca058b2a57931b95661dabf457100\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.countIncrement",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"a82ed27ff7067d1c7acb9cf545663a439e1dce7fbb61ab25b2f793dc0ce63d8b\\\",\\\"1928b684dfe2c21d6e626003c5b68250c664897e6dd05f9c8e7a0ce291b0b6e1\\\"]\",\"lean-type-v1:000f5c30530822b2cbd4771597d21ff63f6074be2dd505387bdcca6a1353459b\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.countRead",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0be975849a41528bfb96b222300fcb3befdbce425a54d9af6b7d354f9eb90af9\\\",\\\"b29dba2ca20ad029a1417a2864dbef6319883e2e203985d71d4f1a5f8eae4627\\\"]\",\"lean-type-v1:a0c8777299ac08f5ed049366dc24e6f4c789f604c36b99ddbc8e1b2c723ab32b\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.encodeQuery",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"41b5775633d9b0d95c4fc70e297530fe7a392b846e209e21fc3a527e5dce1160\\\",\\\"5e8d5df54aca2e1c5624d84345889467540b13e67c89ec9f86a529e9066841cb\\\"]\",\"lean-type-v1:587c9b4b63eb5bfa15ebb78ade234430526dff47b097bba91437440e4f1d6798\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.erasePaired",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"c0712870bf4b8fe72b4b1f8c4dd9beb21445ef8d770d87d698c4e0a6d4635fca\\\",\\\"b5c560b17f48a5790ed6dfd517c576dad96701bfbb7ed94142e9c1d60b7be248\\\"]\",\"lean-type-v1:3b4f9554d1388d2c407459c538a110a342adeddbed025f8b386b50e327529c1c\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.fairBit",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"d1096add7d8f7fdf0111fbc597e6144db963ee36f5eb611a8d417f9db69edb8f\\\",\\\"7cc34e8849323d18cd420ba04b3ff8d084d00dfb4e034e3bb35504010b835231\\\"]\",\"lean-type-v1:aa8138ba13d28a3b7eb50e1a9c1dd31db9ab9f83706d6e7068704b0c03358fa7\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.halfNat",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5a289c1658c5b8b340d4cd8617201e1967da39ee802c468c8f3cb9d15917053e\\\",\\\"3ccbc9a3cacbf9427226c3b8d17e5c12edb0334ca023ceb93b747846e93e04d2\\\"]\",\"lean-type-v1:66e253702b1e33cf579b2477cce3ccb7ede125ff9db5157682719288bfc79742\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.indexEqual",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"890c494276ee109f89dcd17c0bcf8bca64283c79f77021c16459663ad3d378a1\\\",\\\"4ffd0a241331c9ad561974f45e743b94e5c583f45059c466a74202651ed373a8\\\"]\",\"lean-type-v1:5fa4c29ce4e97c398b3081017ba8d3c4fe227a648774a0fc8a6e96aa534bacb1\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.initialWeights",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f2981af8ce8ce7e6f1210e375f8134c6e389ba1675394becea76645123e19cf1\\\",\\\"35a7597eb7e6fdd6d9c40f692ec89e0a458893247eb67d4ee3cb7cae9f6ec63f\\\"]\",\"lean-type-v1:81344303f5551107f68c9a5737f0ab1f472d3afd8777861ddec933863f9e6d0d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.inputSizeIsZero",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"238c18d9d1b3103362de52ab224eae100d6923f8cbe6d77d94c9c162c982aab9\\\",\\\"7b69f42d2722e4f3f4ea0591552204cde06a92e1b25a2e82e3c9ca9a826ff556\\\"]\",\"lean-type-v1:daae0e47f378f8913ae42a1cd6e3ee68855d132b5255d5f2306586ca7fe70424\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.insertElement",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"81fa667517e70cdf298e98bbdbd63e62d1e5d0a9cf8714f272bb5b5f7294e03c\\\",\\\"1efbf88eca3a389c191af21694a31fbbcbdcff80791cd66ca3fb0338b2833e8f\\\"]\",\"lean-type-v1:5aaef071ccb485686d713cec88c3666ad0b94c824db02d9e4630686b24a28fb2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.insertPaired",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"c0712870bf4b8fe72b4b1f8c4dd9beb21445ef8d770d87d698c4e0a6d4635fca\\\",\\\"5f75c94b052cea6c79ee03bace3f19dbcb8e327a795e4eaf92e5841e68bfdc85\\\"]\",\"lean-type-v1:3b4f9554d1388d2c407459c538a110a342adeddbed025f8b386b50e327529c1c\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.instDecidableEqCell",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"8262ee4cfb1173c3694f71bd50bad436c5a3149cb5c882456ec4baea01bf705e\\\",\\\"16300a676fa5f68b621023a6505fb43eb93a33d76b90d72f7df4ab0cd2f238c8\\\"]\",\"lean-type-v1:a3cc9dc086b8b91b1fefab136e0dbdb872a4fd21295efa5d5d5cf2a626668f5e\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.instDecidableEqOp",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"b5ba1f50180ac7e1ad51dd40f8b39e0d5ad8735ad818b5fd1cc6deb5e38b3f7e\\\",\\\"881b6b3c43a6449c146de635cade24bf5fdfa0c29cfea333a97bef415dd2706e\\\"]\",\"lean-type-v1:286d69c50810c355d00e100ad1a8087f0f41b3f3bf6b2273aab8a2254dc1c429\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.isSome",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"4f77c4a3a49fb1a82666acc3b33ea1eb060ff7eecca519e3bd51b202770eb993\\\",\\\"1ccfc4b35a35318872812b48256d481d27cd95ca74d1c4202bc31f5803777af2\\\"]\",\"lean-type-v1:103e722418f465e7d2c5aa89c623ea3524bbc59b0a106a9115e54c937da26d17\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.learnedWeightRead",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"7afd007c3a84d3c506bd1b027c3810a618b66e9183a88f47ad19dea427669335\\\",\\\"5d39ae0ee8f2a0ff99697157b668cde53ef2728fe65045933cb7c21943b4a5a5\\\"]\",\"lean-type-v1:c137b6b1a827b23f87f65993dba1b6542c6eb215569f9842c62eab07d9781216\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.learnedWeightWrite",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f46c16301738bffb0d4a0e33cf57dbea4df7cf5ea0a959b5e8c5b142f924ace0\\\",\\\"04191a5aba284e07006b885b606dec5ecd9b9baf29ce7397cd710fef41949b30\\\"]\",\"lean-type-v1:6982269cdb9dba3e16157be1f70d7c99bcf3c94fcd33864c49fa158b84a5b247\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.lessThan",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"fe3e472c72d179686dd4a4eaa483f127828de98aa749602b4acaa19f94dc3c35\\\",\\\"5d97922cdc0bebddda38f209370853dc716fba8be4563f58405038a19788d89d\\\"]\",\"lean-type-v1:f05014f0919d16e489cd9670e920773656085a3584eaac180962c270cf7ca5d0\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.multiplierRead",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"44243a1afc7c8ce5f62077a6572ea9cab2bc49d0b5c5d330931c55a50300e1b1\\\",\\\"8877724219bd6bd9e2275c3d3353b7124b9175ee007860468249eaa2f3241719\\\"]\",\"lean-type-v1:b00d50a345d3045d366cb9b7aff41e3c1812f5a83cb7dd4ff3213fcaeefe69f7\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.multiplierWrite",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"b6ba5d39991b1b13d6315664bc350cca18aab39aefdd503c00cf33dc0dbfa712\\\",\\\"7762074208f465e7907e09542c8f62374cf757120fa9a67225c054f040057dc7\\\"]\",\"lean-type-v1:80c33ec697dd8bd17b2214e3c5d3451bb48899ca6d2f664204684a1830e6dbf2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.natAdd",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"2d2ea87bbe5b28c6153232a5417b50c2c63ddb013c24042a5fd7b59e2dfbb358\\\",\\\"bba3899926ffcd7344f1e337c60fb6cf2693fd477c4d97fa28f23e18d8782605\\\"]\",\"lean-type-v1:3b99c98ff6bd107ac3c6c0aa0aea588193f9fe16e23c78e125725d2aa88f6ef9\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.natEqual",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"fe3e472c72d179686dd4a4eaa483f127828de98aa749602b4acaa19f94dc3c35\\\",\\\"a301622e62ce634dfc5de90bd53022d9086afcde3d9b36c8295f9839f0e0c742\\\"]\",\"lean-type-v1:f05014f0919d16e489cd9670e920773656085a3584eaac180962c270cf7ca5d0\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.natMul",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"2d2ea87bbe5b28c6153232a5417b50c2c63ddb013c24042a5fd7b59e2dfbb358\\\",\\\"04920f38107cdddc53d098f181d4c32d67202d1519baff4e2a1fecb2606523b5\\\"]\",\"lean-type-v1:3b99c98ff6bd107ac3c6c0aa0aea588193f9fe16e23c78e125725d2aa88f6ef9\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.natSub",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"2d2ea87bbe5b28c6153232a5417b50c2c63ddb013c24042a5fd7b59e2dfbb358\\\",\\\"41460e312aceedfffd53fcc54f48ac790d69881592234242c458241a9303afa2\\\"]\",\"lean-type-v1:3b99c98ff6bd107ac3c6c0aa0aea588193f9fe16e23c78e125725d2aa88f6ef9\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.nthRational",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"229de2980026a6ad5a10febd58552dd4a6b65a362c95db647e50202522d24d1d\\\",\\\"f364b426d4723cfa14ae9866be1012a98cc257d4abee295041387433ced1807e\\\"]\",\"lean-type-v1:aabd7f9b21e0411e7ea1ae152e166e045100e36bbd7af9120ead23e1216d5685\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.Op",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"7dc28303d6da1d3a396c5606bb2a086c6a529d3a2335a60ef4b2fc70e52f9128\\\"]\",\"lean-type-v1:7dc28303d6da1d3a396c5606bb2a086c6a529d3a2335a60ef4b2fc70e52f9128\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.Op.fairBit.elim",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"7b05d7cbbdce94e1dc70b85a366cf3bb48cadd166f34064e9f6970e624302fd8\\\",\\\"12be1fc2f5694ceb77cf761214fb58a413ca1434703b26906f0d3a6facecc045\\\"]\",\"lean-type-v1:67a43d68bfcac0d04dd20ee16beef6cdfff0f79992d318329287b399ea5126e4\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.Op.oracleFirst.elim",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f375310660b95404249f216f5e3dfdd3e5e52e6b434d59722c8aab481c9b8f8c\\\",\\\"c6260c3abe28e4445d3e8358e42e29275975b324b97ac9ffdf1e438857199fc6\\\"]\",\"lean-type-v1:eeec02cbc1687a7e2075f83a52e2f287e8358e3df16cef279e0f5e902bbb37a5\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.Op.oracleSecond.elim",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"cbb57730c031f0b934b68276f6552b225ffd305452052953cf6163d8bc3d5d06\\\",\\\"644cda398a584e04c30166039bba7628c77f10b6ec44ca6bd44b322914a9face\\\"]\",\"lean-type-v1:9a1c3b58794b2948ee7633a3eabde26a2486430c5d9786a4582146e7b6deae13\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.Op.word.elim",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"9246e344cb350030e6ccccb3cc4198172dda54b626a69b5a9c684f7c74a2feee\\\",\\\"9d45662c6e65736994979a1340f03c885072b277742e5604381fded95fccf4a3\\\"]\",\"lean-type-v1:03daad5b2774c4c2d33a9df49dd753d8c483b06273b931ac7ae012a9004737f5\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.oracleQuery",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"73a27a68a3816f01827cd620551b2d5b97cafde4bd32568baba94b509bd59693\\\",\\\"2b3486e8be0076f5071395139bb04de4b9b39745fb1aa0125351493d05ab5ed1\\\"]\",\"lean-type-v1:4e365cd3739f5eb1c0d697437a480818b61fcfd27800c43f6d218115b6e3f8f5\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.ratAdd",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f6a43b5ae0d77774c31126f86757d46ac811595d99fd2b30f7266f90f889912c\\\",\\\"483ce3e67f89601129f2fceeabb759dc5c0c68560f75b3ac7476b871509ba862\\\"]\",\"lean-type-v1:5158b3403ad92d863d0523a568d952c716b7f03be57b52ebc804396469c62bb2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.ratDiv",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f6a43b5ae0d77774c31126f86757d46ac811595d99fd2b30f7266f90f889912c\\\",\\\"c1a36aefc9cc81448bda0687f758987798d07d9b1cec697ad5f453b797c158ac\\\"]\",\"lean-type-v1:5158b3403ad92d863d0523a568d952c716b7f03be57b52ebc804396469c62bb2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.rate",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"2f68c2a57fcc68aeede34bac1c3ad360ac6c7366bfa5826ddd693d659ae7c667\\\",\\\"da2edfb5dbfde06118e6165a0409a560bac1ba93e5ecf90e348f12c4c12bfe6c\\\"]\",\"lean-type-v1:08345140936a36599abd104838853c81918b892aed1bdeef30cb2c5964ea199b\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.rationalCeil",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"20266a92c268a3a2b0820c5a9311f55d5bfc85b27a3555f9a0b3bc1aeffd06ed\\\",\\\"20cac05a4e0a96dfcbacb63e81cfd9de4567a0b1c860d752fca3d535debdd616\\\"]\",\"lean-type-v1:13a072065019ad90a5dadd03452e7365e7eb08b4f2a4dbc56141c903e2ba9d05\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.rationalDenominator",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"20266a92c268a3a2b0820c5a9311f55d5bfc85b27a3555f9a0b3bc1aeffd06ed\\\",\\\"a9e06b7cf0810e90bed2cf1c6cc6b4264a7b0ff55de6aebb44661454a985d54e\\\"]\",\"lean-type-v1:13a072065019ad90a5dadd03452e7365e7eb08b4f2a4dbc56141c903e2ba9d05\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.rationalNumerator",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"20266a92c268a3a2b0820c5a9311f55d5bfc85b27a3555f9a0b3bc1aeffd06ed\\\",\\\"1d2dd1a18a0f45554e5d28e1612df03de35a321014871a4bfc0125303e0aef55\\\"]\",\"lean-type-v1:13a072065019ad90a5dadd03452e7365e7eb08b4f2a4dbc56141c903e2ba9d05\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.rationalSize",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"422a4c38abe4c1eee0ab9159712e58b2b1f3fb5cb9e5d9ef81dc04223b1c0b6e\\\",\\\"f4f7d3b0aa59b9d35f152a48cdbcb5aa6c1872d7117280c2c332ce119f3aae56\\\"]\",\"lean-type-v1:1abbab68a6a547162f432cbb519a0fd4c47cb4b50f505119db1e386ecd1c8837\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.ratLess",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"b260c8b6ca0285bac2a41a985372d39ce4806ffb6e52eae5a1a67f6ab71374fb\\\",\\\"d75f22edeea4b3aa5cd76a7210cfe43448c147ce697679a0e34f0422d1fa4b8a\\\"]\",\"lean-type-v1:728bfae29bf09ce44570120da1929621f12db18ac6fc1b1d800342638a0757de\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.ratMul",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f6a43b5ae0d77774c31126f86757d46ac811595d99fd2b30f7266f90f889912c\\\",\\\"3d4234081bda755e710784194a74bdf4a33e8c956f929614967092d16abca983\\\"]\",\"lean-type-v1:5158b3403ad92d863d0523a568d952c716b7f03be57b52ebc804396469c62bb2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.ratOfNat",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"6c350537b6db682f26e3da6ec75345e41a84a7f68ca80d6dc6c2ebec1a9034d3\\\",\\\"17bb87bf36420a1814276cad159b3ce1891b72380406ea094108f46368096b9d\\\"]\",\"lean-type-v1:9274cc852fafc5c175548cb812bf9d024f69055902e96e7a20ad1a754c12b892\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.ratSub",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f6a43b5ae0d77774c31126f86757d46ac811595d99fd2b30f7266f90f889912c\\\",\\\"17bbe6d02ae81253961ae0fc07a163ba1965339ef02e1f4e7a0a22b35094770d\\\"]\",\"lean-type-v1:5158b3403ad92d863d0523a568d952c716b7f03be57b52ebc804396469c62bb2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.reverseRationals",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"4eb860f89dcd47c7b9891e6a663180ec76b0e17a2cda577362b7be9ab7ba87aa\\\",\\\"ad87600182145ce7350080f4d80f170847fd83441e9c825e27aa75ce118b35ff\\\"]\",\"lean-type-v1:dbf0fe1a8e91cb784a86cb262ae4b9c4194291285981d532efdca81cb88ce67e\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.successor",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5a289c1658c5b8b340d4cd8617201e1967da39ee802c468c8f3cb9d15917053e\\\",\\\"d54c4d69e3c308fdd7639f71f35b09617e98cbabe07d938175d03722d22c138a\\\"]\",\"lean-type-v1:66e253702b1e33cf579b2477cce3ccb7ede125ff9db5157682719288bfc79742\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Operations.uniformWidth",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5a289c1658c5b8b340d4cd8617201e1967da39ee802c468c8f3cb9d15917053e\\\",\\\"b5949e2e0b684fe350feee0dce6114544b0289b02b27caa15107c7d760bec7e3\\\"]\",\"lean-type-v1:66e253702b1e33cf579b2477cce3ccb7ede125ff9db5157682719288bfc79742\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.PairedGround",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"a662bf84e3d9d4e8caf5d7939412fc4ab9d897b03e5ec46ba8add2f484a2affd\\\"]\",\"lean-type-v1:34f305bfec45cdfbc2d2bf9b067af573da5d94f07df8277d47ae0f46876f024f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.PairedSet",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"900626464ef909c79a960ae7f20967688bcca23cc384aaf22f5bb7290a95a7a9\\\"]\",\"lean-type-v1:34f305bfec45cdfbc2d2bf9b067af573da5d94f07df8277d47ae0f46876f024f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Query",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"ab438e57e8d1b1f645fb0d332bdb629371ca4983566ec80c60420d8f72de7d6a\\\"]\",\"lean-type-v1:34f305bfec45cdfbc2d2bf9b067af573da5d94f07df8277d47ae0f46876f024f\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Run.algorithmLaw",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"55dbfc4c014c651ee55afb350fc84e92c0740f1c88caa3ce4fbef25c6a2a934d\\\",\\\"f5c5232ae36579d5c892ba817da3fc4fc72e7b33ff2cb72a27fd0b32f2523264\\\"]\",\"lean-type-v1:a2d658eef53ace9301feb80bec66d388356ca4549d4b9b16fa98ec590db9832b\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Run.blockLength",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f976acf62731a9d3109c6e21d75e8a7b77e229d674e52979185b3c896e8af1bb\\\",\\\"9b5efb216d2d736b8f92451077c36f5c81ddb5e0a4bd89c9f6358024a5484d9b\\\"]\",\"lean-type-v1:a18f71b2afe81ddc7350b3397151930b938575f3f67654c2745d4f4d30e957bd\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Run.blockTape",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"02fe98cff8c82c9df4c67094ae31f573a992838f6666f52cf191af6717061b81\\\",\\\"e2efce4e569726aa507aac9bcc0051a6bdb9d7de7015b1a16511a677b80e1482\\\"]\",\"lean-type-v1:0275552fb24e46b7acd90a98f50c8860bd7ac932266cd992cb9a00f95b540531\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Run.fairBitLaw",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"527bab5798b90ec1751fe677da02de1504018bf8fc5f36420c54302710e6b45d\\\",\\\"4cf3ffdfa5e0d1b039c24e67036f60103f6672afe3b2696e35d3901aad37fe2c\\\"]\",\"lean-type-v1:99da292b5d706263d2637704eb17cdb9a1c2f4287968f763b6d4122ea7eb586c\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Run.fairBlocks",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"ca3d733ee94ed688e2d822f15732fad65433d423110ced0516045822f3c48418\\\",\\\"7487760b559c57b6bbb9f03fc6f24bacb512712bc12cdf65ee8aec597021be70\\\"]\",\"lean-type-v1:ebec28ea0998e87320e5830057b75b173b52c32291f984176d65ecf92763b13d\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Run.fairTape",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"c818ba80dda506e9558acb031f17de180d0aaf7487ba3c66899689d17f5ead7b\\\",\\\"b0b47de148afdc7973e1c979ee8cad3e81388f06719dd0ea72f71b0cc9518924\\\"]\",\"lean-type-v1:326b0d9ed8537af77a3a2f0d00a21cf7c35d8df41c552f0a2edc5c031b616d3c\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Run.outputLaw",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"e866c8bbd5b7e3a683037c6856ac86ed4aefeb430a4eb8784261f396833a7357\\\",\\\"4983f72ef1679b96f6f3d5d739ffe6d24aa6424340781405572fd4051102c4f8\\\"]\",\"lean-type-v1:fc52292dcc45afb89a8b8edd4a3a853195d5ebcc557a3d469ab964a6002d9f34\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.StateKind",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"178e6e3283360f92062a9cdcc34fd83faa9e4c17fea636ede7c7cfecccd94d66\\\"]\",\"lean-type-v1:178e6e3283360f92062a9cdcc34fd83faa9e4c17fea636ede7c7cfecccd94d66\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.StateKind.defect.elim",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f33728e8209bf70797d547e07ec1d4d770c53b2a497148f51575cfa213201364\\\",\\\"ad1c0e66cdda70b4ed164facfbfa49ea1c0b19e47a33fe958b5cecf585553d54\\\"]\",\"lean-type-v1:c904b99b9cadbc2b57b1b70f906b4d3f4c50994170ade67097740212949d6e20\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.StateKind.invalid.elim",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"318e68914b274fde8d5d5f3de5f93ba188b95a77cf7ce77a4cf368eb48000264\\\",\\\"5890f5363cec9322c159e67c1af8e94c8200af459290a34300e134688d384a11\\\"]\",\"lean-type-v1:d905753278918193cf2081e20eba6eac6f3fc1f2b52de681df8a4fa62a2f19a2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.StateKind.transversal.elim",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f3c0ff1817cb86d327dde87e3103d981c575802a7ba42b61378881ba8e80b354\\\",\\\"c1f2858e07fa940ec92720ac6b27fcbc2923ab9c692cfca200ba9abe4baf83fe\\\"]\",\"lean-type-v1:98f6728e652bd8f1cc21e5b90c5a4e30526726def9c2b822559d4e1e4e19dfa5\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityBounded",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"9e7365ce1e6246485c47ebf600a15e7db56c72bb90164f090f7b9363927cc376\\\",\\\"b6a8ecb15d778ce49f8ed8645e4d9b90204493e79c24c98feafcaa4a01616a5e\\\"]\",\"lean-type-v1:652f161eef2d4ed5626b49204632ca41a045c001d2f0c4d6944ea34a0fae312a\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"9cceb433844bd062b15ac45c724afdc0342dbc162ecdc215b2010a3c102c1c37\\\"]\",\"lean-type-v1:31f6e2bbaecb2d0711cb6536432b872509f6bf6800bb52ff5dbf738df92825c0\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.bitConstant",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0ce61a2d11f047bef38547f25bac8bdfeac6ca62bcb464c06a3c0041dd62dd30\\\",\\\"35f26cf82c1c9d99a1d37a71f724303e549bb2144b999d0e62328c22944d6324\\\"]\",\"lean-type-v1:a70fad85e0714d7923616136138ad63df60540367e5d206f728576d4233ec1dc\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.bitDegree",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0ce61a2d11f047bef38547f25bac8bdfeac6ca62bcb464c06a3c0041dd62dd30\\\",\\\"1c3ca688b262e083d2cc0bc7b82945b43561b4f7f2dd4fd0ba30ffe99a04ef35\\\"]\",\"lean-type-v1:a70fad85e0714d7923616136138ad63df60540367e5d206f728576d4233ec1dc\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.bounded",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"7c7b85e563472a571240626edfd007134dce125e644a039c813d83c96d063d68\\\",null]\",\"lean-type-v1:ed9cfc94e6b3bb32b61570b73a9dc56fbe5fc839cfed28f762c423add3e06dd2\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.callConstant",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0ce61a2d11f047bef38547f25bac8bdfeac6ca62bcb464c06a3c0041dd62dd30\\\",\\\"39c6d3f78e96f71b480f218c06a9bcfec47ecb393dda8fb7453fdba14389f5c9\\\"]\",\"lean-type-v1:a70fad85e0714d7923616136138ad63df60540367e5d206f728576d4233ec1dc\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.callDegree",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0ce61a2d11f047bef38547f25bac8bdfeac6ca62bcb464c06a3c0041dd62dd30\\\",\\\"fadf925d7e56dd52e5fa101672f205fe2782eef0d96771c6f9fc91b504e36f26\\\"]\",\"lean-type-v1:a70fad85e0714d7923616136138ad63df60540367e5d206f728576d4233ec1dc\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.correct",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"theorem\\\",\\\"7e6105fea3205eaf65f9119e5861fd60c7900b99350800327385b88c498a81a2\\\",null]\",\"lean-type-v1:56a8ab0f3001231d809b5dcfbc47fe992d7f09a512837f1647c21efded63cee9\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.implementation",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0b91247d3fb76ed2e49324fe94cb8a5964214a18d61ccb361317a673573e5394\\\",\\\"fd0a509e82a2d3ce25eeaca21008c30acd87242ebcf6f1096f2e1be069bb6633\\\"]\",\"lean-type-v1:3aaac3194cb04848e7d2859cf632ef881028af6b47a2f9ac22e7fdec20528091\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityContract.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"4d45b76282078c2bcbe519f8056e42c702f69d834f771ddfab18c7481e0f674d\\\",\\\"c671a00a531a9beacab2e9a0ab3be97b234cbd8c70cf1a6319ae347059bb44fe\\\"]\",\"lean-type-v1:4baf124a59fa5af7a404b4a36531b1d50b43c7640f53372b56608b4c99ccfecd\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityCorrect",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5b1a750eff19af197f9db096ee562245c3d19d722e7861366aac816dad51b4a6\\\",\\\"fd5c48c6f9497764e7ade229f27e8ac5d124bdefd18ef056eaac8208d278e78a\\\"]\",\"lean-type-v1:eb4f61f442e0e55ee3e4c91b7297d0b626e6a6b8824e1788e0e12401ec31c399\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityImplementation",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"b4611575b2b62eb57ff8b514cf96bf01666158b035ac2fcc89065136260d1e05\\\",\\\"f1ee36f835559da0f73101291970e7ec11087e456c16a9f277b06edfa2f8a0f0\\\"]\",\"lean-type-v1:9bf068afbd980ac603285199ebb085469d1d0805ae794a0ef5ce25acbe8a1c5b\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityImplementation.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"3375dd4acd93310fe553c50b5293d8efa99fea4f6356f89a411d7bf30f8ad9eb\\\",\\\"85c27843bfae191c63e4f245523122c3a39c9277a7d04b83e23cb9871f6cadf4\\\"]\",\"lean-type-v1:71b9ddf7c1797c366e5ae2a1c3d17a1b7a68632e8249cb6921e7886606a1a0c8\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.FeasibilityImplementation.run",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"4804f019daa38612a4af4a75b9d52b8707312b43dc6fb476364de0c916ed47c6\\\",\\\"35de5ac1e8b2b91a226733d0704d5f2224bcbde8e0d3ccc1802c7670b614608f\\\"]\",\"lean-type-v1:e1929f95352c22fc91f736872cd2efa7cab85dfb9546ea6ee29fe0b7dbb07edb\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.greedyRank",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"b709662393eb53b1ec0e505cffbec4af9ffe9a181c92475ad522b897f43fd437\\\",\\\"ba37921c1fb317dd0123caee7e330816685bc6fa1b4aa8e5c4eaaac6855d1223\\\"]\",\"lean-type-v1:d17df67412f7d8e21b197cd01a5424a0aa8a209af40493ce0ac175874609eaf5\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.oracleCalls",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"103e23e62e75a3d47015609e973454ccd575cc43df8f50f11d1fd10dc300c28c\\\",\\\"d8cdfced5e5a2221fb5dd2fecfefde20bc125d34361f0f13fed37e0d2a226f17\\\"]\",\"lean-type-v1:d0f360b3358f5b77817b66d6d7267a60ce87e0405289bd9691c51c59dc32ee10\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.otherSteps",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"103e23e62e75a3d47015609e973454ccd575cc43df8f50f11d1fd10dc300c28c\\\",\\\"315fa2c3ac273639708cfd6505b58addfdc8376b5b8863a6d1f90d532eec4c2b\\\"]\",\"lean-type-v1:d0f360b3358f5b77817b66d6d7267a60ce87e0405289bd9691c51c59dc32ee10\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.pairedProjections",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"0a268488fbee2bbc9d03536e13c9b22974136412fbe2f3062520cc570df7d092\\\",\\\"ce499cae3b9cecb887b2083967df590baca668364273578f038b64042a91cc53\\\"]\",\"lean-type-v1:e54737080e4232319b8939749766045ad01aebef61054d9404f3aadd7843b57a\"]"
+    },
+    {
+      "name": "CountingMatroid.Model.Subroutines.pairedRank",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"41c5df9c6a2c1c482da83f55ac9638287bf7e204e7733a2bf13151bddbf55a4e\\\",\\\"b53e386d333790b99cf7f3cfce4f7935101f0be51626dac9cf3ec5f9f5ca51ea\\\"]\",\"lean-type-v1:a3409ffa39afadeb5bd004b74f41408cc183ca4c970112d455cf68ded1aee21e\"]"
+    },
+    {
+      "name": "CountingMatroid.Prior",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"7eb9c843b0fd71b8fd2d1fabbb34bb5e51c5767a961a5fe1323fb9a277b48cde\\\",\\\"238f24a09d66506d4ae07364399fedc3ef2d9a4d242cdf3c3096e2465ae3217f\\\"]\",\"lean-type-v1:238f24a09d66506d4ae07364399fedc3ef2d9a4d242cdf3c3096e2465ae3217f\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.AnnealingCursor",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"4d44d669851552640a5ef13dde19d0ccb7448311c3b8306570a3bab5d0ea24ff\\\"]\",\"lean-type-v1:7c575bbae9174b4eb6e669cbf9d2c9a4967e3a538cfba91b68f7d33c9a27432c\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.AnnealingCursor.bitCursor",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"4630a32c2a3d2533db4893bc6209530f54540ee92b30277e06d607292a7b27de\\\",\\\"4a2ca6be81cc83d8935daa2cdf5603e0db6d54b2aece3870e8b17ed1cb6af59d\\\"]\",\"lean-type-v1:0d325aa3d4c474fd830df6a6a10e80d22c137af06ebb1dba02dca5df21807a17\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.AnnealingCursor.currentWeights",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"9a069ed72cb18cdf78ceb637c8a2d3ea1cfb5d85a1c66b2dd70bf9f6fdb2d79d\\\",\\\"8425777bed3f3795664116afaa870a34ff20f610f3b4dddca2c29978855fda9d\\\"]\",\"lean-type-v1:ee3873b53c1184e0476af7914a9875d4a2d802f99aea391ccb4cb5afb4c76c3d\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.AnnealingCursor.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"8f47167459c845d7ba406f06e600d23e18d3b3da8804200d179879f7aafc7cb5\\\",\\\"b504f3e61cef40baf94089ec19d408f2288a2e181ea859ec60f3553a112c33fa\\\"]\",\"lean-type-v1:33c296d9c33e776b20cb96a8593aef4df2d80f7d61c7661c2396fa5400494de2\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.AnnealingCursor.product",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"c3158db064648b53c4d8a6d6c78366f4f762db195fe75bbdc7cb24c15fa630f6\\\",\\\"a41cd090ef50048b095e1ae6921760e0287692df6a7ac1f60e6134d6f5e56827\\\"]\",\"lean-type-v1:7566eac76d654826f1819bea435d7b98193cd45b427702f4ec834ca0f48be223\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.AnnealingCursor.tables",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"e16833c8bac84d56d40b82719d62bc230682102dca63e2d0bcdd8a36434992df\\\",\\\"3db8606f3392b5e826c8eec6a8bde7e11858f1baa706be336a0bcbae6ef02c93\\\"]\",\"lean-type-v1:f09288ed92cd2496e8a602d5db22a02b65c55e2034cdd6bbda0ffe9dd1963695\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.boundedRun",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5b37a5bcaa54753ceecf2b0f832cfc5ef54f9fccfc6c913c1a5dfae78e39c911\\\",\\\"3f094fe759ff067af0ae0b4a4464edd958ee704b7bb2099ee1271897ea744763\\\"]\",\"lean-type-v1:cd13cb2bb7738680c916c82b8a22daa2919d9c5ecb57122d7cd3770cd47876ca\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.boundedUniform",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"72be28080190dcbaa14c1be49ff8fca347d588da618151a5a5890ce2e7cc3e2b\\\",\\\"8c8e0181ec41a1ab46a603713277efb4428af280f285ca0ddf3457567b7b96cf\\\"]\",\"lean-type-v1:99318673c3ecc1c33db1afcc0b1291146956f0df0e6bec64f41b16485d771f46\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.chainStep",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"f6d9ea0eb41cfc684152845a0b61d6fa84651d63bd1afdc984a10df57da11cd1\\\",\\\"3e67c2f33d0235ed3f35afd7cdf84e898085fc30bb47eb778e40f5f7f4b44873\\\"]\",\"lean-type-v1:5f7cee18fb1b90a967e08452210f89c164f64e9f2c2fac87141708379e373e2f\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.classifyState",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"7c510710a7cca283d424c64e81dc6d1fca1467467a67250a3f1f54e93d01ed64\\\",\\\"8e6b9a69ae65a76f45510a8d34f5ee8a2770daf1db32d4a5a48b8277639a38b8\\\"]\",\"lean-type-v1:8e9fd22f34951df944571dcae70bbcfd079ca6633e242b766d3e28a25e3088f7\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.estimate",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"912d193674908e924e2687ea8ba017844bb82705fbd337987905597ff7c28d71\\\",\\\"a50e9984112b3bd14738d55134621ca9202d0259cd86b7007de4b0d1e3341fd2\\\"]\",\"lean-type-v1:87dde1631bec2d3af3b886c334970023a82102f5da838a3e33f5cb9eb08b8955\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.finishPhase",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"19af38204396080d5476b947ab4ff28d21f8c136c5da6682701430fea8eb76e2\\\",\\\"fe605c54f2879327992d54692cf831eff94b8bdb145f7e9689279e98d04495a1\\\"]\",\"lean-type-v1:1881f4969c7900724b6960c778792ac56a8e79366daba6dbec959a284da1e3cf\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.freshTransversal",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"188f1d2e5a26969b5cef6b5da9943bca1bd336d8af5d113ab9c7b676db54fa36\\\",\\\"6c5cfb960ff1965e4ce34f0514c017c26e0069804a56fccf221a9a4bc3e84e19\\\"]\",\"lean-type-v1:63516d22dec9a622444a12d0e06b8d77a0e1e0c60ea5d838e5a98bf9b701bbf1\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.leastDrawTrials",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5a289c1658c5b8b340d4cd8617201e1967da39ee802c468c8f3cb9d15917053e\\\",\\\"5477bca4bf2084655de7a43cb1bb3f14bbce13a5b63abfd87927e6f3db5493d3\\\"]\",\"lean-type-v1:66e253702b1e33cf579b2477cce3ccb7ede125ff9db5157682719288bfc79742\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.leastHalvings",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"20266a92c268a3a2b0820c5a9311f55d5bfc85b27a3555f9a0b3bc1aeffd06ed\\\",\\\"99187604a65215582d379e1a0bc687cb0e304644ec9721e0450fd45ca286123e\\\"]\",\"lean-type-v1:13a072065019ad90a5dadd03452e7365e7eb08b4f2a4dbc56141c903e2ba9d05\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.medianRational",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"3a81baceb57e9bba88514993413174e49ede1131e6895a23c5ffa1839e8d334d\\\",\\\"099c2dc7a68698dd482087a86b247120b1127bb14ccdcc4dec3fe5d3157101cb\\\"]\",\"lean-type-v1:5ab19218c43f2a7661346303dc3d9178828fff247791a5ef7df23bd06f53ab35\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.natPower",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"2d2ea87bbe5b28c6153232a5417b50c2c63ddb013c24042a5fd7b59e2dfbb358\\\",\\\"c671e19b0d929e6771f8b078aa41d9ec9363aae7a40a5201408dec9e44f0b576\\\"]\",\"lean-type-v1:3b99c98ff6bd107ac3c6c0aa0aea588193f9fe16e23c78e125725d2aa88f6ef9\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.ObservationCursor",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"fbdb2c32165fc625ab6c2544b0093e535e015c9d0ededac98ae39886f19eda42\\\"]\",\"lean-type-v1:1f409305f8ff27ece1c0ba0b26c50335ad3cab9f49562636d3157873b92d8d99\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.ObservationCursor.bitCursor",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"bf3e9387e833f8ec93d4f6366be455d4e509b5be057f205c64062500c5b870dc\\\",\\\"c32a2276b443f34aa2e19b53ad5825f7796d64b31fed913251f63ceec4753624\\\"]\",\"lean-type-v1:854d8235a35e5f1d113b710004e8ff39bd3aa5ea0c52dae19128e23303462a5f\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.ObservationCursor.counts",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"d8abcb0d92c18e7db60dfcd5c73c0be0243b08650f0ac8a96ade6f740188a435\\\",\\\"0512aa58a9b69cb91a57015819880ce514b2f0d2be85c12e4ba3ac335f565ed3\\\"]\",\"lean-type-v1:a3185fe5cf9dbb8a9123799858ccef7193656b9f91a89e12c7d23d9a66bc412c\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.ObservationCursor.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"a80115b24dfad4345d4eacea7cc7b49163cfcaa6335256792280189152973fbc\\\",\\\"67e8afabc3bdd6f55410b2172eb8edfb820faa32e3c43987f6c1fea1d53b76b8\\\"]\",\"lean-type-v1:5632ec539fedabe9eb9aeb05ab4eb83d205bc103b2edb690d57e632e112eee67\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.ObservationCursor.numeratorSum",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"b0eec54958f04dc835fca8032843819188b4107c936abfd8cff4b2fc351d4894\\\",\\\"01346e8fd6577d075b5ffbe0e8722afec9c745be4f018cdedc08ad228879118f\\\"]\",\"lean-type-v1:503761b4c17d619651a435f72b359b841da992c459ed2d0abd04418eb56909bc\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.ObservationCursor.state",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"99cd06b3444070e29080c42767897ca61bbd2b6c4bfdfd80770287b7d916d7ee\\\",\\\"e017196f38f1ba5a4bc998812552748f9f4a95081c8cb310d98b05de5b61a31e\\\"]\",\"lean-type-v1:884fd2c93f345fbbcf82a625527b0be127ce52dd81f6b050ea328336b8564771\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.observePhase",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"b3f199588084fd69c76923436e707310266f6f9ddf06c795711a75ffc49f1d4a\\\",\\\"79c4726c41a70490f515def978ac1d7d087e506740bbd877251ae12a0a77d41c\\\"]\",\"lean-type-v1:371d7167f4af7f388c95b0c759ee3bd91eb4c8a3937f90690a1ee494e943838f\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.preprocess",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"aa547ccc80272d1808acd32e83da3e209f6d81581801d7a4fe3015a64b1c39b2\\\",\\\"20693c33432dabb0c972039eb5fabfed7fad412284d4557e6a7de85e2d5febe4\\\"]\",\"lean-type-v1:264fdadd988da241a3e0a01aa26eb2c1343113879c54a5705548e7456cd12aed\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.ratPower",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"c4e01a4103902ff5e9017f57eca0abc54ed787268335ecabf9b595cd5b2056bf\\\",\\\"617285c95226e6419e0f32ead94bd90c9f3bec6ee60926e4ef9a7c3a86aca1d9\\\"]\",\"lean-type-v1:986044fa72de59944de9c317d3e22afd08a5a7edadf11b80745d175b0696fe70\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.recordObservation",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"5af0cc857d77ba4ec12423862ae2d82437e7b25e87aa20fdfe370750e5d9e7b4\\\",\\\"98fbe94d4e9d2cf53980bc610723059122b0117f0cd709e9597542a7e39cf9f3\\\"]\",\"lean-type-v1:5f7d014437e58b0f6fc4284ab3244c1a23ecea1d624ef5b9ac51c5bd431412bf\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.RestartCursor",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"inductive\\\",\\\"89fb61007c44bcccb611c1c7f5689382b78e4d1afb42587c13114458153b2d9b\\\",\\\"4225c6b31f197efe169afe62fe3ae5f6460d61b8266ac4327895cb18e774184b\\\"]\",\"lean-type-v1:4225c6b31f197efe169afe62fe3ae5f6460d61b8266ac4327895cb18e774184b\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.RestartCursor.attempts",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"eb12df6d756b111bb67525cbd58a5fa27d157df214dc29f9fda5a9b4193ed42a\\\",\\\"982c3f8f8ed09cb5892a4e6d19153b77612c2959ae94f70f47e5f2c921e2e770\\\"]\",\"lean-type-v1:59f8c3037c4d5e14e865600e0618c023c6aef7cfd30628d329b13043a7789418\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.RestartCursor.bitCursor",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"eb12df6d756b111bb67525cbd58a5fa27d157df214dc29f9fda5a9b4193ed42a\\\",\\\"dbbfa7031cac730724c04b9308b5949d7c7b17e1b4414bc95f7d2b586d686d6c\\\"]\",\"lean-type-v1:59f8c3037c4d5e14e865600e0618c023c6aef7cfd30628d329b13043a7789418\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.RestartCursor.mk.noConfusion",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"a41d8cee14b41add9c61194a3797227c368de5cc86fb196a1324848fe816a6eb\\\",\\\"954e42bb07e02950294347d9b115844a02505cbeff69d90bed71d3c3c44fcb29\\\"]\",\"lean-type-v1:ceeec0a43f0d530548bd6bea83bc72a71d663a59a53181dcd0ae195f1229ca62\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.RestartCursor.state",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"dd7343e328a012713b23e6620fb6cc1c4e1775953c478af8f6c03870255ada81\\\",\\\"24152139cbcb79dc36490ec4abb5fe1aaae23a62fe0a8b92cf09bae4304950eb\\\"]\",\"lean-type-v1:fef9c5ef35fcf97f17f7b5d93f7ee22cc72bc3913659474e5fa931d4024b3ef6\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.restartPhase",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"614b3de9e91ad6172dfb9bd1f892f7df45cc9aa7858131aaa4825d46f4311985\\\",\\\"3b35040a875658453be69b3970ca24a4c4548afa64443263aaf85befdbdbd4e6\\\"]\",\"lean-type-v1:5afcb741fe28c5a9542c347d3f7b71fdd07ffc874bbe77cfa2ddc9610643fbe4\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.schedule",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"82fc9bb8c16cf8953d654c4027b527fef31789f0f9ab04e5df3bcc0e6d86909b\\\",\\\"c42b6da4f8bfa176f75540ee7d3d910ac87b8b5b1539250e57f4031968ce2899\\\"]\",\"lean-type-v1:af7196b47214cb1e8e5496d889325a74bebcfa89a29fb867147707cf5b4a1538\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.selectionVisit",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"bc380881cb72cab539fa79e499cbf7443ee53887ff3f187b86b64bb36e883973\\\",\\\"61cb5eb6d52db8f41ce1bb007bacc2cc9f15ace7c009481e908cf56f7b9e6050\\\"]\",\"lean-type-v1:f329a9b74e127784d1b0f1673642b32db20f8ec7fc811e766a37e90f5182b3d4\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.selectPaired",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"93628336ba81be1be019d9078869a06577bcbc4c0f4129e10cf02bb718b1a1bd\\\",\\\"6ad73b69472a69abd0afed6ddb30cd7bc33301dc6dbbca02160aebf8de1828b2\\\"]\",\"lean-type-v1:1fe948df4222216837b87a2c7cf240c7bb7f2340190e7248cb342f739520e7a7\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.sortedInsert",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"d6c829e82a29630d54ae55ec81cf7f33c38dc5af402243cf106f1a353d1e54f8\\\",\\\"7d5e37e4efddd375244a602f8a1cdf8a36e946890f5362bf976e363afad3b749\\\"]\",\"lean-type-v1:dbb77fa2d90fd7c6b097572e4be6e2777286a8d4b2f23fb1ddd5a7f24718b6be\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.traceReturn",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"cade06b880441bdc7d5eeb87ac6a720becd9bd79e08fbf32efc5f9f377c4e44c\\\",\\\"5f2578cee3d77d6993de8d2debf869eec62978bc4ca4e159b463a840fbc40d1a\\\"]\",\"lean-type-v1:96bdb4c6407e83edd4ee1eb38dd2e2c3b2b42bb590a40e5193e5af78be87f08f\"]"
+    },
+    {
+      "name": "CountingMatroid.Program.weightOfKind",
+      "identity": "[\"[\\\"tex2lean.declaration-identity/1\\\",\\\"def\\\",\\\"733a8430187ac9f7356e8acc26c68085f0ac2d03bd1001bd0a39ed5ec3d7b0be\\\",\\\"c9f085d46f84d58919852bf044c656baceafcc3e80065712f0d078207947e4c4\\\"]\",\"lean-type-v1:55e1fa0eed953cae3c7f822c6723a5376594e85d411c001686e64da6648beb5b\"]"
+    }
+  ],
+  "sources": [
+    {
+      "id": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+      "name": "aesop",
+      "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+      "fingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "3d69bdc2598b167b4554492642dc4e6d387fbf540649cafcf0a4d6e91022ffb0",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib",
+      "name": "arlib",
+      "revision": "6262f60ad7556be62e94e87f6b5811cf299e7d94",
+      "fingerprint": "b822c767f21fbc6ac66ffa43723db5a29393be0c0b927dfbf1d1dc09d858b1d5",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "mathlibRev": "db584cd6d46c92f209a44c0f1c829460d327499d",
+      "dependency": true
+    },
+    {
+      "id": "6c15f54b00cdd1d6579e429f00fc52dee6bca99fc6205108eeeae2df6e9baa2f",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/batteries",
+      "name": "batteries",
+      "revision": "4488d40d070b9700d4d5a6aa342f0d40c31b2a2d",
+      "fingerprint": "ac2e4df609acc30751feb996ed8632876a85450d10ba43f262e21dfc603d76f4",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "51990d371a854f70fd9188d8328cc363c916bddb87cee1086e2cc4794f2ad18f",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/Cli",
+      "name": "Cli",
+      "revision": "6130a47896ce867c6a4a55373441e59e565bad0f",
+      "fingerprint": "90aadaeeca229cd908a99ff93ca3c4c12f283e5d43d1acd1ef5080c49f3234e0",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "1e681842247e2788bcb4611707015b065f032f39f0556d57d1eae04b23eb5d6f",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/importGraph",
+      "name": "importGraph",
+      "revision": "16f02aa7642864af59f1ff0e384a015994db9118",
+      "fingerprint": "e4805d0cf517c802d8f1ef799a770940426185655102f6f8b464fbd8b19a8965",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "3cc4384a57549dd2b4ba0f6c199b762db94a084bdacecd7038709803f092930a",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/LeanSearchClient",
+      "name": "LeanSearchClient",
+      "revision": "5f4d51b81cbd3f6b32b156bfad9056621a040404",
+      "fingerprint": "72737418190a5148f403fa34006010a810cc7e200137ba9e95928ab435026dc1",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "7617e70a4561c332b2988f329f5c9c30d4971ee295d19833461e840442c977ef",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib",
+      "name": "mathlib",
+      "revision": "db584cd6d46c92f209a44c0f1c829460d327499d",
+      "fingerprint": "531940510342ba16cf001507e2437676abdeeb1a422c91671dee076269e709c6",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+      "name": "aesop",
+      "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+      "fingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "5c0f15677ebbc91b69781b58449ebb30d83b1d8303211f8676fe50bcd458c188",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/batteries",
+      "name": "batteries",
+      "revision": "4488d40d070b9700d4d5a6aa342f0d40c31b2a2d",
+      "fingerprint": "ac2e4df609acc30751feb996ed8632876a85450d10ba43f262e21dfc603d76f4",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "5ddaaf582e75dda424900ff1ef40d350e6b08de50d5e4c3e7ebc7c43988b2472",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/Cli",
+      "name": "Cli",
+      "revision": "6130a47896ce867c6a4a55373441e59e565bad0f",
+      "fingerprint": "90aadaeeca229cd908a99ff93ca3c4c12f283e5d43d1acd1ef5080c49f3234e0",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "25cbae04b1b61f126f73748c2e58a68f00db1a45e17656242917af3ff5f7b171",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/importGraph",
+      "name": "importGraph",
+      "revision": "16f02aa7642864af59f1ff0e384a015994db9118",
+      "fingerprint": "e4805d0cf517c802d8f1ef799a770940426185655102f6f8b464fbd8b19a8965",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "2d12290f7f02761d93233d84c6f5025c1cb78bdc2993c20164c2541319a9bab9",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/LeanSearchClient",
+      "name": "LeanSearchClient",
+      "revision": "5f4d51b81cbd3f6b32b156bfad9056621a040404",
+      "fingerprint": "72737418190a5148f403fa34006010a810cc7e200137ba9e95928ab435026dc1",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "ae3cc02fcf47ce1c3aa9c5a18c6a6ff33577aff85cf88350be06209950c84f08",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/plausible",
+      "name": "plausible",
+      "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+      "fingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "43ab67385c625b9e4792b124eed1b45ecd8829107b9990edbc4dca1689da1b0a",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/proofwidgets",
+      "name": "proofwidgets",
+      "revision": "4be2e3d5087eeb272cf5a8853b8f9dd025ef5957",
+      "fingerprint": "7d91b3812e1f63f65026fcd8400948eb1243148f5525b28d4b21aaa7b9b3d2f0",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "ae86ae95bf10fae753c41b4ef53f9fe9b70f31be97a9bdb175d068edc1badb6c",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/Qq",
+      "name": "Qq",
+      "revision": "92c15be17b7caf78c2ad767ec40f89052d908d81",
+      "fingerprint": "0ae895ddee453cb395527962ea1bfa7c81a76c90ffefbafa00a7e819e5b8a174",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "1009f63e5c24fa2258ecfcb1846d49675c3c87be16ba6f11a5dc84c72f6bd87e",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/plausible",
+      "name": "plausible",
+      "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+      "fingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "64f1c0c42502f2a8281f86c3570e744bd3414ab50e1c79e73e6700f0a6cd8e27",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/proofwidgets",
+      "name": "proofwidgets",
+      "revision": "4be2e3d5087eeb272cf5a8853b8f9dd025ef5957",
+      "fingerprint": "7d91b3812e1f63f65026fcd8400948eb1243148f5525b28d4b21aaa7b9b3d2f0",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    },
+    {
+      "id": "c53c20715216c966c10e55b3ec756de103f46696c44f2a9c68b24095ee53c2c3",
+      "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/Qq",
+      "name": "Qq",
+      "revision": "92c15be17b7caf78c2ad767ec40f89052d908d81",
+      "fingerprint": "0ae895ddee453cb395527962ea1bfa7c81a76c90ffefbafa00a7e819e5b8a174",
+      "toolchain": "leanprover/lean4:v4.33.0",
+      "dependency": true
+    }
+  ],
+  "certificates": [
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 1042,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.tail_append_singleton_of_ne_nil",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {a : α} {l : List α}, l ≠ [] → (l ++ [a]).tail = l.tail ++ [a]",
+      "typeHash": "b41b3bbd3817333fecc7438f36ff9cb6510ddd6f35f38aedf15aafc6a2b6420e",
+      "dependencies": [
+        "List",
+        "Ne",
+        "List.nil",
+        "Eq",
+        "List.tail",
+        "HAppend.hAppend",
+        "instHAppendOfAppend",
+        "List.instAppend",
+        "List.cons",
+        "List.rec",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "Eq.trans",
+        "Not",
+        "True",
+        "congrArg",
+        "eq_self",
+        "not_true_eq_false",
+        "of_eq_true",
+        "outParam",
+        "HAppend",
+        "Append"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 369,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.X.length_singleton",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} (a : α), [a].length = 1",
+      "typeHash": "616a35c5ff51ecc3a4ba8aa7788f43d19a38039a749c9256b35df1f6e8b54655",
+      "dependencies": [
+        "Eq",
+        "Nat",
+        "List.length",
+        "List.cons",
+        "List.nil",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "rfl",
+        "List",
+        "OfNat"
+      ],
+      "definitions": [],
+      "axioms": [],
+      "proved": true
+    },
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 408,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.length_injective",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} [Subsingleton α], Injective List.length",
+      "typeHash": "757bbeb2f967a067883a2d611b455c42da33a589a91dc32b189c33511910b23c",
+      "dependencies": [
+        "Subsingleton",
+        "Injective",
+        "List",
+        "Nat",
+        "List.length",
+        "of_eq_true",
+        "Eq.trans",
+        "True",
+        "List.length_injective_iff._simp_1",
+        "eq_true",
+        "Eq",
+        "propext",
+        "List.length_injective_iff",
+        "Iff",
+        "ADMIT"
+      ],
+      "definitions": [
+        {
+          "name": "Injective",
+          "type": "{α : Sort u_1} → {β : Sort u_2} → (α → β) → Prop",
+          "value": "fun {α} {β} f => ∀ (x y : α), f x = f y → x = y"
+        }
+      ],
+      "axioms": [
+        "ADMIT",
+        "propext"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 405,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.length_injective_iff",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1}, Injective List.length ↔ Subsingleton α",
+      "typeHash": "48e6ad1098be5946f6f36ccab9c9c3f37de79a9580384e2bd2c7b918d6676cb2",
+      "dependencies": [
+        "Iff",
+        "Injective",
+        "List",
+        "Nat",
+        "List.length",
+        "Subsingleton",
+        "ADMIT",
+        "Eq"
+      ],
+      "definitions": [
+        {
+          "name": "Injective",
+          "type": "{α : Sort u_1} → {β : Sort u_2} → (α → β) → Prop",
+          "value": "fun {α} {β} f => ∀ (x y : α), f x = f y → x = y"
+        }
+      ],
+      "axioms": [
+        "ADMIT"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 452,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.X.forall_mem_singleton",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {p : α → Prop} {a : α}, (∀ (x : α), x ∈ [a] → p x) ↔ p a",
+      "typeHash": "aa613b2e95d0e293e7f52d089c1989054a92cc95a9df8cf8462bcc663be71536",
+      "dependencies": [
+        "Iff",
+        "Membership.mem",
+        "List",
+        "List.instMembership",
+        "List.cons",
+        "List.nil",
+        "of_eq_true",
+        "Eq.trans",
+        "True",
+        "congrFun'",
+        "congrArg",
+        "Eq",
+        "forall_congr",
+        "implies_congr_ctx",
+        "Or",
+        "List.mem_cons._simp_1",
+        "False",
+        "List.not_mem_nil._simp_1",
+        "or_false",
+        "forall_eq._simp_1",
+        "iff_self",
+        "outParam",
+        "Membership"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext",
+        "Quot.sound"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 1054,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.cons_head_tail'",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} [inst : Inhabited α] {l : List α}, l ≠ [] → l.ihead :: l.tail = l",
+      "typeHash": "ca4b45b25d8ea696c57f8a2d9e7dd0bf099497492f0af2a3605c821a8197c03b",
+      "dependencies": [
+        "Inhabited",
+        "List",
+        "Ne",
+        "List.nil",
+        "Eq",
+        "List.cons",
+        "List.ihead",
+        "List.tail",
+        "id",
+        "_private.AesopTest.List.0.List.head'.match_1.splitter",
+        "List.head'.match_1",
+        "Unit",
+        "Inhabited.default",
+        "Eq.ndrec",
+        "Not",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "Eq.trans",
+        "True",
+        "congrArg",
+        "eq_self",
+        "not_true_eq_false",
+        "Eq.symm",
+        "of_eq_true",
+        "Eq.refl",
+        "List.casesOn",
+        "Unit.unit"
+      ],
+      "definitions": [
+        {
+          "name": "List.ihead",
+          "type": "{α : Type u_1} → [Inhabited α] → List α → α",
+          "value": "fun {α} [Inhabited α] x =>\n  match x with\n  | [] => default\n  | a :: tail => a"
+        },
+        {
+          "name": "_private.AesopTest.List.0.List.head'.match_1.splitter",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "@List.head'.match_1"
+        },
+        {
+          "name": "List.head'.match_1",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "fun {α} motive x h_1 h_2 => List.casesOn x (h_1 ()) fun head tail => h_2 head tail"
+        }
+      ],
+      "axioms": [
+        "propext"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 1046,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.cons_head'_tail",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {l : List α} {a : α}, a ∈ l.head' → a :: l.tail = l",
+      "typeHash": "e717038ffe66dcc29a6794738ee2d65abe33319dc6af40ed75f5a6352a8416f7",
+      "dependencies": [
+        "List",
+        "Membership.mem",
+        "Option",
+        "Option.instMembership_aesopTest",
+        "List.head'",
+        "Eq",
+        "List.cons",
+        "List.tail",
+        "_private.AesopTest.List.0.List.head'.match_1.splitter",
+        "List.head'.match_1",
+        "Unit",
+        "Option.none",
+        "Option.some",
+        "List.nil",
+        "Eq.ndrec",
+        "id",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "eq_false'",
+        "noConfusion_of_Nat",
+        "Option.ctorIdx",
+        "Eq.symm",
+        "of_eq_true",
+        "Eq.trans",
+        "True",
+        "congr",
+        "congrArg",
+        "congrFun'",
+        "Option.some.injEq",
+        "eq_self",
+        "Eq.refl",
+        "Option.mem_spec._simp_1",
+        "outParam",
+        "Membership",
+        "Membership.mk",
+        "Option.Mem",
+        "List.casesOn",
+        "Unit.unit",
+        "Nat",
+        "Bool.rec",
+        "Bool",
+        "Nat.beq",
+        "propext",
+        "Option.mem_spec",
+        "Bool.false",
+        "Bool.true",
+        "Iff",
+        "Iff.intro",
+        "Option.Mem.casesOn",
+        "HEq",
+        "Option.some.noConfusion",
+        "Option.Mem.some",
+        "eq_of_heq",
+        "HEq.refl",
+        "Option.Mem.rec"
+      ],
+      "definitions": [
+        {
+          "name": "Option.instMembership_aesopTest",
+          "type": "{α : Type u_1} → Membership α (Option α)",
+          "value": "fun {α} => { mem := fun a o => Option.Mem a (some (some o)) }"
+        },
+        {
+          "name": "List.head'",
+          "type": "{α : Type u_1} → List α → Option α",
+          "value": "fun {α} x =>\n  match x with\n  | [] => none\n  | a :: tail => some a"
+        },
+        {
+          "name": "_private.AesopTest.List.0.List.head'.match_1.splitter",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "@List.head'.match_1"
+        },
+        {
+          "name": "List.head'.match_1",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "fun {α} motive x h_1 h_2 => List.casesOn x (h_1 ()) fun head tail => h_2 head tail"
+        },
+        {
+          "name": "Option.Mem.casesOn",
+          "type": "{α : Type u_1} →\n  {a : α} →\n    {motive : (a_1 : Option α) → Option.Mem a a_1 → Sort u} →\n      {a_1 : Option α} → (t : Option.Mem a a_1) → motive (some a) ⋯ → motive a_1 t",
+          "value": "fun {α} {a} {motive} {a_1} t some => Option.Mem.rec some t"
+        }
+      ],
+      "axioms": [
+        "propext"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "f35efafab22d85be67f5ef0fa1859ce48e8305619ac05890198cdf5c832ef7d5",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 401,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.exists_of_length_succ",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {n : Nat} (l : List α), l.length = n + 1 → ∃ h t, l = h :: t",
+      "typeHash": "448ce589dddd5a12c23a4897dd501549cfb2207fc76276a350c0fcccb7cabfd8",
+      "dependencies": [
+        "Nat",
+        "List",
+        "Eq",
+        "List.length",
+        "HAdd.hAdd",
+        "instHAdd",
+        "instAddNat",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Exists",
+        "List.cons",
+        "List.rec",
+        "List.nil",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "Eq.trans",
+        "Nat.right_eq_add._simp_1",
+        "And",
+        "Nat.add_eq_zero_iff._simp_1",
+        "congrArg",
+        "Nat.succ_ne_self._simp_1",
+        "and_false",
+        "of_eq_true",
+        "True",
+        "funext",
+        "List.cons.injEq",
+        "exists_and_left._simp_1",
+        "exists_eq'._simp_1",
+        "and_true",
+        "outParam",
+        "HAdd",
+        "Add",
+        "OfNat",
+        "Nat.succ"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 1042,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.tail_append_singleton_of_ne_nil",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {a : α} {l : List α}, l ≠ [] → (l ++ [a]).tail = l.tail ++ [a]",
+      "typeHash": "b41b3bbd3817333fecc7438f36ff9cb6510ddd6f35f38aedf15aafc6a2b6420e",
+      "dependencies": [
+        "List",
+        "Ne",
+        "List.nil",
+        "Eq",
+        "List.tail",
+        "HAppend.hAppend",
+        "instHAppendOfAppend",
+        "List.instAppend",
+        "List.cons",
+        "List.rec",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "Eq.trans",
+        "Not",
+        "True",
+        "congrArg",
+        "eq_self",
+        "not_true_eq_false",
+        "of_eq_true",
+        "outParam",
+        "HAppend",
+        "Append"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 369,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.X.length_singleton",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} (a : α), [a].length = 1",
+      "typeHash": "616a35c5ff51ecc3a4ba8aa7788f43d19a38039a749c9256b35df1f6e8b54655",
+      "dependencies": [
+        "Eq",
+        "Nat",
+        "List.length",
+        "List.cons",
+        "List.nil",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "rfl",
+        "List",
+        "OfNat"
+      ],
+      "definitions": [],
+      "axioms": [],
+      "proved": true
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 408,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.length_injective",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} [Subsingleton α], Injective List.length",
+      "typeHash": "757bbeb2f967a067883a2d611b455c42da33a589a91dc32b189c33511910b23c",
+      "dependencies": [
+        "Subsingleton",
+        "Injective",
+        "List",
+        "Nat",
+        "List.length",
+        "of_eq_true",
+        "Eq.trans",
+        "True",
+        "List.length_injective_iff._simp_1",
+        "eq_true",
+        "Eq",
+        "propext",
+        "List.length_injective_iff",
+        "Iff",
+        "ADMIT"
+      ],
+      "definitions": [
+        {
+          "name": "Injective",
+          "type": "{α : Sort u_1} → {β : Sort u_2} → (α → β) → Prop",
+          "value": "fun {α} {β} f => ∀ (x y : α), f x = f y → x = y"
+        }
+      ],
+      "axioms": [
+        "ADMIT",
+        "propext"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 405,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.length_injective_iff",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1}, Injective List.length ↔ Subsingleton α",
+      "typeHash": "48e6ad1098be5946f6f36ccab9c9c3f37de79a9580384e2bd2c7b918d6676cb2",
+      "dependencies": [
+        "Iff",
+        "Injective",
+        "List",
+        "Nat",
+        "List.length",
+        "Subsingleton",
+        "ADMIT",
+        "Eq"
+      ],
+      "definitions": [
+        {
+          "name": "Injective",
+          "type": "{α : Sort u_1} → {β : Sort u_2} → (α → β) → Prop",
+          "value": "fun {α} {β} f => ∀ (x y : α), f x = f y → x = y"
+        }
+      ],
+      "axioms": [
+        "ADMIT"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 452,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.X.forall_mem_singleton",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {p : α → Prop} {a : α}, (∀ (x : α), x ∈ [a] → p x) ↔ p a",
+      "typeHash": "aa613b2e95d0e293e7f52d089c1989054a92cc95a9df8cf8462bcc663be71536",
+      "dependencies": [
+        "Iff",
+        "Membership.mem",
+        "List",
+        "List.instMembership",
+        "List.cons",
+        "List.nil",
+        "of_eq_true",
+        "Eq.trans",
+        "True",
+        "congrFun'",
+        "congrArg",
+        "Eq",
+        "forall_congr",
+        "implies_congr_ctx",
+        "Or",
+        "List.mem_cons._simp_1",
+        "False",
+        "List.not_mem_nil._simp_1",
+        "or_false",
+        "forall_eq._simp_1",
+        "iff_self",
+        "outParam",
+        "Membership"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext",
+        "Quot.sound"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 1054,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.cons_head_tail'",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} [inst : Inhabited α] {l : List α}, l ≠ [] → l.ihead :: l.tail = l",
+      "typeHash": "ca4b45b25d8ea696c57f8a2d9e7dd0bf099497492f0af2a3605c821a8197c03b",
+      "dependencies": [
+        "Inhabited",
+        "List",
+        "Ne",
+        "List.nil",
+        "Eq",
+        "List.cons",
+        "List.ihead",
+        "List.tail",
+        "id",
+        "_private.AesopTest.List.0.List.head'.match_1.splitter",
+        "List.head'.match_1",
+        "Unit",
+        "Inhabited.default",
+        "Eq.ndrec",
+        "Not",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "Eq.trans",
+        "True",
+        "congrArg",
+        "eq_self",
+        "not_true_eq_false",
+        "Eq.symm",
+        "of_eq_true",
+        "Eq.refl",
+        "List.casesOn",
+        "Unit.unit"
+      ],
+      "definitions": [
+        {
+          "name": "List.ihead",
+          "type": "{α : Type u_1} → [Inhabited α] → List α → α",
+          "value": "fun {α} [Inhabited α] x =>\n  match x with\n  | [] => default\n  | a :: tail => a"
+        },
+        {
+          "name": "_private.AesopTest.List.0.List.head'.match_1.splitter",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "@List.head'.match_1"
+        },
+        {
+          "name": "List.head'.match_1",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "fun {α} motive x h_1 h_2 => List.casesOn x (h_1 ()) fun head tail => h_2 head tail"
+        }
+      ],
+      "axioms": [
+        "propext"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 1046,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.cons_head'_tail",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {l : List α} {a : α}, a ∈ l.head' → a :: l.tail = l",
+      "typeHash": "e717038ffe66dcc29a6794738ee2d65abe33319dc6af40ed75f5a6352a8416f7",
+      "dependencies": [
+        "List",
+        "Membership.mem",
+        "Option",
+        "Option.instMembership_aesopTest",
+        "List.head'",
+        "Eq",
+        "List.cons",
+        "List.tail",
+        "_private.AesopTest.List.0.List.head'.match_1.splitter",
+        "List.head'.match_1",
+        "Unit",
+        "Option.none",
+        "Option.some",
+        "List.nil",
+        "Eq.ndrec",
+        "id",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "eq_false'",
+        "noConfusion_of_Nat",
+        "Option.ctorIdx",
+        "Eq.symm",
+        "of_eq_true",
+        "Eq.trans",
+        "True",
+        "congr",
+        "congrArg",
+        "congrFun'",
+        "Option.some.injEq",
+        "eq_self",
+        "Eq.refl",
+        "Option.mem_spec._simp_1",
+        "outParam",
+        "Membership",
+        "Membership.mk",
+        "Option.Mem",
+        "List.casesOn",
+        "Unit.unit",
+        "Nat",
+        "Bool.rec",
+        "Bool",
+        "Nat.beq",
+        "propext",
+        "Option.mem_spec",
+        "Bool.false",
+        "Bool.true",
+        "Iff",
+        "Iff.intro",
+        "Option.Mem.casesOn",
+        "HEq",
+        "Option.some.noConfusion",
+        "Option.Mem.some",
+        "eq_of_heq",
+        "HEq.refl",
+        "Option.Mem.rec"
+      ],
+      "definitions": [
+        {
+          "name": "Option.instMembership_aesopTest",
+          "type": "{α : Type u_1} → Membership α (Option α)",
+          "value": "fun {α} => { mem := fun a o => Option.Mem a (some (some o)) }"
+        },
+        {
+          "name": "List.head'",
+          "type": "{α : Type u_1} → List α → Option α",
+          "value": "fun {α} x =>\n  match x with\n  | [] => none\n  | a :: tail => some a"
+        },
+        {
+          "name": "_private.AesopTest.List.0.List.head'.match_1.splitter",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "@List.head'.match_1"
+        },
+        {
+          "name": "List.head'.match_1",
+          "type": "{α : Type u_1} →\n  (motive : List α → Sort u_2) →\n    (x : List α) → (Unit → motive []) → ((a : α) → (tail : List α) → motive (a :: tail)) → motive x",
+          "value": "fun {α} motive x h_1 h_2 => List.casesOn x (h_1 ()) fun head tail => h_2 head tail"
+        },
+        {
+          "name": "Option.Mem.casesOn",
+          "type": "{α : Type u_1} →\n  {a : α} →\n    {motive : (a_1 : Option α) → Option.Mem a a_1 → Sort u} →\n      {a_1 : Option α} → (t : Option.Mem a a_1) → motive (some a) ⋯ → motive a_1 t",
+          "value": "fun {α} {a} {motive} {a_1} t some => Option.Mem.rec some t"
+        }
+      ],
+      "axioms": [
+        "propext"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "796f15e913ecdf27f37e557e5fbb156bc227a59b478d42df28f01e52cb096f43",
+      "sourceFingerprint": "c5abf80809e9d6f13094b40da9072dc34baa2d6f88402f629c9bb8439b2ab4b3",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop",
+        "file": "AesopTest/List.lean",
+        "line": 401,
+        "revision": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "List.exists_of_length_succ",
+      "module": "AesopTest.List",
+      "type": "∀ {α : Type u_1} {n : Nat} (l : List α), l.length = n + 1 → ∃ h t, l = h :: t",
+      "typeHash": "448ce589dddd5a12c23a4897dd501549cfb2207fc76276a350c0fcccb7cabfd8",
+      "dependencies": [
+        "Nat",
+        "List",
+        "Eq",
+        "List.length",
+        "HAdd.hAdd",
+        "instHAdd",
+        "instAddNat",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Exists",
+        "List.cons",
+        "List.rec",
+        "List.nil",
+        "False.elim",
+        "Eq.mp",
+        "False",
+        "Eq.trans",
+        "Nat.right_eq_add._simp_1",
+        "And",
+        "Nat.add_eq_zero_iff._simp_1",
+        "congrArg",
+        "Nat.succ_ne_self._simp_1",
+        "and_false",
+        "of_eq_true",
+        "True",
+        "funext",
+        "List.cons.injEq",
+        "exists_and_left._simp_1",
+        "exists_eq'._simp_1",
+        "and_true",
+        "outParam",
+        "HAdd",
+        "Add",
+        "OfNat",
+        "Nat.succ"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext",
+        "Classical.choice",
+        "Quot.sound"
+      ],
+      "proved": true
+    },
+    {
+      "sourceId": "ae3cc02fcf47ce1c3aa9c5a18c6a6ff33577aff85cf88350be06209950c84f08",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 148,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "testBit_pred",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ {x : Nat} {i : Nat},\n  x.pred.testBit i = (decide (0 < x) && (((List.range i).all fun j => !x.testBit j) ^^ x.testBit i))",
+      "typeHash": "0bb5195ec8c93b4cd9014a79ff15201360df19a963aef5aff1cd8a457c35f227",
+      "dependencies": [
+        "Nat",
+        "Eq",
+        "Bool",
+        "Nat.testBit",
+        "Nat.pred",
+        "Bool.and",
+        "Decidable.decide",
+        "LT.lt",
+        "instLTNat",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Nat.decLt",
+        "Bool.xor",
+        "List.all",
+        "List.range",
+        "Bool.not",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "Decidable",
+        "LT",
+        "OfNat",
+        "List",
+        "String"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext",
+        "sorryAx"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "ae3cc02fcf47ce1c3aa9c5a18c6a6ff33577aff85cf88350be06209950c84f08",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 170,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "true_example_with_guard",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ (a : Nat), 4 ≤ a → a = a",
+      "typeHash": "58db32ceb767d9aa46c4388177e401214a7d02ff0d9b0a3e1e3be1585a2833cd",
+      "dependencies": [
+        "Nat",
+        "LE.le",
+        "instLENat",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Eq",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "LE",
+        "OfNat",
+        "Bool",
+        "String"
+      ],
+      "definitions": [],
+      "axioms": [
+        "sorryAx"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "ae3cc02fcf47ce1c3aa9c5a18c6a6ff33577aff85cf88350be06209950c84f08",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 160,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "type_u",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ (α : Type u) (l : List α), l = l ++ l",
+      "typeHash": "8c257ead25c399569360dce54b1d035c2a499db73c7c1e2f9d765a286ddc1a2a",
+      "dependencies": [
+        "List",
+        "Eq",
+        "HAppend.hAppend",
+        "instHAppendOfAppend",
+        "List.instAppend",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "OfNat.ofNat",
+        "Nat",
+        "instOfNatNat",
+        "outParam",
+        "HAppend",
+        "Append",
+        "Bool",
+        "String",
+        "OfNat"
+      ],
+      "definitions": [],
+      "axioms": [
+        "sorryAx"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "ae3cc02fcf47ce1c3aa9c5a18c6a6ff33577aff85cf88350be06209950c84f08",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 155,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "ulift_nat",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ (f : ULift Nat), f = { down := 0 }",
+      "typeHash": "0e98f4b63171374edd9acfe3fca329267bf1ea09953ab71ef046e5a262cc78c6",
+      "dependencies": [
+        "ULift",
+        "Nat",
+        "Eq",
+        "ULift.up",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "OfNat",
+        "Bool",
+        "String"
+      ],
+      "definitions": [],
+      "axioms": [
+        "sorryAx"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "1009f63e5c24fa2258ecfcb1846d49675c3c87be16ba6f11a5dc84c72f6bd87e",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 148,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "testBit_pred",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ {x : Nat} {i : Nat},\n  x.pred.testBit i = (decide (0 < x) && (((List.range i).all fun j => !x.testBit j) ^^ x.testBit i))",
+      "typeHash": "0bb5195ec8c93b4cd9014a79ff15201360df19a963aef5aff1cd8a457c35f227",
+      "dependencies": [
+        "Nat",
+        "Eq",
+        "Bool",
+        "Nat.testBit",
+        "Nat.pred",
+        "Bool.and",
+        "Decidable.decide",
+        "LT.lt",
+        "instLTNat",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Nat.decLt",
+        "Bool.xor",
+        "List.all",
+        "List.range",
+        "Bool.not",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "Decidable",
+        "LT",
+        "OfNat",
+        "List",
+        "String"
+      ],
+      "definitions": [],
+      "axioms": [
+        "propext",
+        "sorryAx"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "1009f63e5c24fa2258ecfcb1846d49675c3c87be16ba6f11a5dc84c72f6bd87e",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 170,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "true_example_with_guard",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ (a : Nat), 4 ≤ a → a = a",
+      "typeHash": "58db32ceb767d9aa46c4388177e401214a7d02ff0d9b0a3e1e3be1585a2833cd",
+      "dependencies": [
+        "Nat",
+        "LE.le",
+        "instLENat",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "Eq",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "LE",
+        "OfNat",
+        "Bool",
+        "String"
+      ],
+      "definitions": [],
+      "axioms": [
+        "sorryAx"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "1009f63e5c24fa2258ecfcb1846d49675c3c87be16ba6f11a5dc84c72f6bd87e",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 160,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "type_u",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ (α : Type u) (l : List α), l = l ++ l",
+      "typeHash": "8c257ead25c399569360dce54b1d035c2a499db73c7c1e2f9d765a286ddc1a2a",
+      "dependencies": [
+        "List",
+        "Eq",
+        "HAppend.hAppend",
+        "instHAppendOfAppend",
+        "List.instAppend",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "OfNat.ofNat",
+        "Nat",
+        "instOfNatNat",
+        "outParam",
+        "HAppend",
+        "Append",
+        "Bool",
+        "String",
+        "OfNat"
+      ],
+      "definitions": [],
+      "axioms": [
+        "sorryAx"
+      ],
+      "proved": false
+    },
+    {
+      "sourceId": "1009f63e5c24fa2258ecfcb1846d49675c3c87be16ba6f11a5dc84c72f6bd87e",
+      "sourceFingerprint": "4a6d5d0f3c35392f0a627774c1c05991a2ebdb36650de2dfbffede15eb920b0a",
+      "source": {
+        "projectDir": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/plausible",
+        "file": "PlausibleTest/Tactic.lean",
+        "line": 155,
+        "revision": "b7eb3304aeae834b12dda98993a37f6a41f6f0bb",
+        "toolchain": "leanprover/lean4:v4.33.0"
+      },
+      "name": "ulift_nat",
+      "module": "PlausibleTest.Tactic",
+      "type": "∀ (f : ULift Nat), f = { down := 0 }",
+      "typeHash": "0e98f4b63171374edd9acfe3fca329267bf1ea09953ab71ef046e5a262cc78c6",
+      "dependencies": [
+        "ULift",
+        "Nat",
+        "Eq",
+        "ULift.up",
+        "OfNat.ofNat",
+        "instOfNatNat",
+        "sorryAx",
+        "Lean.Name",
+        "Bool.true",
+        "Lean.Name.num",
+        "Lean.Name.str",
+        "Lean.Name.anonymous",
+        "OfNat",
+        "Bool",
+        "String"
+      ],
+      "definitions": [],
+      "axioms": [
+        "sorryAx"
+      ],
+      "proved": false
+    }
+  ],
+  "issues": [
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/mathlib: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/mathlib'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/plausible: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/plausible'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/LeanSearchClient: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/LeanSearchClient'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/importGraph: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/importGraph'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/proofwidgets: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/proofwidgets'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/aesop: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/aesop'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/Qq: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/Qq'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/batteries: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/batteries'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/Cli: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/arlib/.lake/packages/Cli'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/importGraph/.lake/packages/Cli: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/importGraph/.lake/packages/Cli'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop/.lake/packages/batteries: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/aesop/.lake/packages/batteries'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/importGraph/.lake/packages/Cli: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/importGraph/.lake/packages/Cli'",
+    "Cannot discover /Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop/.lake/packages/batteries: Error: ENOENT: no such file or directory, realpath '/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/aesop/.lake/packages/batteries'",
+    "List.length_injective is not a proved reusable theorem: ADMIT, propext.",
+    "List.length_injective_iff is not a proved reusable theorem: ADMIT.",
+    "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/batteries: External module/declaration scripts/runLinter.lean: main collides with the local development; dependency linking needs review. Candidate contracts: List.count_singleton', List.countBefore_lt_count_of_lt_length_of_beq, List.countBefore_of_ge_length, List.countPBefore_length, List.countPBefore_lt_countP_of_lt_length_of_pos, List.countPBefore_of_ge_length, List.findIdxNth_countPBefore_of_lt_length_of_pos, List.findIdxNth_eq_length_of_ge_countP. Compatibility needs project change/review; no import or cost transfer was attempted.",
+    "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/importGraph: External module/declaration MainGraph.lean: main collides with the local development; dependency linking needs review. Candidate contracts: bad_contains_sorry. Compatibility needs project change/review; no import or cost transfer was attempted.",
+    "List.length_injective is not a proved reusable theorem: ADMIT, propext.",
+    "List.length_injective_iff is not a proved reusable theorem: ADMIT.",
+    "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/batteries: External module/declaration scripts/runLinter.lean: main collides with the local development; dependency linking needs review. Candidate contracts: List.count_singleton', List.countBefore_lt_count_of_lt_length_of_beq, List.countBefore_of_ge_length, List.countPBefore_length, List.countPBefore_lt_countP_of_lt_length_of_pos, List.countPBefore_of_ge_length, List.findIdxNth_countPBefore_of_lt_length_of_pos, List.findIdxNth_eq_length_of_ge_countP. Compatibility needs project change/review; no import or cost transfer was attempted.",
+    "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean/.lake/packages/mathlib/.lake/packages/importGraph: External module/declaration MainGraph.lean: main collides with the local development; dependency linking needs review. Candidate contracts: bad_contains_sorry. Compatibility needs project change/review; no import or cost transfer was attempted.",
+    "testBit_pred is not a proved reusable theorem: propext, sorryAx.",
+    "true_example_with_guard is not a proved reusable theorem: sorryAx.",
+    "type_u is not a proved reusable theorem: sorryAx.",
+    "ulift_nat is not a proved reusable theorem: sorryAx.",
+    "testBit_pred is not a proved reusable theorem: propext, sorryAx.",
+    "true_example_with_guard is not a proved reusable theorem: sorryAx.",
+    "type_u is not a proved reusable theorem: sorryAx.",
+    "ulift_nat is not a proved reusable theorem: sorryAx."
+  ],
+  "bridges": [],
+  "reason": "Decline all supplied candidates. The only certified theorems concern elementary List facts in Aesop test modules; none states a probability, counting, concentration, matroid, or finite-tape bound, and their elaborated types cannot establish either target theorem. The local goals quantify over matroids, exact oracles, parameters, and finite Boolean tapes, with weighted cardinalities of failure sets. The supplied local definitions describe the executable counting-matroid model and charged-operation vocabulary, but they do not turn these unrelated List results into correspondence evidence. No nonvacuous universally quantified correspondence obligations can be supported by these candidates. No resource route is available: there is no matching simulation or cost theorem, and the local model itself flags unresolved encoding, conversion, RAM word-width, and storage-realization obligations. The listed local definitions and comments are evidence only, not certified theorems. No specific program mismatch can be diagnosed from the supplied evidence; model review remains necessary before claiming correspondence."
+}

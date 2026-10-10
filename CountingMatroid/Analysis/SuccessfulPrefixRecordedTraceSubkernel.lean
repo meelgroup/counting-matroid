@@ -58,6 +58,7 @@ noncomputable def restartRecordedMass {n : ℕ} (r : ℕ)
       restartSuffixMass r o₁ o₂ s j current pref t (path 0) *
         ∏ i : Fin s.observations, P (path i.castSucc) (path i.succ) else 0
 
+
 /-- INTERNAL: Disintegrate the actual completed-trace event by its complete
 restart result, retaining the returned cursor as well as the state.
 This finite regrouping is exact and makes no stochastic assertion.
@@ -107,6 +108,7 @@ theorem capped_recorded_trace_mass_restart_fibers {n : ℕ} (r : ℕ)
     · simp only [heq, false_and, if_false]
   simp_rw [hterm]
   simp only [Finset.sum_ite_eq, hmem, if_true]
+
 
 /-- INTERNAL: The ideal path mixture has the same restart-result fibers as
 the actual trace event. Its path factor depends only on the returned state;
@@ -178,6 +180,50 @@ theorem restart_recorded_mass_restart_fibers {n : ℕ} (r : ℕ)
     Finset.mem_image_of_mem _ (Finset.mem_univ suffix)
   simp only [Finset.sum_ite_eq, hmem, if_true]
 
+
+/-- Keep finite regrouping and stopped-prefix composition generic so kernel
+checking does not repeatedly unfold the concrete schedule and bit budget. -/
+private theorem recorded_subkernel_of_coverage {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (s : AnnealingSchedule) (j : ℕ)
+    (current : AnnealingCursor n) (pref : List Bool) (t : ℕ)
+    (P : Arlib.MarkovChains.FinChain (PairedSet n))
+    (hstep : ∀ (head : List Bool) (u : ℕ) (state next : PairedSet n),
+      state.card = n → (classifyState state).val ≠ .invalid →
+      CoveredChainStepSubkernel.coveredChainStepMass r o₁ o₂ s.drawTrials
+        (s.ρ ^ j) current.currentWeights head u state next ≤ P state next)
+    (hreplay : ChainStepIntervalReplay.SuccessReplay
+      (fun tape => (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val)
+      Prod.snd pref.length)
+    (htrans : ∀ tape result,
+      (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val = some result →
+      (classifyState result.1).val = .transversal)
+    (hcovered : ∀ (suffix : List.Vector Bool t) result observed recorded,
+      (restartPhase r o₁ o₂ (fun i => ((pref ++ suffix.val)[i]?).getD false)
+        s current.tables j current.bitCursor).val = some result →
+      observePhaseTrace r o₁ o₂ (fun i => ((pref ++ suffix.val)[i]?).getD false)
+        s (s.ρ ^ j) current.currentWeights result = some (observed, recorded) →
+      observed.bitCursor ≤ pref.length + t)
+    (states : List.Vector (PairedSet n) s.observations) :
+    cappedRecordedTraceMass r o₁ o₂ s j current pref t states ≤
+      restartRecordedMass r o₁ o₂ s j current pref t P states := by
+  classical
+  rw [capped_recorded_trace_mass_restart_fibers,
+    restart_recorded_mass_restart_fibers]
+  apply Finset.sum_le_sum
+  intro outcome _
+  cases outcome with
+  | none =>
+      simp only [Option.bind_none, Option.map_none, reduceCtorEq, exists_false,
+        and_false, if_false, Finset.sum_const_zero, mul_zero]
+      exact le_rfl
+  | some start =>
+    have hbound := StoppedRecordedTraceSubkernel.stopped_recorded_trace_subkernel
+      r o₁ o₂ s (s.ρ ^ j) current.currentWeights pref t
+      (fun tape => (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val)
+      hreplay htrans hcovered P hstep start states
+    simpa only [Option.bind_some, Option.map_some, Option.some.injEq] using hbound
+
+
 /-- INTERNAL: The actual completed finite-suffix observation sublaw is
 bounded by ideal transitions from the actual restart endpoint marginal.
 This statement contains no warm-law hypothesis; that independent estimate
@@ -207,110 +253,72 @@ theorem successful_prefix_recorded_trace_subkernel (n r : ℕ)
           current.currentWeights hn hq hw) states := by
   classical
   dsimp only
-  suffices hcompose :
-      (∀ (head : List Bool) (u : ℕ) (state next : PairedSet n),
-        state.card = n → (classifyState state).val ≠ .invalid →
-        CoveredChainStepSubkernel.coveredChainStepMass r o₁ o₂
-          (CountingMatroid.Interface.Pseudocode.setup n p).drawTrials
-          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
-          current.currentWeights head u state next ≤
-        IdealExchangeChain.idealChain r o₁ o₂
-          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
-          current.currentWeights hn
-          (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
-          hw state next) →
-      cappedRecordedTraceMass r o₁ o₂
-        (CountingMatroid.Interface.Pseudocode.setup n p) j current pref
-        (CountingMatroid.Model.Run.blockLength n r p - pref.length) states ≤
-      restartRecordedMass r o₁ o₂
-        (CountingMatroid.Interface.Pseudocode.setup n p) j current pref
-        (CountingMatroid.Model.Run.blockLength n r p - pref.length)
-        (IdealExchangeChain.idealChain r o₁ o₂
-          ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
-          current.currentWeights hn
-          (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
-          hw) states by
-    apply hcompose
-    intro head u state next hcard hvalid
-    exact CoveredChainStepSubkernel.covered_chain_step_subkernel r o₁ o₂
-      (CountingMatroid.Interface.Pseudocode.setup n p).drawTrials
-      ((CountingMatroid.Interface.Pseudocode.setup n p).ρ ^ j)
-      current.currentWeights hn
-      (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
-      hw head u state next hcard hvalid
-  intro hstep
-  rw [capped_recorded_trace_mass_restart_fibers,
-    restart_recorded_mass_restart_fibers]
-  apply Finset.sum_le_sum
-  intro outcome _
-  cases outcome with
-  | none =>
-      simp only [Option.bind_none, Option.map_none, reduceCtorEq, exists_false,
-        and_false, if_false, Finset.sum_const_zero, mul_zero]
-      exact le_rfl
-  | some start =>
-    let s := CountingMatroid.Interface.Pseudocode.setup n p
-    let m := CountingMatroid.Model.Run.blockLength n r p
-    let t := m - pref.length
-    let initialRun := fun tape : ℕ → Bool =>
-      (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val
-    obtain ⟨bits, original, hbits, _, horiginal, _, hpref, hprefLength⟩ :=
-      SuccessfulPrefixAbortBound.successful_prefix_has_good_cursor
-        n r o₁ o₂ p j hj pref hprefix
-    have hp : pref <+: bits := hpref ▸ List.take_prefix _ _
-    have hconcat : pref ++ bits.drop pref.length = bits :=
-      (List.prefix_append_drop hp).symm
-    let originalSuffix : List.Vector Bool t :=
-      ⟨bits.drop pref.length, by simpa only [List.length_drop, hbits]⟩
-    have hsame := hfixed originalSuffix
-    change BoundedRunPhaseHistory.phaseHistory r o₁ o₂
-      (fun i => ((pref ++ bits.drop pref.length)[i]?).getD false) s j = some current at hsame
-    rw [hconcat, horiginal] at hsame
-    have heq : original = current := Option.some.inj hsame
-    have hstart : pref.length ≤ current.bitCursor := by
-      rw [hprefLength, ← heq]
-      exact Nat.min_le_left _ _
-    have hlen : pref.length ≤ m := by
-      rw [hprefLength]
-      exact Nat.min_le_right _ _
-    have hreplay : ChainStepIntervalReplay.SuccessReplay initialRun Prod.snd pref.length := by
-      intro tape result hrun
-      have hrp := RestartPhaseIntervalReplay.restartPhase_success_interval
-        r o₁ o₂ s current.tables j current.bitCursor tape result hrun
-      refine ⟨hstart.trans hrp.1, ?_⟩
-      intro other hagree
-      exact hrp.2 other (fun i hlo hhi => hagree i (hstart.trans hlo) hhi)
-    have htrans : ∀ tape result, initialRun tape = some result →
-        (classifyState result.1).val = .transversal := by
-      intro tape result hrun
-      exact RestartPhaseTransversal.restartPhase_transversal
-        r o₁ o₂ tape s current.tables j current.bitCursor result hrun
-    have hcovered : ∀ (suffix : List.Vector Bool t) result observed recorded,
-        initialRun (fun i => ((pref ++ suffix.val)[i]?).getD false) = some result →
-        observePhaseTrace r o₁ o₂ (fun i => ((pref ++ suffix.val)[i]?).getD false)
-          s (s.ρ ^ j) current.currentWeights result = some (observed, recorded) →
-        observed.bitCursor ≤ pref.length + t := by
-      intro suffix result observed recorded hrestart htrace
-      have hobserve := recorded_trace_observePhase r o₁ o₂
-        (fun i => ((pref ++ suffix.val)[i]?).getD false) s
-        (s.ρ ^ j) current.currentWeights result
-      rw [htrace] at hobserve
-      have hbound := PhaseObservationBitCoverage.phase_observation_cursor_le_block
-        n r o₁ o₂ p hn (fun i => ((pref ++ suffix.val)[i]?).getD false)
-        j hj current result observed (hfixed suffix) hrestart hobserve.symm
-      simpa only [t, Nat.add_sub_of_le hlen] using hbound
-    have hbound := StoppedRecordedTraceSubkernel.stopped_recorded_trace_subkernel
-      r o₁ o₂ s (s.ρ ^ j) current.currentWeights pref t initialRun
-      hreplay htrans hcovered
-      (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j) current.currentWeights
-        hn (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j) hw)
-      hstep start states
-    simpa only [Option.bind_some, Option.map_some, Option.some.injEq] using hbound
+  let s := CountingMatroid.Interface.Pseudocode.setup n p
+  let m := CountingMatroid.Model.Run.blockLength n r p
+  let t := m - pref.length
+  let initialRun := fun tape : ℕ → Bool =>
+    (restartPhase r o₁ o₂ tape s current.tables j current.bitCursor).val
+  obtain ⟨bits, original, hbits, _, horiginal, _, hpref, hprefLength⟩ :=
+    SuccessfulPrefixAbortBound.successful_prefix_has_good_cursor
+      n r o₁ o₂ p j hj pref hprefix
+  have hp : pref <+: bits := hpref ▸ List.take_prefix _ _
+  have hconcat : pref ++ bits.drop pref.length = bits :=
+    (List.prefix_append_drop hp).symm
+  let originalSuffix : List.Vector Bool t :=
+    ⟨bits.drop pref.length, by simpa only [t, m, List.length_drop, hbits]⟩
+  have hsame := hfixed originalSuffix
+  change BoundedRunPhaseHistory.phaseHistory r o₁ o₂
+    (fun i => ((pref ++ bits.drop pref.length)[i]?).getD false) s j = some current at hsame
+  rw [hconcat, horiginal] at hsame
+  have heq : original = current := Option.some.inj hsame
+  have hstart : pref.length ≤ current.bitCursor := by
+    rw [hprefLength, ← heq]
+    exact Nat.min_le_left _ _
+  have hlen : pref.length ≤ m := by
+    rw [hprefLength]
+    exact Nat.min_le_right _ _
+  have hreplay : ChainStepIntervalReplay.SuccessReplay initialRun Prod.snd pref.length := by
+    intro tape result hrun
+    have hrp := RestartPhaseIntervalReplay.restartPhase_success_interval
+      r o₁ o₂ s current.tables j current.bitCursor tape result hrun
+    refine ⟨hstart.trans hrp.1, ?_⟩
+    intro other hagree
+    exact hrp.2 other (fun i hlo hhi => hagree i (hstart.trans hlo) hhi)
+  have htrans : ∀ tape result, initialRun tape = some result →
+      (classifyState result.1).val = .transversal := by
+    intro tape result hrun
+    exact RestartPhaseTransversal.restartPhase_transversal
+      r o₁ o₂ tape s current.tables j current.bitCursor result hrun
+  have hcovered : ∀ (suffix : List.Vector Bool t) result observed recorded,
+      initialRun (fun i => ((pref ++ suffix.val)[i]?).getD false) = some result →
+      observePhaseTrace r o₁ o₂ (fun i => ((pref ++ suffix.val)[i]?).getD false)
+        s (s.ρ ^ j) current.currentWeights result = some (observed, recorded) →
+      observed.bitCursor ≤ pref.length + t := by
+    intro suffix result observed recorded hrestart htrace
+    have hobserve := recorded_trace_observePhase r o₁ o₂
+      (fun i => ((pref ++ suffix.val)[i]?).getD false) s
+      (s.ρ ^ j) current.currentWeights result
+    rw [htrace] at hobserve
+    have hbound := PhaseObservationBitCoverage.phase_observation_cursor_le_block
+      n r o₁ o₂ p hn (fun i => ((pref ++ suffix.val)[i]?).getD false)
+      j hj current result observed (hfixed suffix) hrestart hobserve.symm
+    simpa only [t, Nat.add_sub_of_le hlen] using hbound
+  apply recorded_subkernel_of_coverage r o₁ o₂ s j current pref t
+    (IdealExchangeChain.idealChain r o₁ o₂ (s.ρ ^ j) current.currentWeights
+      hn (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j) hw)
+    ?_ hreplay htrans hcovered states
+  intro head u state next hcard hvalid
+  exact CoveredChainStepSubkernel.covered_chain_step_subkernel r o₁ o₂ s.drawTrials
+    (s.ρ ^ j) current.currentWeights hn
+    (pow_pos (AnnealingPartitionDrift.schedule_power_lower n p hn).1 j)
+    hw head u state next hcard hvalid
 
 end CountingMatroid.Analysis.SuccessfulPrefixRecordedTraceSubkernel
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · compiler maintenance · moved finite regrouping and stopped-prefix composition into a generic schedule/suffix helper. The public statement and stochastic obligations are unchanged; this avoids repeated concrete-schedule reduction during kernel checking.
 
 * 2026-10-09 · reduced · proved deterministic full observation bit coverage in PhaseObservationBitCoverage; instantiated the generic stopped recorded-trace comparison with exact restart replay, transversal return, and original-history cursor extraction. The remaining positive-length stochastic composition is in StoppedRecordedTraceSubkernel; this moves, rather than closes, that proof obligation.
 

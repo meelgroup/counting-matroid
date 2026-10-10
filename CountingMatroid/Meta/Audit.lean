@@ -1,19 +1,135 @@
 /-
 The whole-development checks, invoked where the whole development is in scope.
 
-**This file is written by the tool and regenerated at every phase boundary.**
-Nothing here is yours to edit: an edit is reverted at the next gate, and the
-gate reports it.
-
-The import list below is every module the project has. It grows as the
-development does so the model-closure report sees the declarations available at
-that boundary.
+This file is written by the tool and regenerated at every phase boundary.
+The import list covers every project module so the model-closure report sees
+all declarations available at that boundary.
 -/
+import CountingMatroid.Analysis.AbortTapeBound
+import CountingMatroid.Analysis.AnnealingPartitionDrift
+import CountingMatroid.Analysis.BoundedRunOracleCalls
+import CountingMatroid.Analysis.BoundedRunOtherSteps
+import CountingMatroid.Analysis.BoundedRunPhase
+import CountingMatroid.Analysis.BoundedRunPhaseHistory
+import CountingMatroid.Analysis.BoundedRunPhaseSize
+import CountingMatroid.Analysis.BoundedRunPhaseWork
+import CountingMatroid.Analysis.BoundedRunResourceEnvelope
+import CountingMatroid.Analysis.BoundedUniformReplay
+import CountingMatroid.Analysis.CertifiedPhaseRatioSteps
+import CountingMatroid.Analysis.ChainStepIntervalReplay
+import CountingMatroid.Analysis.ConditionalObservationAbortMass
+import CountingMatroid.Analysis.ConditionalRestartAbortMass
+import CountingMatroid.Analysis.DefectPartitionPositive
+import CountingMatroid.Analysis.EmpiricalPhaseCertificate
+import CountingMatroid.Analysis.EstimateMedianResource
+import CountingMatroid.Analysis.ExchangeClosedBasis
+import CountingMatroid.Analysis.ExchangePathCertificate
+import CountingMatroid.Analysis.ExchangeProposalGeometry
+import CountingMatroid.Analysis.ExchangeWalkCardinality
+import CountingMatroid.Analysis.ExchangeWalkReversal
+import CountingMatroid.Analysis.FeasibilitySolver
+import CountingMatroid.Analysis.FindPathCertificate
+import CountingMatroid.Analysis.FinishPhaseEmpiricalUpdate
+import CountingMatroid.Analysis.FinishPhaseWeightsSize
+import CountingMatroid.Analysis.FinishPhaseWork
+import CountingMatroid.Analysis.FiniteObservationMarkov
+import CountingMatroid.Analysis.FinitePhaseEstimationBound
+import CountingMatroid.Analysis.FinitePhaseExecutionAbort
+import CountingMatroid.Analysis.FinitePhaseObservationMSE
+import CountingMatroid.Analysis.FiniteTapeFirstPhaseBound
+import CountingMatroid.Analysis.FiniteTapeLowerTail
+import CountingMatroid.Analysis.FiniteTapePhaseControl
+import CountingMatroid.Analysis.FiniteTapePrefixBound
+import CountingMatroid.Analysis.FiniteTapeProductAccuracy
+import CountingMatroid.Analysis.FirstPhaseFailure
+import CountingMatroid.Analysis.FoundPathAugmentation
+import CountingMatroid.Analysis.FrozenPathTable
+import CountingMatroid.Analysis.GreedyRankCorrect
+import CountingMatroid.Analysis.IdealChainNonnegDefinite
+import CountingMatroid.Analysis.IdealExchangeChain
+import CountingMatroid.Analysis.InaccurateNonzeroTapeBound
+import CountingMatroid.Analysis.IndependentRunsCore
+import CountingMatroid.Analysis.IndependentRunsTail
+import CountingMatroid.Analysis.InitialMultipliersGood
+import CountingMatroid.Analysis.InitialRestartLaw
+import CountingMatroid.Analysis.IntersectionAugmentation
+import CountingMatroid.Analysis.IntersectionSearch
+import CountingMatroid.Analysis.IntersectionSearchCost
+import CountingMatroid.Analysis.LeastHalvingsCost
+import CountingMatroid.Analysis.MainProof
+import CountingMatroid.Analysis.MedianAmplification
+import CountingMatroid.Analysis.MedianBadMajority
+import CountingMatroid.Analysis.NoPathSeparator
+import CountingMatroid.Analysis.ObservableEnergyDual
+import CountingMatroid.Analysis.ObservablePoincare
+import CountingMatroid.Analysis.ObservableProjection
+import CountingMatroid.Analysis.ObservableVarianceDecomposition
+import CountingMatroid.Analysis.ObservePhaseIntervalReplay
+import CountingMatroid.Analysis.ObservePhaseWork
+import CountingMatroid.Analysis.OutputAccuracy
+import CountingMatroid.Analysis.OutputSupport
+import CountingMatroid.Analysis.PhaseChainWork
+import CountingMatroid.Analysis.PhaseMeanCertificate
+import CountingMatroid.Analysis.PhaseObservationExperiment
+import CountingMatroid.Analysis.PhaseResourcePrimitives
+import CountingMatroid.Analysis.PrimitiveOracleCalls
+import CountingMatroid.Analysis.RankOneFeasibility
+import CountingMatroid.Analysis.RatioProductAccuracy
+import CountingMatroid.Analysis.RationalHeight
+import CountingMatroid.Analysis.RawPhaseFailureMass
+import CountingMatroid.Analysis.RelativeObservationBounds
+import CountingMatroid.Analysis.ResourceBound
+import CountingMatroid.Analysis.RestartPhaseIntervalReplay
+import CountingMatroid.Analysis.RestartPhaseWork
+import CountingMatroid.Analysis.ScheduleAbortBudget
+import CountingMatroid.Analysis.ScheduleConfidence
+import CountingMatroid.Analysis.ScheduleCostEnvelope
+import CountingMatroid.Analysis.ScheduleCostPrimitives
+import CountingMatroid.Analysis.ScheduleDrawTrialsBridge
+import CountingMatroid.Analysis.ScheduleOpeningCost
+import CountingMatroid.Analysis.ScheduleOtherStepsEnvelope
+import CountingMatroid.Analysis.ScheduleResourceEnvelope
+import CountingMatroid.Analysis.ScheduleThermalRestCost
+import CountingMatroid.Analysis.ScheduleThermalSetupCost
+import CountingMatroid.Analysis.ScheduleValueEnvelope
+import CountingMatroid.Analysis.ShortestExchangeAugmentation
+import CountingMatroid.Analysis.ShortestSourceWalkIndependence
+import CountingMatroid.Analysis.SinglePhaseIntervalReplay
+import CountingMatroid.Analysis.SingleRunAccuracy
+import CountingMatroid.Analysis.SortedInsertValue
+import CountingMatroid.Analysis.StationaryCovarianceSum
+import CountingMatroid.Analysis.StationaryMeanIdentities
+import CountingMatroid.Analysis.StationaryMeanLowerBound
+import CountingMatroid.Analysis.StationaryObservableMSE
+import CountingMatroid.Analysis.StationaryPathMoment
+import CountingMatroid.Analysis.SuccessfulPhasePrefixBound
+import CountingMatroid.Analysis.SuccessfulPhaseReplay
+import CountingMatroid.Analysis.SuccessfulPrefixAbortBound
+import CountingMatroid.Analysis.SuccessfulPrefixObservationMSE
+import CountingMatroid.Analysis.SuccessfulPrefixTrajectoryDomination
+import CountingMatroid.Analysis.TheoremProof
+import CountingMatroid.Analysis.TraceReturnIntervalReplay
+import CountingMatroid.Analysis.TransversalClassPartition
+import CountingMatroid.Analysis.TransversalPartition
+import CountingMatroid.Analysis.TransversalProjection
+import CountingMatroid.Analysis.TransversalRankBridge
+import CountingMatroid.Analysis.TypeMassLowerBounds
+import CountingMatroid.Interface.Encoding
+import CountingMatroid.Interface.ProgramModel
+import CountingMatroid.Interface.Pseudocode
+import CountingMatroid.Meta.CostSeal
+import CountingMatroid.Meta.ModelClosure
+import CountingMatroid.Model.Operations
 import CountingMatroid.Model.Prelude
+import CountingMatroid.Model.Prior
+import CountingMatroid.Model.Program
+import CountingMatroid.Model.Run
+import CountingMatroid.Model.Subroutines
+import CountingMatroid.Model.Theorem
 
 namespace CountingMatroid.Meta
 
--- No headline recorded yet, so there is nothing to seed `#surplusIn` from.
--- The model gate records one; until then this file is here to be imported.
+#modelClosureOfType CountingMatroid.countingmatroid_main
+#surplusIn CountingMatroid.Model from CountingMatroid.countingmatroid_main
 
 end CountingMatroid.Meta

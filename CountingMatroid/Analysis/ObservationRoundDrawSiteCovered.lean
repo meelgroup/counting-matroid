@@ -13,8 +13,9 @@ stopping maps. The bound must account for all earlier actual phase updates,
 restart attempts, and k observations. The additive multiplier, draw, restart, observation, and actual-history
 budgets are proved in the support modules. The target proof combines prefix
 replay for the lower endpoint with the quartic bound for the full trial interval.
-Its final standalone compiler validation remains pending: diagnostic checks
-have stalled before the first post-import checkpoint, without a proof error.
+The generic observation-prefix bridge checks record-update projections before
+instantiation with the concrete schedule, keeping the composed budget proof
+small enough for kernel validation.
 -/
 
 namespace CountingMatroid.Analysis.ObservationRoundDrawSiteCovered
@@ -189,6 +190,22 @@ private theorem observation_cursor_arithmetic (n L B N C j k u v w bits : ℕ)
   simp only [Nat.add_mul, Nat.one_mul] at hc hkC hjC ⊢
   omega
 
+/-- INTERNAL: Normalize the observation-count record update while the schedule
+is generic. Instantiating the unnormalized bound with the concrete schedule
+causes excessive kernel reduction when composing cursor budgets.
+TEXLINE: main.tex:1350-1390,1392-1421 -/
+private theorem observe_prefix_bit_bound {n : ℕ} (r : ℕ)
+    (o₁ o₂ : IndependenceOracle n) (tape : ℕ → Bool)
+    (s : AnnealingSchedule) (q : ℚ) (weights : Multipliers n)
+    (start : PairedSet n × ℕ) (K k : ℕ)
+    (hq : binaryRatLength 1 + n * binaryRatLength q ≤ K)
+    (hw : ∀ i, binaryRatLength (weights i) ≤ K)
+    (out : ObservationCursor n)
+    (h : (observePhase r o₁ o₂ tape {s with observations := k} q weights start).val = some out) :
+    out.bitCursor ≤ start.2 + k * (1 + 3 * s.drawTrials * (4 * K + n + 1)) := by
+  exact PhaseBitCursorBound.observe_phase_bit_bound r o₁ o₂ tape
+    {s with observations := k} q weights start K hq hw out h
+
 /-- INTERNAL: Every stopped observation draw has its cursor after the
 external consumed prefix and enough remaining block space for all trials.
 TEXLINE: main.tex:1350-1390,1392-1421 -/
@@ -206,12 +223,14 @@ theorem observation_round_draw_site_covered (n r : ℕ)
     ∀ site suffix, suffix.length = t → ∀ d,
       observationDrawSite n r o₁ o₂ p j pref k site suffix = some d →
       pref.length ≤ d.1 ∧ d.1 + s.drawTrials * ((d.2 - 1).log2 + 1) ≤ m := by
-  /- PARKED: Complete proof text retained, but not certified. Standalone parent
+  /- Validation history: Standalone parent
      checks first reported transient missing ChainStepBitBound/PhaseBitCursorBound
      object files. After publication, checks (including a one-thread bounded
      diagnostic and the generated Lake setup) stalled loading imports. A scratch
      IO checkpoint immediately after the same imports was never reached.
-     All three support-source checks passed; no target proof error was emitted. -/
+     All three support-source checks passed; no target proof error was emitted.
+     Subsequent isolation identified kernel reduction during cursor-budget
+     composition; observe_prefix_bit_bound avoids that conversion. -/
   classical
   let s := CountingMatroid.Interface.Pseudocode.setup n p
   let m := CountingMatroid.Model.Run.blockLength n r p
@@ -283,8 +302,8 @@ theorem observation_round_draw_site_covered (n r : ℕ)
     (Nat.le_of_lt hj) hq hw current hhistory
   have hs := PhaseBitCursorBound.restart_phase_bit_bound r o₁ o₂ tape s current.tables j
     current.bitCursor K (Nat.le_of_lt hj) hq htables start hrestart
-  have ho := PhaseBitCursorBound.observe_phase_bit_bound r o₁ o₂ tape {s with observations := k}
-    (s.ρ ^ j) current.currentWeights start K hqj hweights reached hobserve
+  have ho := observe_prefix_bit_bound r o₁ o₂ tape s
+    (s.ρ ^ j) current.currentWeights start K k hqj hweights reached hobserve
   split at hsite
   · cases hsite
   · have hd := ChainStepBitBound.chain_draw_site_bit_bound r o₁ o₂ tape s (s.ρ ^ j)
@@ -312,6 +331,8 @@ end CountingMatroid.Analysis.ObservationRoundDrawSiteCovered
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* maintenance · validated · isolated the kernel stall to composing the observation cursor bound; introduced a generic record-update bridge and retained the complete theorem and every hypothesis. The full standalone proof passed kernel validation in 9.6 seconds before publication.
 
 * this round · blocked on validation · retained the full target proof without a new open obligation; support elaborations passed, but parent import loading did not complete, and no granted build permission was observed.
 

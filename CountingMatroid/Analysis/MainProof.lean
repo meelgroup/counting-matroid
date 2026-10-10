@@ -1,21 +1,11 @@
-import CountingMatroid.Model.Run
-import CountingMatroid.Model.Prior
-import CountingMatroid.Interface.Encoding
-import CountingMatroid.Interface.Pseudocode
-import CountingMatroid.Interface.ProgramModel
-import CountingMatroid.Analysis.FeasibilitySolver
-import CountingMatroid.Analysis.OutputAccuracy
-import CountingMatroid.Analysis.ResourceBound
+import CountingMatroid.Analysis.TheoremProof
 
 set_option autoImplicit false
 
 open CountingMatroid.Model
 open CountingMatroid.Model.Subroutines
 
-/-- PAPER: main.tex:86-104, 1442-1470
-Proof-side owner for `CountingMatroid.countingmatroid_main`. Its three proof
-dependencies are the cited pretest, the annealing accuracy argument, and the
-charged cost bound. -/
+/-- Compatibility alias for the proof-side assembly. -/
 theorem CountingMatroid.Analysis.MainProof.countingmatroid_main :
     ∃ (solver : FeasibilityImplementation) (C degree : ℕ),
       FeasibilityCorrect solver ∧
@@ -35,24 +25,7 @@ theorem CountingMatroid.Analysis.MainProof.countingmatroid_main :
           0 ≤ x.1 ∧
           x.2.oracleCalls ≤ C * (size + 1) ^ degree ∧
           x.2.bitOps ≤ C * (size + 1) ^ degree := by
-  obtain ⟨contract⟩ :=
-    CountingMatroid.Analysis.FeasibilitySolver.exists_feasibility_contract
-  obtain ⟨C, degree, hresource⟩ :=
-    CountingMatroid.Analysis.ResourceBound.output_resource_bound contract
-  refine ⟨contract.implementation, C, degree, contract.correct, ?_⟩
-  intro n r M₁ M₂ o₁ o₂ p hfull hr h₁ h₂
-  have haccuracy :=
-    CountingMatroid.Analysis.OutputAccuracy.output_accuracy
-      contract.implementation contract.correct n r M₁ M₂ o₁ o₂ p
-      hfull hr h₁ h₂
-  have hrle : r ≤ n := by
-    have hle : M₁.eRank ≤ (n : ENat) := by
-      calc
-        M₁.eRank ≤ M₁.E.encard := M₁.eRank_le_encard_ground
-        _ = (n : ENat) := by simp [hfull.1]
-    rw [hr.1] at hle
-    exact_mod_cast hle
-  exact ⟨haccuracy.1, haccuracy.2, hresource n r o₁ o₂ p hrle⟩
+  exact CountingMatroid.Analysis.TheoremProof.countingmatroid_main
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.

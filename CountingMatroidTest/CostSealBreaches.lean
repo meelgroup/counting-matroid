@@ -20,20 +20,16 @@ routes turns this file red.  This is the same discipline as
 `ArlibTest/Computation.lean` §3, applied to the checkers rather than to the
 compiler.
 
-Every cheat gets its **own namespace**.  The seal commands take the namespace to
-scan as an argument, so a cheat planted in `Breach.Exchange.Program` is invisible
-to the test that follows it — which keeps each expected message a single entry
-and keeps the tests independent of the order they run in.  It also checks
-something worth checking: that the commands are genuinely parameterized rather
-than hardcoded to the development they were written for.
+The seal accepts only `CountingMatroid.Program`. Each actual breach check lives
+in its own `CostSeal*.lean` module, where the planted declaration uses that
+canonical namespace. This file checks that noncanonical targets are rejected.
 
 ## What is covered
 
 * §1 — the cheats the *compiler* rejects, so that a change making one of them
   compile is caught before either seal is reached.
-* §2 — `#programSeal`: the routes past the compiler, inside the algorithm —
-  including the one that only a *transitive* scan catches, which is the property
-  `reaches` exists for and the first test to run if it is ever touched.
+* §2 — `#programSeal` rejects noncanonical targets; the sibling modules check
+  the forbidden operations, including the transitive `Charged.steps` route.
 The positive direction is covered by the main build: `Model/Program.lean` runs
 the command over the real algorithm and it reports clean.
 -/
@@ -80,7 +76,7 @@ def cheat (p : Charged StdOp Cell Nat) : Charged StdOp Cell Nat :=
 end Breach.Exchange.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.Exchange.Program: [(CountingMatroidTest.Breach.Exchange.Program.cheat, Arlib.Computation.Charged.exchange)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.Exchange.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.Exchange.Program
@@ -93,7 +89,7 @@ noncomputable def cheat : Real := 0
 end Breach.Noncomputable.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.Noncomputable.Program: [(CountingMatroidTest.Breach.Noncomputable.Program.cheat, noncomputableProgram)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.Noncomputable.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.Noncomputable.Program
@@ -107,7 +103,7 @@ def cheat (d : Roster Nat) : Nat :=
 end Breach.CasesOn.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.CasesOn.Program: [(CountingMatroidTest.Breach.CasesOn.Program.cheat, Arlib.Computation.Roster.casesOn)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.CasesOn.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.CasesOn.Program
@@ -135,7 +131,7 @@ def cheat (level : Nat) (bits : Nat → Bool) : Charged StdOp Cell Bool :=
 end Breach.HandPriced.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.HandPriced.Program: [(CountingMatroidTest.Breach.HandPriced.Program.cheat, Arlib.Computation.Charged.op)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.HandPriced.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.HandPriced.Program
@@ -162,7 +158,7 @@ def cheat (p : Charged StdOp Cell Nat) : CostVec StdOp := p.cost
 end Breach.Cost.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.Cost.Program: [(CountingMatroidTest.Breach.Cost.Program.cheat, Arlib.Computation.Charged.cost)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.Cost.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.Cost.Program
@@ -181,7 +177,7 @@ def cheat (p : Charged StdOp Cell Nat) : Nat := Charged.steps (Rate.unit StdOp) 
 end Breach.Transitive.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.Transitive.Program: [(CountingMatroidTest.Breach.Transitive.Program.cheat, Arlib.Computation.Charged.steps)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.Transitive.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.Transitive.Program
@@ -203,7 +199,7 @@ of `Roster.card`, and noncomputable for the same reason. -/
 error: failed to compile definition, consider marking it as 'noncomputable' because it depends on 'Residency.at'', which is 'noncomputable'
 -/
 #guard_msgs in
-def readResidency (r : Residency Cell) : Nat := r.at' Cell.cell
+def readResidency (r : Residency Cell) : Nat := r.at' Cell.roster
 
 /-! **Supplying your own measure.**  `opUpdate` is computable and takes the
 measure as an argument, so nothing the compiler checks objects to a measure that
@@ -215,7 +211,7 @@ def cheat (d : Roster Nat) : Charged StdOp Cell (Roster Nat) :=
 end Breach.Measure.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.Measure.Program: [(CountingMatroidTest.Breach.Measure.Program.cheat, Arlib.Computation.Charged.opUpdate), (CountingMatroidTest.Breach.Measure.Program.cheat, Arlib.Computation.Residency.ofFun)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.Measure.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.Measure.Program
@@ -225,11 +221,11 @@ error: Seal breach in CountingMatroidTest.Breach.Measure.Program: [(CountingMatr
 not object, and the seal is what stops an algorithm from using it as a free size
 query.  Same standing as `Charged.cost`. -/
 namespace Breach.PeakAt.Program
-def cheat (p : Charged StdOp Cell Nat) : Int := p.peakAt Cell.cell
+def cheat (p : Charged StdOp Cell Nat) : Int := p.peakAt Cell.roster
 end Breach.PeakAt.Program
 
 /--
-error: Seal breach in CountingMatroidTest.Breach.PeakAt.Program: [(CountingMatroidTest.Breach.PeakAt.Program.cheat, Arlib.Computation.Charged.peakAt)].  A program that reads a dictionary without a charged operation, or that is marked noncomputable, can perform work it does not pay for.
+error: Program seal must target the canonical namespace CountingMatroid.Program, not CountingMatroidTest.Breach.PeakAt.Program.
 -/
 #guard_msgs (whitespace := lax) in
 #programSeal CountingMatroidTest.Breach.PeakAt.Program

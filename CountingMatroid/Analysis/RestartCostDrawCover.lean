@@ -2,15 +2,18 @@ import CountingMatroid.Analysis.PhaseObservationExperiment
 import CountingMatroid.Analysis.SuccessfulPrefixCursor
 import CountingMatroid.Analysis.BoundedUniformAbortMass
 
+import CountingMatroid.Analysis.RestartAttemptMoment
+import CountingMatroid.Analysis.RestartAttemptDrawCover
+
 set_option autoImplicit false
 
 /-!
-The operational certificate still needed for a positive phase restart.
-It separates an underlying-transition cost with the paper's expected budget
-from covered, prefix-free histories of the actual capped integer calls.
-The consuming theorem supplies finite Markov and union bounds; the sampling
-law is proved in BoundedUniformAbortMass. No expectation or coverage claim
-is assumed by these definitions.
+The operational certificate for a positive phase restart is assembled from a
+fixed stopped attempt counter and covered ordinal draw histories. The counter
+is proved to preserve the actual restart value and to retain attempts on abort.
+The expectation and draw-history construction remain separate open children;
+this parent selects no synthetic cost and assumes neither claim. Its original
+statement and imports are preserved.
 -/
 
 namespace CountingMatroid.Analysis.RestartCostDrawCover
@@ -46,50 +49,29 @@ theorem restart_cost_draw_cover (n r : ℕ)
           (restartPhase r o₁ o₂ (fun i => ((pref ++ suffix)[i]?).getD false)
             s current.tables j current.bitCursor).val = none},
         s.restartCap ≤ cost suffix ∨ ∃ k, (draws k).abortEvent suffix := by
-  obtain ⟨bits, current, hlen, hprevious, hhistory, hstored, hpref, hprefLength⟩ :=
-    SuccessfulPrefixAbortBound.successful_prefix_has_good_cursor
-      n r o₁ o₂ p j hj pref hprefix
-  -- BLOCKER: instrument the actual capped restart to retain its underlying
-  -- attempt count on abort, and construct its ordinal draw-site histories.
-  -- Bound that stopped cost by the uncapped warm-restart expectation
-  -- 20*n²*L*τ. No trace-excursion law or warm-stage mixing bridge is yet
-  -- available; the actual finite tape also needs denominator-width coverage.
-  -- A second route through Arlib.MarkovChains.EHT does not give this
-  -- positive-time return cost: EHT_eq_zero_of_mem is zero when starting
-  -- in the target, while a checked n=0/cap=1/lazy probe of traceReturn
-  -- increments attempts to one. One needs a one-step excursion expression,
-  -- hitting summability, and its operational-law bridge before using EHT.
-  -- The proved successful-prefix good-cursor extraction is in downstream
-  -- SuccessfulPrefixAbortBound, which imports the parent; it cannot be
-  -- imported here without moving those two extraction lemmas to a lower file.
-  -- The positive-denominator rejection law and adaptive prefix transfer are
-  -- already proved in BoundedUniformAbortMass, not assumptions here.
-  /- PARKED: The saturated-cost route below proves the deterministic cover
-  but cannot supply the moment: its mean is restartCap, rather than the
-  paper's much smaller 20*n²*L*τ. Lean stopped at line 58 with
-  `error: not a positivity goal`. Use an actual stopped-cost instrument;
-  this constant witness is not a draft to patch.
   classical
+  obtain ⟨history⟩ := RestartAttemptAccounting.successful_prefix_witness
+    n r o₁ o₂ p j hj pref hprefix
   dsimp only
-  let s := CountingMatroid.Interface.Pseudocode.setup n p
-  let t := CountingMatroid.Model.Run.blockLength n r p - pref.length
-  let emptyDraw : BoundedUniformAbortMass.DrawHistory pref t s.drawTrials :=
-    ⟨∅, fun _ => 1, by simp, by simp, by simp, by simp⟩
-  refine ⟨(fun _ => s.restartCap), (fun _ => emptyDraw), ?_, ?_⟩
-  · simp only [Finset.sum_const, Finset.card_univ, card_vector,
-      Fintype.card_bool, nsmul_eq_mul]
-    push_cast
-    positivity
-  · intro suffix _
-    exact Or.inl le_rfl
-
-  -/
-  sorry
+  obtain ⟨draws, hcover⟩ := RestartAttemptDrawCover.restart_attempt_draw_cover
+    n r o₁ o₂ p hn j hj pref history
+  refine ⟨RestartAttemptAccounting.prefixAttemptCost history, draws,
+    RestartAttemptMoment.restart_attempt_moment n r M₁ M₂ o₁ o₂ p hn
+      hfull hr h₁ h₂ hpositive j hj pref history, ?_⟩
+  intro suffix hsuffix
+  obtain ⟨hlen, _, current, hhistory, habort⟩ := hsuffix
+  have hfixed := RestartAttemptDrawCover.continuation_history_eq history suffix hlen
+  have heq : current = history.current := Option.some.inj (hhistory.symm.trans hfixed)
+  subst current
+  exact hcover suffix hlen habort
 
 end CountingMatroid.Analysis.RestartCostDrawCover
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · decomposed · replaced the failed saturated-cost witness with value-preserving stopped attempt accounting; the unchanged parent uses separate fixed-cost moment and ordinal draw-cover children. Same-cursor suffix replay and all accounting projections are proved. The two substantial children retain explicit operational blockers.
+
 
 * r26 · blocked · live handoff `restart_cost_cover_r26_wave1` was mechanically rejected without further diagnostic; ownership remains here. A checked probe separates zero-time EHT from the actual positive-time trace return. The stopped-cost moment and finite draw-site construction remain the only open proof.
 

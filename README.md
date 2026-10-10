@@ -13,7 +13,13 @@ look for assumptions that narrow the claim or change the meaning of an input.
 Then follow the definitions into the other `Model/` files that are present:
 
 <!-- tex2lean:model-files:start -->
-Model files will be listed here once they have been written.
+- [`CountingMatroid/Model/Prelude.lean`](CountingMatroid/Model/Prelude.lean) defines the shared vocabulary.
+- [`CountingMatroid/Model/Prior.lean`](CountingMatroid/Model/Prior.lean) records assumptions or results taken from earlier work.
+- [`CountingMatroid/Model/Operations.lean`](CountingMatroid/Model/Operations.lean) names project-specific operations and their costs.
+- [`CountingMatroid/Model/Program.lean`](CountingMatroid/Model/Program.lean) describes the algorithm.
+- [`CountingMatroid/Model/Run.lean`](CountingMatroid/Model/Run.lean) describes how randomized runs are sampled.
+- [`CountingMatroid/Model/Theorem.lean`](CountingMatroid/Model/Theorem.lean) states the project's headline results.
+- [`CountingMatroid/Model/Subroutines.lean`](CountingMatroid/Model/Subroutines.lean) contains additional model definitions and statements.
 <!-- tex2lean:model-files:end -->
 
 The particular files depend on the project. Compare their definitions with the

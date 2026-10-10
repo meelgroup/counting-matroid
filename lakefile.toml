@@ -1,5 +1,9 @@
 name = "countingmatroid"
-defaultTargets = ["CountingMatroid", "CountingMatroidTest"]
+defaultTargets = ["CountingMatroid", "CountingMatroidTest", "Tex2Lean"]
+
+# Check declarations sequentially to bound memory pressure on the local host.
+# Scheduling does not change module contents or invalidate cached imports.
+weakLeanArgs = ["-j1", "-DElab.async=false"]
 
 # Pinned so a fresh clone builds without a version hunt. If you bump the
 # toolchain in lean-toolchain, bump both revs below to match.
@@ -19,10 +23,13 @@ rev = "v4.33.0"
 [[require]]
 name = "arlib"
 git = "https://github.com/meelgroup/arlib.git"
-rev = "main"
+rev = "6262f60ad7556be62e94e87f6b5811cf299e7d94"
 
 [[lean_lib]]
 name = "CountingMatroid"
 
 [[lean_lib]]
 name = "CountingMatroidTest"
+
+[[lean_lib]]
+name = "Tex2Lean"

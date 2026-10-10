@@ -11,3 +11,6 @@
 # somewhere inside the project for these: /tmp is outside the directories an
 # agent is given, so every route to it is refused.
 /scratch/
+
+# Inspection dumps: hundreds of MB of JSON the run leaves behind.
+.tex2lean-inspection*

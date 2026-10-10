@@ -4,17 +4,18 @@ import CountingMatroid.Analysis.IdealExchangeChain
 import CountingMatroid.Analysis.AnnealingPartitionDrift
 import CountingMatroid.Analysis.StationaryReturnOccupation
 import CountingMatroid.Analysis.TypeMassLowerBounds
+import CountingMatroid.Analysis.RestartStageAttemptMean
 
 set_option autoImplicit false
 
 /-!
-The stochastic half of the restart certificate now bounds a fixed,
-value-preserving stopped attempt counter. The zero-stage case is proved.
-Finite stationary excursion occupation budgets and their numerical bounds
-are proved. Stage accumulators, nonnegative stage increments, and the exact finite-suffix
-mean decomposition are proved. Positive stages require a single-stage
-operational occupation bound, including stopped-prefix warm propagation. Constructing
-covered integer-draw histories is a separate deterministic obligation.
+The stochastic half of the restart certificate: the finite-suffix mean of the
+fixed, value-preserving stopped attempt counter is at most `20 n² L τ`.
+The mean splits exactly into stage means (draw-abort attempts retained); each
+stage's increment is identified with the attempt count of its τ actual returns,
+whose mean `RestartStageAttemptMean.restart_stage_attempt_mean` bounds by τ warm
+stationary occupation budgets, each at most `20 n²`. Constructing covered
+integer-draw histories is a separate deterministic obligation.
 -/
 namespace CountingMatroid.Analysis.RestartAttemptMoment
 
@@ -186,6 +187,44 @@ theorem prefix_stage_attempt_mean_sum {n r : ℕ} {o₁ o₂ : IndependenceOracl
   simp_rw [← prefix_stage_attempts_sum history]
   rw [Finset.sum_comm, Finset.sum_div]
 
+/-- INTERNAL: The cursor of the stopped accumulator after k stages is the
+actual restart cursor at the start of stage k.
+TEXLINE: main.tex:1163-1176 -/
+theorem prefix_state_cursor {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (suffix : List Bool)
+    (k : ℕ) :
+    (prefixRestartState history suffix k).1 =
+      RestartStageWarmStart.stageCursor r o₁ o₂
+        (FiniteStoppedFiberMass.finiteTape (pref ++ suffix))
+        (CountingMatroid.Interface.Pseudocode.setup n p) history.current.tables
+        history.current.bitCursor k 0 := by
+  induction k with
+  | zero => rfl
+  | succ k ih =>
+      rw [RestartStageWarmStart.stage_cursor_next, restart_stage_state_succ,
+        ← Prod.mk.eta (p := prefixRestartState history suffix k),
+        RestartStageAttemptMean.counted_stage_value, ih]
+      rfl
+
+/-- INTERNAL: A stage's real increment is the attempt count of its τ returns.
+TEXLINE: main.tex:1163-1176,1230-1234 -/
+theorem prefix_stage_attempts_eq {n r : ℕ} {o₁ o₂ : IndependenceOracle n}
+    {p : InputParams} {j : ℕ} {pref : List Bool}
+    (history : RestartPrefixWitness n r o₁ o₂ p j pref) (suffix : List Bool)
+    (k : ℕ) :
+    prefixStageAttempts history suffix k =
+      (RestartStageAttemptMean.stageAttempts r o₁ o₂
+        (FiniteStoppedFiberMass.finiteTape (pref ++ suffix))
+        (CountingMatroid.Interface.Pseudocode.setup n p) history.current.tables
+        history.current.bitCursor k : ℝ) := by
+  unfold prefixStageAttempts
+  rw [restart_stage_state_succ,
+    ← Prod.mk.eta (p := prefixRestartState history suffix k),
+    RestartStageAttemptMean.counted_stage_value, prefix_state_cursor]
+  rw [Nat.cast_add, add_sub_cancel_left]
+  rfl
+
 /-- INTERNAL: Transfer the paper's uncapped restart mean to the fixed counted
 restart on the actual suffix, retaining attempts made before a draw abort.
 The reached-history witness fixes both tables and cursor, rather than letting
@@ -269,37 +308,10 @@ theorem restart_attempt_moment (n r : ℕ)
           (∑ bits : List.Vector Bool t,
             prefixStageAttempts history bits.val i.val) / (2 : ℝ) ^ t ≤
               (s.τ : ℝ) * budget i := by
-        /- PARKED: Recovery now asks for one stage's mean, not the entire
-        restart occupation comparison. prefix_stage_attempts_nonneg proves
-        this is a nonnegative actual cost, and restart_stage_state_succ
-        identifies its input with the preceding stopped operational fold.
-        prefix_stage_attempt_mean_sum proves the exact sum used below.
-
-        Executable next step: at stage i, disintegrate prefixRestartState
-        history bits.val i.val over stopped cursor/state fibers. Split the
-        s.τ calls of countedTransition in countedStage into count increments.
-        For each return, keep the indicator that the pre-step guard permits
-        chainStep even when that draw returns none; subsequent indicators
-        require successful off-target transitions. Show their finite-suffix
-        masses are bounded by the first target mass and the positive-time
-        survival terms in returnOccupation (P i) A (μ i) s.restartCap.
-        The necessary starting sublaw is <= 4 / mass i * μ i on A.
-        The first stage needs the freshTransversal law and parameter drift;
-        subsequent stages need stopped-prefix composition plus scheduled
-        trace mixing to propagate this domination. Do not normalize away
-        missing mass on capped or draw-aborted executions.
-
-        Concrete missing facts: a covered stopping-prefix survival bound
-        for attempted (not just completed) returns, and the above warm
-        starting-sublaw bound at each operational stage/trace-step cursor.
-        No finite-tape coverage premise may be assumed: history.consumed
-        alone does not imply current.bitCursor = pref.length.
-        Existing endpoint subkernels omit the terminal abort attempt;
-        expanding the folds alone gives a counter, not its fiber masses.
-        The deterministic recurrence and telescoping replace that failed
-        expansion route and are proved; the stochastic debt stays here.
-        -/
-        sorry
+        have hm := RestartStageAttemptMean.restart_stage_attempt_mean n r M₁ M₂ o₁ o₂ p hn
+          hfull hr h₁ h₂ (a + 1) hj pref history i.val i.isLt (hq i) (hw i)
+        simp_rw [prefix_stage_attempts_eq history]
+        exact hm
       have hcomparison :
           (∑ bits : List.Vector Bool t, (prefixAttemptCost history bits.val : ℝ)) /
             (2 : ℝ) ^ t ≤ (s.τ : ℝ) * ∑ i : Fin (a + 1), budget i := by
@@ -326,6 +338,8 @@ end CountingMatroid.Analysis.RestartAttemptMoment
 
 /-! ### Run record
 Newest first. History, not instruction — what this file claims is above.
+
+* 2026-10-09 · proved · closed the one-stage bound with the (previously unattached, fully proved) `RestartStageAttemptMean.restart_stage_attempt_mean`, bridged by `prefix_state_cursor` and `prefix_stage_attempts_eq`; no `sorry` remains.
 
 * 2026-10-09 · recovered stage decomposition · proved actual stage recurrence, nonnegative retained increments, and exact mean telescoping; replaced the whole-restart occupation gap by the one-stage mean bound, retaining the original theorem and one open proof.
 
