@@ -14,3 +14,6 @@
 
 # Inspection dumps: hundreds of MB of JSON the run leaves behind.
 .tex2lean-inspection*
+
+# Comparator solution snapshots written by prepare.py; regenerated on demand.
+/comparator/*/exports/
