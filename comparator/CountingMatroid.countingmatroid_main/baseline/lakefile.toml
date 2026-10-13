@@ -1,0 +1,41 @@
+name = "countingmatroid"
+defaultTargets = ["CountingMatroid", "CountingMatroidTest", "Tex2Lean"]
+
+# Check declarations sequentially to bound memory pressure on the local host.
+# Scheduling does not change module contents or invalidate cached imports.
+weakLeanArgs = ["-j1", "-DElab.async=false"]
+
+# Pinned so a fresh clone builds without a version hunt. If you bump the
+# toolchain in lean-toolchain, bump both revs below to match.
+#
+# Run `lake exe cache get` after `lake update` — otherwise you compile
+# Mathlib from source, which takes hours.
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+git = "https://github.com/leanprover-community/mathlib4.git"
+rev = "v4.33.0"
+
+# Reusable, problem-independent material (finite probability, multiplicative
+# error algebra, automata lower bounds, MDPs, …) lives here. Look for a lemma
+# in arlib before proving it in this project.
+[[require]]
+name = "arlib"
+git = "https://github.com/meelgroup/arlib.git"
+rev = "6262f60ad7556be62e94e87f6b5811cf299e7d94"
+
+[[lean_lib]]
+name = "CountingMatroid"
+
+[[lean_lib]]
+name = "CountingMatroidTest"
+
+[[lean_lib]]
+name = "Tex2Lean"
+
+[[lean_lib]]
+name = "Challenge"
+
+[[lean_lib]]
+name = "Solution"

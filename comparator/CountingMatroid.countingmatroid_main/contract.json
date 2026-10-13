@@ -1,0 +1,42 @@
+{
+  "schema": "tex2lean.comparator/1",
+  "sourceProject": "/Users/kmeel8/research/meelgroup-projects/test/counting-matroid/lean",
+  "capstone": "CountingMatroid.countingmatroid_main",
+  "theoremFile": "CountingMatroid/Model/Theorem.lean",
+  "theoremNames": [
+    "CountingMatroid.countingmatroid_main"
+  ],
+  "typeHashes": {
+    "CountingMatroid.countingmatroid_main": "8d7d07e383225576789951cea951107fe8ce8fd2d5aa2faf2b8a6d4a22c79972"
+  },
+  "trustedSources": {
+    "CountingMatroid/Model/Prelude.lean": "7591909cd96220dbf3acaa1acd8e551ade6243510dde140bac3a5f7b7e781ed3",
+    "CountingMatroid/Model/Operations.lean": "2aed821bdb3d2778a137c0cf6a7a3053a9480d478d3ba9fe9ed16db88492f243",
+    "CountingMatroid/Model/Subroutines.lean": "f5369839cd1d8cd5c70613732e4ff2af1cbfe7438b724f43bc1e230f4541cb96",
+    "CountingMatroid/Meta/CostSeal.lean": "d849ce6a3c49e4f50cc70459ded68b01ef330683df9688d6688e68dfb2cd2007",
+    "CountingMatroid/Meta/ModelClosure.lean": "0746e6741200b2447a132b0878efe83bacf2533287c954987b0a1344aa913545",
+    "CountingMatroid/Model/Program.lean": "05241923bc99095c0384eb9546bfd0c046960d6e7197b026f69393fa86f9c8b8",
+    "CountingMatroid/Model/Run.lean": "8e0d168d07d12bb1e8b6acb7db3a37055fe0182366a94f771a6b1dacea86bbce",
+    "CountingMatroid/Model/Prior.lean": "12d491bf8cf4b0ad0eba05d74e637a3be4f86d18eebda8f98371025c65afa2bb",
+    "lean-toolchain": "302cd63c54178885b89e669f33b38f12f4dd7ae7e5cac537b3203e3768d8fb2b",
+    "lakefile.toml": "3ccf648763534ed8babd544868e08a214d7aca3a9e18b902d32008fc30e8b0e0",
+    "lake-manifest.json": "3191a70ac0ad58d9a8f983169ebe7b56bfea46fdf91047d33d1141aeddfc51fe"
+  },
+  "baselineFiles": {
+    "CountingMatroid/Model/Prelude.lean": "7591909cd96220dbf3acaa1acd8e551ade6243510dde140bac3a5f7b7e781ed3",
+    "CountingMatroid/Model/Operations.lean": "2aed821bdb3d2778a137c0cf6a7a3053a9480d478d3ba9fe9ed16db88492f243",
+    "CountingMatroid/Model/Subroutines.lean": "f5369839cd1d8cd5c70613732e4ff2af1cbfe7438b724f43bc1e230f4541cb96",
+    "CountingMatroid/Meta/CostSeal.lean": "d849ce6a3c49e4f50cc70459ded68b01ef330683df9688d6688e68dfb2cd2007",
+    "CountingMatroid/Meta/ModelClosure.lean": "0746e6741200b2447a132b0878efe83bacf2533287c954987b0a1344aa913545",
+    "CountingMatroid/Model/Program.lean": "05241923bc99095c0384eb9546bfd0c046960d6e7197b026f69393fa86f9c8b8",
+    "CountingMatroid/Model/Run.lean": "8e0d168d07d12bb1e8b6acb7db3a37055fe0182366a94f771a6b1dacea86bbce",
+    "CountingMatroid/Model/Prior.lean": "12d491bf8cf4b0ad0eba05d74e637a3be4f86d18eebda8f98371025c65afa2bb",
+    "lean-toolchain": "302cd63c54178885b89e669f33b38f12f4dd7ae7e5cac537b3203e3768d8fb2b",
+    "lakefile.toml": "5ca2608d291f69e896deb230efa49ffc398d2f7a5043ab5d43640bdfe58c0fc5",
+    "lake-manifest.json": "3191a70ac0ad58d9a8f983169ebe7b56bfea46fdf91047d33d1141aeddfc51fe",
+    "Challenge.lean": "df626ef7797073e0b0c3bb02b401e89aff590ce57b63eb86716d87092d735015",
+    "Solution.lean": "43379207981784b96cd36b98b032a6dd53620fe6748b1304e4c53f9ba4d3cff0",
+    "comparator.json": "baf97889af55dbe9e4cbc32d2574adf0944e572ab451038100bab91cbefe3c87",
+    "verify.sh": "786fa25ca1266d4e0ed8db57ac6c53b1872a21b2dee2fe89364f7110d2fd30c4"
+  }
+}
